@@ -91,9 +91,14 @@ jobs:
           python manage.py collectstatic --noinput
           python manage.py migrate --noinput
           pkill -f "manage.py runserver" || true
-          sleep 1
-          nohup python manage.py runserver 0.0.0.0:8000 > server.log 2>&1 &
+          sleep 2
+          setsid nohup python manage.py runserver 0.0.0.0:8000 > server.log 2>&1 < /dev/null &
           sleep 3
-          ps aux | grep "manage.py runserver" | grep -v grep || exit 1
-          echo "Deployment completed successfully"
+          if ps aux | grep -v grep | grep -q "manage.py runserver"; then
+            echo "Deployment completed successfully"
+          else
+            echo "Server failed to start"
+            tail -20 server.log || true
+            exit 1
+          fi
 
