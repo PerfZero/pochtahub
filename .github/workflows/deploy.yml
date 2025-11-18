@@ -29,8 +29,6 @@ jobs:
           python manage.py migrate --noinput
           pkill -f "manage.py runserver" || true
           sleep 2
-          systemd-run --user --unit=pochtahub --setenv=PATH=/var/www/pochtahub/venv/bin:/usr/local/bin:/usr/bin:/bin bash -c "cd /var/www/pochtahub && source venv/bin/activate && python manage.py runserver 0.0.0.0:8000 > server.log 2>&1" || screen -dmS pochtahub bash -c "cd /var/www/pochtahub && source venv/bin/activate && python manage.py runserver 0.0.0.0:8000 > server.log 2>&1" || bash -c "cd /var/www/pochtahub && source venv/bin/activate && nohup python manage.py runserver 0.0.0.0:8000 > server.log 2>&1 &"
-          sleep 3
-          echo "Deployment completed. Server should be running."
-          ps aux | grep -v grep | grep "manage.py runserver" && echo "Server process found" || echo "Server process check (may need a moment to start)"
+          cd /var/www/pochtahub && source venv/bin/activate && nohup python manage.py runserver 0.0.0.0:8000 > server.log 2>&1 &
+          echo "Deployment completed. Server startup initiated."
 
