@@ -1,0 +1,16 @@
+[Unit]
+Description=PochtaHub Django Application
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/var/www/pochtahub
+Environment="PATH=/var/www/pochtahub/venv/bin:/usr/local/bin:/usr/bin:/bin"
+ExecStart=/var/www/pochtahub/venv/bin/python /var/www/pochtahub/manage.py runserver 0.0.0.0:8000
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+
