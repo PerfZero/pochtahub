@@ -92,11 +92,11 @@ jobs:
           python manage.py migrate --noinput
           pkill -f "manage.py runserver" || true
           sleep 2
-          bash -c "cd /var/www/pochtahub && source venv/bin/activate && nohup python manage.py runserver 0.0.0.0:8000 > server.log 2>&1 &" && sleep 1 && disown -a || true
-          sleep 4
+          screen -dmS pochtahub bash -c "cd /var/www/pochtahub && source venv/bin/activate && python manage.py runserver 0.0.0.0:8000 > server.log 2>&1" || bash -c "cd /var/www/pochtahub && source venv/bin/activate && nohup python manage.py runserver 0.0.0.0:8000 > server.log 2>&1 &"
+          sleep 5
           if ps aux | grep -v grep | grep -q "manage.py runserver"; then
             echo "Deployment completed successfully"
-            curl -s http://localhost:8000/admin/ > /dev/null && echo "Server is responding" || echo "Server started but not responding yet"
+            curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/admin/ | grep -q "200\|302" && echo "Server is responding" || echo "Server started but checking response..."
           else
             echo "Server failed to start"
             tail -20 server.log || true
