@@ -132,6 +132,21 @@ pochtahub/
 - Возможность добавления API BoxBerry, KCE и других ТК через наследование или плагины
 - Модульная архитектура позволяет легко добавлять новые функции
 
+## CI/CD
+
+Проект использует GitHub Actions для автоматического деплоя:
+
+- **Тесты**: запускаются при создании PR и при пуше в main
+- **Деплой**: автоматически выполняется при пуше в main ветку
+
+### Настройка секретов в GitHub
+
+Для работы CI/CD нужно добавить секреты в настройках репозитория (Settings → Secrets and variables → Actions):
+
+- `SERVER_HOST` - IP адрес сервера (109.172.46.96)
+- `SERVER_USER` - пользователь для SSH (root)
+- `SERVER_PASSWORD` - пароль для SSH
+
 ## Технологии
 
 - Django 4.2.7
@@ -139,3 +154,4 @@ pochtahub/
 - JWT Authentication (djangorestframework-simplejwt)
 - PostgreSQL
 - Swagger/OpenAPI (drf-yasg)
+- GitHub Actions (CI/CD)
