@@ -7,9 +7,11 @@ Type=simple
 User=root
 WorkingDirectory=/var/www/pochtahub
 Environment="PATH=/var/www/pochtahub/venv/bin:/usr/local/bin:/usr/bin:/bin"
-ExecStart=/var/www/pochtahub/venv/bin/python /var/www/pochtahub/manage.py runserver 0.0.0.0:8000
+ExecStart=/bin/bash -c 'cd /var/www/pochtahub && source venv/bin/activate && python manage.py runserver 0.0.0.0:8000'
 Restart=always
 RestartSec=10
+StandardOutput=append:/var/www/pochtahub/server.log
+StandardError=append:/var/www/pochtahub/server.log
 
 [Install]
 WantedBy=multi-user.target
