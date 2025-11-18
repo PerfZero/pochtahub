@@ -14,30 +14,30 @@ class Order(models.Model):
         ('cancelled', 'Отменен'),
     ]
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders', verbose_name='Пользователь')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new', verbose_name='Статус')
 
-    sender_name = models.CharField(max_length=200)
-    sender_phone = models.CharField(max_length=20)
-    sender_address = models.TextField()
-    sender_city = models.CharField(max_length=100)
+    sender_name = models.CharField(max_length=200, verbose_name='Имя отправителя')
+    sender_phone = models.CharField(max_length=20, verbose_name='Телефон отправителя')
+    sender_address = models.TextField(verbose_name='Адрес отправителя')
+    sender_city = models.CharField(max_length=100, verbose_name='Город отправителя')
 
-    recipient_name = models.CharField(max_length=200)
-    recipient_phone = models.CharField(max_length=20)
-    recipient_address = models.TextField()
-    recipient_city = models.CharField(max_length=100)
+    recipient_name = models.CharField(max_length=200, verbose_name='Имя получателя')
+    recipient_phone = models.CharField(max_length=20, verbose_name='Телефон получателя')
+    recipient_address = models.TextField(verbose_name='Адрес получателя')
+    recipient_city = models.CharField(max_length=100, verbose_name='Город получателя')
 
-    weight = models.DecimalField(max_digits=10, decimal_places=2)
-    length = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    width = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    height = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    weight = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Вес (кг)')
+    length = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='Длина (см)')
+    width = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='Ширина (см)')
+    height = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='Высота (см)')
 
-    transport_company_id = models.IntegerField(null=True, blank=True)
-    transport_company_name = models.CharField(max_length=100, blank=True)
-    price = models.DecimalField(max_digits=10, decimal_places=2)
+    transport_company_id = models.IntegerField(null=True, blank=True, verbose_name='ID транспортной компании')
+    transport_company_name = models.CharField(max_length=100, blank=True, verbose_name='Название транспортной компании')
+    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Цена')
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Дата обновления')
 
     class Meta:
         db_table = 'orders'
@@ -59,11 +59,11 @@ class OrderEvent(models.Model):
         ('cancelled', 'Отменен'),
     ]
 
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='events')
-    event_type = models.CharField(max_length=20, choices=EVENT_TYPES)
-    description = models.TextField(blank=True)
-    metadata = models.JSONField(default=dict, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='events', verbose_name='Заказ')
+    event_type = models.CharField(max_length=20, choices=EVENT_TYPES, verbose_name='Тип события')
+    description = models.TextField(blank=True, verbose_name='Описание')
+    metadata = models.JSONField(default=dict, blank=True, verbose_name='Метаданные')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
 
     class Meta:
         db_table = 'order_events'

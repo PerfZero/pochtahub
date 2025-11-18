@@ -11,13 +11,13 @@ class Payment(models.Model):
         ('failed', 'Ошибка'),
     ]
 
-    order = models.ForeignKey('orders.Order', on_delete=models.CASCADE, related_name='payments')
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='payments')
-    amount = models.DecimalField(max_digits=10, decimal_places=2)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    payment_id = models.CharField(max_length=100, unique=True, blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    order = models.ForeignKey('orders.Order', on_delete=models.CASCADE, related_name='payments', verbose_name='Заказ')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='payments', verbose_name='Пользователь')
+    amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Сумма')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='Статус')
+    payment_id = models.CharField(max_length=100, unique=True, blank=True, null=True, verbose_name='ID платежа')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Дата обновления')
 
     class Meta:
         db_table = 'payments'
