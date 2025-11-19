@@ -20,6 +20,7 @@ class TransportCompany(models.Model):
         db_table = 'transport_companies'
         verbose_name = 'Транспортная компания'
         verbose_name_plural = 'Транспортные компании'
+        ordering = ['name']
 
     def __str__(self):
         return self.name
