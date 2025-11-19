@@ -17,7 +17,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v3
       with:
-        node-version: '18'
+        node-version: '20'
     
     - name: Build frontend
       working-directory: ./frontend
@@ -44,6 +44,14 @@ jobs:
           
           echo "=== Deploying Frontend ==="
           cd ../frontend
+          
+          NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
+          if [ "$NODE_VERSION" -lt 20 ]; then
+            echo "Node.js version is too old. Installing Node.js 20..."
+            curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+            apt-get install -y nodejs
+          fi
+          
           npm ci
           npm run build
           
