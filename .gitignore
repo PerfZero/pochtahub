@@ -33,3 +33,7 @@ db.sqlite3
 *.log
 media/
 staticfiles/
+
+node_modules/
+frontend/dist/
+frontend/.env
