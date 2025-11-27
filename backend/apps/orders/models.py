@@ -34,6 +34,8 @@ class Order(models.Model):
 
     transport_company_id = models.IntegerField(null=True, blank=True, verbose_name='ID транспортной компании')
     transport_company_name = models.CharField(max_length=100, blank=True, verbose_name='Название транспортной компании')
+    tariff_code = models.IntegerField(null=True, blank=True, verbose_name='Код тарифа (CDEK)')
+    tariff_name = models.CharField(max_length=200, blank=True, verbose_name='Название тарифа')
     price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Цена')
     
     external_order_uuid = models.CharField(max_length=100, blank=True, null=True, verbose_name='UUID заказа во внешней системе')

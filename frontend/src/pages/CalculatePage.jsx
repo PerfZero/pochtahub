@@ -1,19 +1,68 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { tariffsAPI } from '../api'
+import CityInput from '../components/CityInput'
 import './CalculatePage.css'
 
 function CalculatePage() {
-  const [fromAddress, setFromAddress] = useState('')
-  const [toAddress, setToAddress] = useState('')
+  const [fromCity, setFromCity] = useState('')
+  const [toCity, setToCity] = useState('')
   const [weight, setWeight] = useState('')
+  const [length, setLength] = useState('')
+  const [width, setWidth] = useState('')
+  const [height, setHeight] = useState('')
+  const [image, setImage] = useState(null)
+  const [imagePreview, setImagePreview] = useState(null)
+  const [analyzing, setAnalyzing] = useState(false)
   const [options, setOptions] = useState([])
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      setImage(file)
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setImagePreview(reader.result)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handleAnalyzeImage = async () => {
+    if (!image) {
+      alert('Загрузите фотографию')
+      return
+    }
+    
+    setAnalyzing(true)
+    try {
+      const formData = new FormData()
+      formData.append('image', image)
+      
+      const response = await tariffsAPI.analyzeImage(formData)
+      const data = response.data
+      
+      if (data.warning) {
+        alert(data.warning)
+      }
+      
+      if (data.weight > 0) setWeight(data.weight.toString())
+      if (data.length > 0) setLength(data.length.toString())
+      if (data.width > 0) setWidth(data.width.toString())
+      if (data.height > 0) setHeight(data.height.toString())
+    } catch (error) {
+      console.error('Ошибка анализа изображения:', error)
+      alert(`Ошибка анализа изображения: ${error.response?.data?.error || error.message}`)
+    } finally {
+      setAnalyzing(false)
+    }
+  }
+
   const handleCalculate = async (e) => {
     e.preventDefault()
-    if (!fromAddress || !toAddress || !weight) {
+    if (!fromCity || !toCity || !weight) {
       alert('Заполните все поля')
       return
     }
@@ -23,19 +72,19 @@ function CalculatePage() {
     try {
       await new Promise(resolve => setTimeout(resolve, 500))
       
-      const extractCity = (address) => {
-        if (!address) return ''
-        const parts = address.split(',')
-        return parts[0].trim()
+      const calculateData = {
+        weight: parseFloat(weight),
+        from_city: fromCity,
+        to_city: toCity,
+        from_address: fromCity,
+        to_address: toCity,
       }
       
-      const response = await tariffsAPI.calculate({
-        weight: parseFloat(weight),
-        from_city: extractCity(fromAddress),
-        to_city: extractCity(toAddress),
-        from_address: fromAddress,
-        to_address: toAddress,
-      })
+      if (length) calculateData.length = parseFloat(length)
+      if (width) calculateData.width = parseFloat(width)
+      if (height) calculateData.height = parseFloat(height)
+      
+      const response = await tariffsAPI.calculate(calculateData)
       console.log('Full response:', response)
       console.log('Response data:', response.data)
       console.log('Options:', response.data?.options)
@@ -64,17 +113,24 @@ function CalculatePage() {
       state: {
         company,
         weight: parseFloat(weight),
-        fromAddress,
-        toAddress,
+        fromAddress: fromCity,
+        toAddress: toCity,
+        fromCity: fromCity,
+        toCity: toCity,
       },
     })
   }
 
   const handleNewCalculation = () => {
     setOptions([])
-    setFromAddress('')
-    setToAddress('')
+    setFromCity('')
+    setToCity('')
     setWeight('')
+    setLength('')
+    setWidth('')
+    setHeight('')
+    setImage(null)
+    setImagePreview(null)
   }
 
   return (
@@ -104,36 +160,92 @@ function CalculatePage() {
                 </ul>
 
                 <form onSubmit={handleCalculate} className="calculate-form">
+                  <div className="image-upload-section">
+                    <label className="image-upload-label">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        style={{ display: 'none' }}
+                      />
+                      <div className="image-upload-area">
+                        {imagePreview ? (
+                          <img src={imagePreview} alt="Preview" className="image-preview" />
+                        ) : (
+                          <div className="image-upload-placeholder">
+                            <span>📷</span>
+                            <span>Загрузить фото посылки</span>
+                          </div>
+                        )}
+                      </div>
+                    </label>
+                    {image && (
+                      <button
+                        type="button"
+                        onClick={handleAnalyzeImage}
+                        disabled={analyzing}
+                        className="analyze-button"
+                      >
+                        {analyzing ? 'Анализирую...' : 'Определить параметры'}
+                      </button>
+                    )}
+                  </div>
+
                   <div className="address-fields">
                     <div className="form-group">
-                      <input
-                        type="text"
+                      <CityInput
                         placeholder="От куда"
-                        value={fromAddress}
-                        onChange={(e) => setFromAddress(e.target.value)}
-                        required
+                        value={fromCity}
+                        onChange={(e) => setFromCity(e.target.value)}
                       />
                     </div>
                     <div className="form-group">
-                      <input
-                        type="text"
+                      <CityInput
                         placeholder="Куда"
-                        value={toAddress}
-                        onChange={(e) => setToAddress(e.target.value)}
-                        required
+                        value={toCity}
+                        onChange={(e) => setToCity(e.target.value)}
                       />
                     </div>
                   </div>
                   
-                  <div className="weight-field">
-                    <label>Вес (кг) *</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={weight}
-                      onChange={(e) => setWeight(e.target.value)}
-                      required
-                    />
+                  <div className="dimensions-fields">
+                    <div className="dimension-field">
+                      <label>Вес (кг) *</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={weight}
+                        onChange={(e) => setWeight(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="dimension-field">
+                      <label>Длина (см)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={length}
+                        onChange={(e) => setLength(e.target.value)}
+                      />
+                    </div>
+                    <div className="dimension-field">
+                      <label>Ширина (см)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={width}
+                        onChange={(e) => setWidth(e.target.value)}
+                      />
+                    </div>
+                    <div className="dimension-field">
+                      <label>Высота (см)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={height}
+                        onChange={(e) => setHeight(e.target.value)}
+                      />
+                    </div>
                   </div>
 
                   <button type="submit" disabled={loading} className="calculate-button">

@@ -26,3 +26,7 @@ class CalculatePriceSerializer(serializers.Serializer):
     from_address = serializers.CharField(max_length=500, required=False, help_text='Адрес отправления (для внешних API)')
     to_address = serializers.CharField(max_length=500, required=False, help_text='Адрес получения (для внешних API)')
     transport_company_id = serializers.IntegerField(required=False)
+
+
+class AnalyzeImageSerializer(serializers.Serializer):
+    image = serializers.ImageField(required=True)

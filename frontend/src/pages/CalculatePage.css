@@ -121,18 +121,91 @@
   border-radius: 4px;
 }
 
-.weight-field {
+.image-upload-section {
   margin-bottom: 24px;
 }
 
-.weight-field label {
+.image-upload-label {
+  display: block;
+  cursor: pointer;
+}
+
+.image-upload-area {
+  width: 100%;
+  min-height: 200px;
+  border: 2px dashed #0066CC;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f9f9f9;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.image-upload-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: #666;
+  font-size: 16px;
+}
+
+.image-upload-placeholder span:first-child {
+  font-size: 48px;
+}
+
+.image-preview {
+  width: 100%;
+  height: auto;
+  max-height: 300px;
+  object-fit: contain;
+}
+
+.analyze-button {
+  width: 100%;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.analyze-button:hover:not(:disabled) {
+  background-color: #218838;
+}
+
+.analyze-button:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.dimensions-fields {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.dimension-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.dimension-field label {
   display: block;
   margin-bottom: 8px;
   font-weight: 500;
+  font-size: 14px;
 }
 
-.weight-field input {
-  width: 200px;
+.dimension-field input {
+  width: 100%;
   padding: 12px;
   border: 1px solid #ddd;
   border-radius: 4px;

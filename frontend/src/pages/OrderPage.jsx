@@ -15,35 +15,38 @@ function OrderPage() {
   const [weight, setWeight] = useState(orderData.weight || '')
   const [fromAddress, setFromAddress] = useState(orderData.fromAddress || '')
   const [toAddress, setToAddress] = useState(orderData.toAddress || '')
+  const [fromCity, setFromCity] = useState(orderData.fromCity || '')
+  const [toCity, setToCity] = useState(orderData.toCity || '')
   
   const [senderName, setSenderName] = useState('')
   const [senderPhone, setSenderPhone] = useState('')
   const [senderAddress, setSenderAddress] = useState(fromAddress)
-  const [senderCity, setSenderCity] = useState('')
+  const [senderCity, setSenderCity] = useState(fromCity)
   
   const [recipientName, setRecipientName] = useState('')
   const [recipientPhone, setRecipientPhone] = useState('')
   const [recipientAddress, setRecipientAddress] = useState(toAddress)
-  const [recipientCity, setRecipientCity] = useState('')
+  const [recipientCity, setRecipientCity] = useState(toCity)
   
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (!company) {
-      navigate('/calculate')
-      return
-    }
-    
     const token = localStorage.getItem('access_token')
     if (!token) {
       navigate('/login', { 
         state: { 
           returnTo: '/order', 
-          orderData: { company, weight, fromAddress, toAddress } 
+          orderData: { company, weight, fromAddress, toAddress, fromCity, toCity } 
         } 
       })
+      return
     }
-  }, [company, weight, fromAddress, toAddress, navigate])
+    
+    if (!company) {
+      navigate('/calculate')
+      return
+    }
+  }, [company, weight, fromAddress, toAddress, fromCity, toCity, navigate])
 
   useEffect(() => {
     if (fromAddress) {
@@ -52,7 +55,13 @@ function OrderPage() {
     if (toAddress) {
       setRecipientAddress(toAddress)
     }
-  }, [fromAddress, toAddress])
+    if (fromCity) {
+      setSenderCity(fromCity)
+    }
+    if (toCity) {
+      setRecipientCity(toCity)
+    }
+  }, [fromAddress, toAddress, fromCity, toCity])
 
   const handleSubmit = async (e) => {
     e.preventDefault()

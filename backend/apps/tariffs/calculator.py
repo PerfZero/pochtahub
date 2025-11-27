@@ -12,14 +12,20 @@ class TariffCalculator:
             companies = TransportCompany.objects.filter(is_active=True)
 
         results = []
+        import logging
+        logger = logging.getLogger(__name__)
+        
         for company in companies:
             if company.api_type == 'cdek' and company.api_account and company.api_secure_password and from_city and to_city:
+                logger.info(f'Вызов CDEK API для компании {company.name} (ID: {company.id})')
+                logger.info(f'Параметры: from_city={from_city}, to_city={to_city}, weight={weight}')
                 try:
                     adapter = CDEKAdapter(
                         account=company.api_account,
                         secure_password=company.api_secure_password,
-                        test_mode=True
+                        test_mode=False
                     )
+                    logger.info(f'CDEK адаптер создан, API URL: {adapter.api_url}')
                     cdek_results = adapter.calculate_price(
                         from_city=from_city,
                         to_city=to_city,
@@ -28,13 +34,12 @@ class TariffCalculator:
                         width=float(dimensions.get('width', 0)) if dimensions.get('width') else None,
                         height=float(dimensions.get('height', 0)) if dimensions.get('height') else None
                     )
+                    logger.info(f'CDEK API вернул {len(cdek_results)} тарифов')
                     for result in cdek_results:
                         result['company_id'] = company.id
                         results.append(result)
                 except Exception as e:
-                    import logging
-                    logger = logging.getLogger(__name__)
-                    logger.warning(f'Ошибка расчета CDEK для компании {company.name}: {str(e)}')
+                    logger.error(f'Ошибка расчета CDEK для компании {company.name}: {str(e)}', exc_info=True)
             
             tariffs = Tariff.objects.filter(
                 transport_company=company,

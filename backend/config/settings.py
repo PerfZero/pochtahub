@@ -45,7 +45,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [FRONTEND_BUILD_DIR] if FRONTEND_BUILD_DIR.exists() else [],
+        'DIRS': [str(FRONTEND_BUILD_DIR)] if FRONTEND_BUILD_DIR.exists() else [],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -140,4 +140,33 @@ SWAGGER_SETTINGS = {
             'in': 'header'
         }
     }
+}
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+        'file': {
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'cdek_api.log',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'apps.tariffs': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
 }

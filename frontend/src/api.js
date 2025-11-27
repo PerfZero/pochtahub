@@ -26,6 +26,11 @@ export const authAPI = {
 export const tariffsAPI = {
   getCompanies: () => api.get('/tariffs/companies/'),
   calculate: (data) => api.post('/tariffs/calculate/', data),
+  analyzeImage: (formData) => api.post('/tariffs/analyze-image/', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  }),
 }
 
 export const ordersAPI = {
