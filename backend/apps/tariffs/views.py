@@ -91,14 +91,14 @@ class AnalyzeImageView(generics.GenericAPIView):
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a measurement assistant. Analyze any object in the image and estimate its dimensions. Always respond with valid JSON only, even if the object is not a package."
+                        "content": "You are a measurement assistant. Analyze objects in the image and estimate their dimensions and value. Always respond with valid JSON only, even if the object is not a package."
                     },
                     {
                         "role": "user",
                         "content": [
                             {
                                 "type": "text",
-                                "text": "Analyze the main object in this image (package, box, item, etc.). Estimate dimensions in centimeters (length, width, height) and weight in kilograms. Use reference objects (hands, phones, etc.) for scale. If you see any box-like object, estimate its dimensions. Return ONLY valid JSON: {\"length\": number, \"width\": number, \"height\": number, \"weight\": number}. All values must be numbers. If you cannot determine a dimension, estimate based on visible objects."
+                                "text": "Analyze all objects in this image (packages, boxes, items, etc.). Count how many objects you see. For each object, identify its name/type. Estimate dimensions in centimeters (length, width, height) and weight in kilograms for the main object or combined objects. Use reference objects (hands, phones, etc.) for scale. Estimate the total declared value in rubles (оценочная стоимость) for insurance purposes based on the visible items. Return ONLY valid JSON: {\"object_count\": number, \"object_names\": [\"name1\", \"name2\", ...], \"length\": number, \"width\": number, \"height\": number, \"weight\": number, \"declared_value\": number}. All numeric values must be numbers. If you cannot determine a dimension, estimate based on visible objects. The declared_value should be a reasonable estimate of the total value of all items in rubles for insurance calculation."
                             },
                             {
                                 "type": "image_url",
@@ -109,7 +109,7 @@ class AnalyzeImageView(generics.GenericAPIView):
                         ]
                     }
                 ],
-                max_tokens=500
+                max_tokens=800
             )
 
             if not response.choices or not response.choices[0].message:
@@ -136,10 +136,23 @@ class AnalyzeImageView(generics.GenericAPIView):
                     except (ValueError, TypeError):
                         return default
                 
+                def safe_int(value, default=0):
+                    if value is None:
+                        return default
+                    try:
+                        return int(value)
+                    except (ValueError, TypeError):
+                        return default
+                
                 length = safe_float(data.get('length'), 0)
                 width = safe_float(data.get('width'), 0)
                 height = safe_float(data.get('height'), 0)
                 weight = safe_float(data.get('weight'), 0)
+                object_count = safe_int(data.get('object_count'), 1)
+                object_names = data.get('object_names', [])
+                if not isinstance(object_names, list):
+                    object_names = []
+                declared_value = safe_float(data.get('declared_value'), 0)
                 
                 if length == 0 and width == 0 and height == 0 and weight == 0:
                     logger.warning(f"All values are zero. Raw response: {content}")
@@ -148,7 +161,10 @@ class AnalyzeImageView(generics.GenericAPIView):
                     'length': max(0, length),
                     'width': max(0, width),
                     'height': max(0, height),
-                    'weight': max(0, weight)
+                    'weight': max(0, weight),
+                    'object_count': object_count,
+                    'object_names': object_names,
+                    'declared_value': max(0, declared_value)
                 })
             except json.JSONDecodeError:
                 json_match = re.search(r'\{[^}]+\}', content)
@@ -163,11 +179,26 @@ class AnalyzeImageView(generics.GenericAPIView):
                         except (ValueError, TypeError):
                             return default
                     
+                    def safe_int(value, default=0):
+                        if value is None:
+                            return default
+                        try:
+                            return int(value)
+                        except (ValueError, TypeError):
+                            return default
+                    
+                    object_names = data.get('object_names', [])
+                    if not isinstance(object_names, list):
+                        object_names = []
+                    
                     return Response({
                         'length': max(0, safe_float(data.get('length'), 0)),
                         'width': max(0, safe_float(data.get('width'), 0)),
                         'height': max(0, safe_float(data.get('height'), 0)),
-                        'weight': max(0, safe_float(data.get('weight'), 0))
+                        'weight': max(0, safe_float(data.get('weight'), 0)),
+                        'object_count': safe_int(data.get('object_count'), 1),
+                        'object_names': object_names,
+                        'declared_value': max(0, safe_float(data.get('declared_value'), 0))
                     })
                 else:
                     if 'package' in content.lower() and ('not' in content.lower() or 'no' in content.lower() or 'unable' in content.lower()):
@@ -176,6 +207,9 @@ class AnalyzeImageView(generics.GenericAPIView):
                             'width': 0,
                             'height': 0,
                             'weight': 0,
+                            'object_count': 0,
+                            'object_names': [],
+                            'declared_value': 0,
                             'warning': 'На изображении не обнаружена посылка. Пожалуйста, загрузите фото посылки или коробки.'
                         })
                     return Response({'error': f'Не удалось распознать данные из ответа. Ответ: {content}'}, status=500)
