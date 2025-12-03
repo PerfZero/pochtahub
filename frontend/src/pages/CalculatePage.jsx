@@ -271,8 +271,9 @@ function CalculatePage() {
                 {index === 0 && <span className="badge cheapest">Самый дешевый</span>}
                 <div className="company-info">
                   <h3>{option.company_name}</h3>
+                  {option.tariff_name && <p className="tariff-name">{option.tariff_name}</p>}
                   <div className="price">{option.price} ₽</div>
-                  <div className="delivery-time">5 дня</div>
+                  {option.delivery_time && <div className="delivery-time">{option.delivery_time} дн.</div>}
                 </div>
                 <button 
                   onClick={() => handleSelectCompany(option)}

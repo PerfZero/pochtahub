@@ -226,6 +226,40 @@ class CDEKAdapter:
             logger.error(f'Ошибка получения информации о заказе CDEK: {str(e)}')
             raise Exception(f'Ошибка получения информации о заказе CDEK: {str(e)}')
     
+    def get_delivery_points(self, city_code: Optional[int] = None, city: Optional[str] = None, 
+                           postal_code: Optional[str] = None, type: str = 'PVZ', 
+                           size: int = 50, fias_guid: Optional[str] = None) -> List[Dict]:
+        url = f'{self.api_url}/deliverypoints'
+        params = {
+            'type': type,
+            'country_codes': 'RU',
+            'size': size
+        }
+        
+        if city_code:
+            params['city_code'] = city_code
+        elif city:
+            params['city'] = city
+        if postal_code:
+            params['postal_code'] = postal_code
+        if fias_guid:
+            params['fias_guid'] = fias_guid
+        
+        logger.info(f'Поиск ПВЗ CDEK: city_code={city_code}, city={city}, type={type}, size={size}')
+        try:
+            response = requests.get(url, headers=self._get_headers(), params=params, timeout=10)
+            logger.info(f'Ответ поиска ПВЗ CDEK: статус {response.status_code}')
+            if response.status_code == 200:
+                points = response.json()
+                result = points if isinstance(points, list) else []
+                logger.info(f'Найдено ПВЗ: {len(result)}')
+                return result[:size]
+            logger.warning(f'ПВЗ не найдены')
+            return []
+        except Exception as e:
+            logger.error(f'Ошибка поиска ПВЗ CDEK: {str(e)}')
+            return []
+    
     def delete_order(self, order_uuid: str) -> Dict:
         url = f'{self.api_url}/orders/{order_uuid}'
         logger.info(f'Отмена заказа в CDEK: {url}')

@@ -4,6 +4,7 @@ import { ordersAPI } from '../api'
 import PhoneInput from '../components/PhoneInput'
 import AddressInput from '../components/AddressInput'
 import CityInput from '../components/CityInput'
+import DeliveryPointInput from '../components/DeliveryPointInput'
 import './OrderPage.css'
 
 function OrderPage() {
@@ -27,6 +28,7 @@ function OrderPage() {
   const [recipientPhone, setRecipientPhone] = useState('')
   const [recipientAddress, setRecipientAddress] = useState(toAddress)
   const [recipientCity, setRecipientCity] = useState(toCity)
+  const [recipientDeliveryPointCode, setRecipientDeliveryPointCode] = useState('')
   
   const [loading, setLoading] = useState(false)
 
@@ -76,11 +78,16 @@ function OrderPage() {
         recipient_phone: recipientPhone,
         recipient_address: recipientAddress,
         recipient_city: recipientCity,
+        recipient_delivery_point_code: recipientDeliveryPointCode || null,
         weight: parseFloat(weight),
         transport_company_id: company.company_id,
         transport_company_name: company.company_name,
         price: company.price,
+        tariff_code: company.tariff_code,
+        tariff_name: company.tariff_name,
       }
+      console.log('Order data before submit:', orderData)
+      console.log('Recipient delivery point code:', recipientDeliveryPointCode)
       const response = await ordersAPI.createOrder(orderData)
       console.log('Order created response:', response)
       console.log('Order data:', response.data)
@@ -112,6 +119,7 @@ function OrderPage() {
       <h1>Оформление заказа</h1>
       <div className="order-summary">
         <h3>Выбранная ТК: {company.company_name}</h3>
+        {company.tariff_name && <p>Тариф: {company.tariff_name}</p>}
         <p>Стоимость: {company.price} ₽</p>
         <p>Вес: {weight} кг</p>
       </div>
@@ -191,6 +199,24 @@ function OrderPage() {
               placeholder="Начните вводить адрес..."
             />
           </div>
+          {company?.company_code === 'cdek' && (
+            <div className="form-group">
+              <label>ПВЗ (Пункт выдачи заказов)</label>
+              <DeliveryPointInput
+                city={recipientCity}
+                transportCompanyId={company.company_id}
+                value={recipientDeliveryPointCode}
+                onChange={(e) => {
+                  const value = e?.target?.value || e?.value || '';
+                  setRecipientDeliveryPointCode(value);
+                }}
+                placeholder="Выберите ПВЗ (опционально)"
+              />
+              <small style={{ color: '#666', fontSize: '12px', display: 'block', marginTop: '4px' }}>
+                Выберите пункт выдачи, если доставка осуществляется в ПВЗ
+              </small>
+            </div>
+          )}
         </div>
 
         <button type="submit" disabled={loading}>

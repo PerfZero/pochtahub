@@ -31,6 +31,7 @@ export const tariffsAPI = {
       'Content-Type': 'multipart/form-data',
     },
   }),
+  getDeliveryPoints: (params) => api.get('/tariffs/delivery-points/', { params }),
 }
 
 export const ordersAPI = {

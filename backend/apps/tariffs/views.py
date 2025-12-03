@@ -7,6 +7,7 @@ import json
 import re
 from .models import TransportCompany, Tariff
 from .calculator import TariffCalculator
+from .cdek_adapter import CDEKAdapter
 from .serializers import TransportCompanySerializer, TariffSerializer, CalculatePriceSerializer, AnalyzeImageSerializer
 
 
@@ -183,3 +184,66 @@ class AnalyzeImageView(generics.GenericAPIView):
             import traceback
             error_trace = traceback.format_exc()
             return Response({'error': f'Ошибка анализа изображения: {str(e)}', 'trace': error_trace}, status=500)
+
+
+class DeliveryPointsView(generics.GenericAPIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        city = request.query_params.get('city')
+        city_code = request.query_params.get('city_code')
+        transport_company_id = request.query_params.get('transport_company_id')
+        size = int(request.query_params.get('size', 20))
+        
+        if not city and not city_code:
+            return Response({'error': 'Необходимо указать city или city_code'}, status=400)
+        
+        if not transport_company_id:
+            return Response({'error': 'Необходимо указать transport_company_id'}, status=400)
+        
+        if size > 100:
+            size = 100
+        
+        try:
+            company = TransportCompany.objects.get(id=transport_company_id)
+            if company.api_type != 'cdek' or not company.api_account or not company.api_secure_password:
+                return Response({'error': 'Компания не поддерживает CDEK API'}, status=400)
+            
+            adapter = CDEKAdapter(
+                account=company.api_account,
+                secure_password=company.api_secure_password,
+                test_mode=False
+            )
+            
+            city_code_int = int(city_code) if city_code else None
+            
+            if city and not city_code_int:
+                city_code_int = adapter._get_city_code(city)
+            
+            request_size = size * 3 if city else size
+            
+            points = adapter.get_delivery_points(
+                city_code=city_code_int,
+                city=city,
+                type='PVZ',
+                size=request_size
+            )
+            
+            if city and points:
+                filtered_points = []
+                city_lower = city.lower().strip()
+                for point in points:
+                    point_city = point.get('location', {}).get('city', '')
+                    if point_city and city_lower in point_city.lower():
+                        filtered_points.append(point)
+                
+                if filtered_points:
+                    points = filtered_points[:size]
+                else:
+                    points = points[:size]
+            
+            return Response({'points': points, 'total': len(points)})
+        except TransportCompany.DoesNotExist:
+            return Response({'error': 'Транспортная компания не найдена'}, status=404)
+        except Exception as e:
+            return Response({'error': f'Ошибка получения ПВЗ: {str(e)}'}, status=500)

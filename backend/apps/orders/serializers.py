@@ -33,8 +33,9 @@ class OrderCreateSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'sender_name', 'sender_phone', 'sender_address', 'sender_city',
             'recipient_name', 'recipient_phone', 'recipient_address', 'recipient_city',
-            'weight', 'length', 'width', 'height', 'transport_company_id', 'transport_company_name',
-            'price', 'status', 'created_at'
+            'recipient_delivery_point_code', 'weight', 'length', 'width', 'height', 
+            'transport_company_id', 'transport_company_name',
+            'tariff_code', 'tariff_name', 'price', 'status', 'created_at'
         )
         read_only_fields = ('id', 'status', 'created_at')
 
@@ -78,7 +79,16 @@ class OrderCreateSerializer(serializers.ModelSerializer):
                     if not to_code:
                         raise Exception(f'Город назначения "{order.recipient_city}" не найден в CDEK')
                     
+                    recipient_delivery_point_code = getattr(order, 'recipient_delivery_point_code', None)
+                    
                     tariff_code = order.tariff_code if hasattr(order, 'tariff_code') and order.tariff_code else None
+                    
+                    pvz_tariff_codes = [136, 137, 138, 139, 62, 63, 233, 234, 235, 236, 237, 238, 239, 240]
+                    
+                    if recipient_delivery_point_code and tariff_code and tariff_code not in pvz_tariff_codes:
+                        logger.warning(f'Выбранный тариф {tariff_code} не поддерживает ПВЗ, пересчитываю тарифы')
+                        tariff_code = None
+                    
                     if not tariff_code:
                         tariffs = adapter.calculate_price(
                             from_city=order.sender_city,
@@ -89,23 +99,67 @@ class OrderCreateSerializer(serializers.ModelSerializer):
                             height=float(order.height) if order.height else None
                         )
                         if tariffs:
-                            tariff_code = tariffs[0].get('tariff_code')
+                            if recipient_delivery_point_code:
+                                pvz_tariffs = [t for t in tariffs if t.get('tariff_code') in pvz_tariff_codes]
+                                if pvz_tariffs:
+                                    tariff_code = pvz_tariffs[0].get('tariff_code')
+                                    logger.info(f'Выбран тариф для ПВЗ: {tariff_code}')
+                                else:
+                                    logger.warning(f'Не найдено тарифов для ПВЗ, используем первый доступный')
+                                    tariff_code = tariffs[0].get('tariff_code')
+                            else:
+                                tariff_code = tariffs[0].get('tariff_code')
                     
                     package_number = f"PKG-{order.id}"
+                    
+                    to_location = {
+                        'code': to_code,
+                        'address': order.recipient_address or order.recipient_city
+                    }
+                    
+                    delivery_point_value = None
+                    if recipient_delivery_point_code:
+                        if '-' in recipient_delivery_point_code:
+                            delivery_point_value = recipient_delivery_point_code
+                            logger.info(f'Используем UUID ПВЗ: {delivery_point_value}')
+                        else:
+                            try:
+                                points = adapter.get_delivery_points(city=order.recipient_city, size=100)
+                                point = next((p for p in points if p.get('code') == recipient_delivery_point_code), None)
+                                if point and point.get('uuid'):
+                                    delivery_point_value = point.get('uuid')
+                                    logger.info(f'Найден UUID ПВЗ: {delivery_point_value} по коду: {recipient_delivery_point_code}')
+                                else:
+                                    delivery_point_value = recipient_delivery_point_code
+                                    logger.warning(f'ПВЗ с кодом {recipient_delivery_point_code} не найден, используем код как есть')
+                            except Exception as e:
+                                logger.error(f'Ошибка поиска ПВЗ: {str(e)}, используем код')
+                                delivery_point_value = recipient_delivery_point_code
+                    
+                    if delivery_point_value:
+                        to_location['delivery_point'] = delivery_point_value
+                    
+                    items_data = {
+                        'name': 'Посылка',
+                        'ware_key': f'ITEM-{order.id}',
+                        'cost': float(order.price),
+                        'weight': int(float(order.weight) * 1000),
+                        'amount': 1,
+                        'payment': {'value': 0.0 if recipient_delivery_point_code else float(order.price)}
+                    }
+                    
                     order_data = {
                         'tariff_code': tariff_code or 136,
                         'from_location': {
                             'code': from_code,
                             'address': order.sender_address or order.sender_city
                         },
-                        'to_location': {
-                            'code': to_code,
-                            'address': order.recipient_address or order.recipient_city
-                        },
+                        'to_location': to_location,
                         'recipient': {
                             'name': order.recipient_name,
                             'phones': [{'number': order.recipient_phone.replace(' ', '').replace('(', '').replace(')', '').replace('-', '')}]
                         },
+                        'recipient_delivery_point': delivery_point_value if delivery_point_value else None,
                         'sender': {
                             'name': order.sender_name,
                             'phones': [{'number': order.sender_phone.replace(' ', '').replace('(', '').replace(')', '').replace('-', '')}]
@@ -116,13 +170,7 @@ class OrderCreateSerializer(serializers.ModelSerializer):
                             'length': int(float(order.length)) if order.length else 10,
                             'width': int(float(order.width)) if order.width else 10,
                             'height': int(float(order.height)) if order.height else 10,
-                            'items': [{
-                                'name': 'Посылка',
-                                'ware_key': f'ITEM-{order.id}',
-                                'cost': float(order.price),
-                                'weight': int(float(order.weight) * 1000),
-                                'amount': 1
-                            }]
+                            'items': [items_data]
                         }]
                     }
                     
