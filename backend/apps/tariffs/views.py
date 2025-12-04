@@ -276,8 +276,85 @@ class DeliveryPointsView(generics.GenericAPIView):
                 else:
                     points = points[:size]
             
+            for point in points:
+                if 'work_time_list' in point and 'work_time' not in point:
+                    work_time_list = point.get('work_time_list', [])
+                    work_time = []
+                    for day_info in work_time_list:
+                        if 'time' in day_info:
+                            work_time.append({
+                                'day': day_info.get('day', 0),
+                                'time': day_info.get('time', '')
+                            })
+                    point['work_time'] = work_time
+            
             return Response({'points': points, 'total': len(points)})
         except TransportCompany.DoesNotExist:
             return Response({'error': 'Транспортная компания не найдена'}, status=404)
         except Exception as e:
             return Response({'error': f'Ошибка получения ПВЗ: {str(e)}'}, status=500)
+
+
+class GetTariffsView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAdminUser]
+
+    def get(self, request, *args, **kwargs):
+        transport_company_id = request.query_params.get('transport_company_id')
+        from_city = request.query_params.get('from_city')
+        to_city = request.query_params.get('to_city')
+        weight = request.query_params.get('weight', '1.0')
+        api_account = request.query_params.get('api_account')
+        api_secure_password = request.query_params.get('api_secure_password')
+        
+        if not from_city or not to_city:
+            return Response({'error': 'Необходимо указать from_city и to_city'}, status=400)
+        
+        account = None
+        password = None
+        
+        if transport_company_id:
+            try:
+                company = TransportCompany.objects.get(id=transport_company_id)
+                if company.api_type != 'cdek' or not company.api_account or not company.api_secure_password:
+                    return Response({'error': 'Компания не поддерживает CDEK API'}, status=400)
+                account = company.api_account
+                password = company.api_secure_password
+            except TransportCompany.DoesNotExist:
+                return Response({'error': 'Транспортная компания не найдена'}, status=404)
+        elif api_account and api_secure_password:
+            account = api_account
+            password = api_secure_password
+        else:
+            return Response({'error': 'Необходимо указать transport_company_id или api_account и api_secure_password'}, status=400)
+        
+        try:
+            adapter = CDEKAdapter(
+                account=account,
+                secure_password=password,
+                test_mode=False
+            )
+            
+            tariffs = adapter.calculate_price(
+                from_city=from_city,
+                to_city=to_city,
+                weight=float(weight),
+                length=10,
+                width=10,
+                height=10
+            )
+            
+            seen_codes = set()
+            tariff_list = []
+            for tariff in tariffs:
+                tariff_code = tariff.get('tariff_code')
+                tariff_name = tariff.get('tariff_name', '')
+                if tariff_code and tariff_code not in seen_codes:
+                    seen_codes.add(tariff_code)
+                    tariff_list.append({
+                        'code': tariff_code,
+                        'name': tariff_name
+                    })
+            
+            return Response({'tariffs': tariff_list})
+        except Exception as e:
+            return Response({'error': f'Ошибка получения тарифов: {str(e)}'}, status=500)

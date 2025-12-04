@@ -16,6 +16,7 @@ class OrderSerializer(serializers.ModelSerializer):
         model = Order
         fields = (
             'id', 'status', 'sender_name', 'sender_phone', 'sender_address', 'sender_city',
+            'sender_company', 'sender_tin', 'sender_contragent_type',
             'recipient_name', 'recipient_phone', 'recipient_address', 'recipient_city',
             'weight', 'length', 'width', 'height', 'transport_company_id', 'transport_company_name',
             'price', 'external_order_uuid', 'external_order_number', 'created_at', 'updated_at', 'events'
@@ -32,6 +33,7 @@ class OrderCreateSerializer(serializers.ModelSerializer):
         model = Order
         fields = (
             'id', 'sender_name', 'sender_phone', 'sender_address', 'sender_city',
+            'sender_company', 'sender_tin', 'sender_contragent_type',
             'recipient_name', 'recipient_phone', 'recipient_address', 'recipient_city',
             'recipient_delivery_point_code', 'weight', 'length', 'width', 'height', 
             'transport_company_id', 'transport_company_name',
@@ -148,39 +150,99 @@ class OrderCreateSerializer(serializers.ModelSerializer):
                         'payment': {'value': 0.0 if recipient_delivery_point_code else float(order.price)}
                     }
                     
+                    sender_company = order.sender_company or user.sender_company or order.sender_name.strip()
+                    
+                    sender_data = {
+                        'name': order.sender_name.strip(),
+                        'company': sender_company,
+                        'phones': [{'number': order.sender_phone.replace(' ', '').replace('(', '').replace(')', '').replace('-', '')}]
+                    }
+                    
+                    contragent_type = order.sender_contragent_type or user.sender_contragent_type
+                    if contragent_type:
+                        sender_data['contragent_type'] = contragent_type
+                    
+                    sender_tin = order.sender_tin or user.sender_tin
+                    if sender_tin:
+                        sender_data['tin'] = sender_tin
+                    
+                    seller_data = None
+                    if sender_company or sender_tin:
+                        seller_data = {
+                            'name': sender_company or order.sender_name.strip()
+                        }
+                        if sender_tin:
+                            seller_data['inn'] = sender_tin
+                        seller_data['phone'] = order.sender_phone.replace(' ', '').replace('(', '').replace(')', '').replace('-', '')
+                        seller_data['address'] = order.sender_address or order.sender_city
+                    
                     order_data = {
+                        'type': 1,
+                        'number': str(order.id),
                         'tariff_code': tariff_code or 136,
-                        'from_location': {
-                            'code': from_code,
-                            'address': order.sender_address or order.sender_city
-                        },
-                        'to_location': to_location,
+                        'sender': sender_data,
                         'recipient': {
                             'name': order.recipient_name,
                             'phones': [{'number': order.recipient_phone.replace(' ', '').replace('(', '').replace(')', '').replace('-', '')}]
                         },
-                        'recipient_delivery_point': delivery_point_value if delivery_point_value else None,
-                        'sender': {
-                            'name': order.sender_name,
-                            'phones': [{'number': order.sender_phone.replace(' ', '').replace('(', '').replace(')', '').replace('-', '')}]
+                        'from_location': {
+                            'code': from_code,
+                            'address': order.sender_address or order.sender_city
                         },
                         'packages': [{
-                            'number': package_number,
+                            'number': str(order.id),
                             'weight': int(float(order.weight) * 1000),
                             'length': int(float(order.length)) if order.length else 10,
                             'width': int(float(order.width)) if order.width else 10,
                             'height': int(float(order.height)) if order.height else 10,
+                            'comment': f'Посылка #{order.id}',
                             'items': [items_data]
                         }]
                     }
+                    
+                    if delivery_point_value:
+                        order_data['delivery_point'] = delivery_point_value
+                    else:
+                        order_data['to_location'] = {
+                            'code': to_code,
+                            'address': order.recipient_address or order.recipient_city
+                        }
+                    
+                    if seller_data:
+                        order_data['seller'] = seller_data
                     
                     cdek_response = adapter.create_order(order_data)
                     logger.info(f'Заказ создан в CDEK: {cdek_response}')
                     
                     if 'entity' in cdek_response and 'uuid' in cdek_response['entity']:
                         order.external_order_uuid = cdek_response['entity']['uuid']
-                    if 'entity' in cdek_response and 'cdek_number' in cdek_response['entity']:
-                        order.external_order_number = cdek_response['entity'].get('cdek_number')
+                        if 'cdek_number' in cdek_response['entity']:
+                            order.external_order_number = cdek_response['entity'].get('cdek_number')
+                            logger.info(f'Номер заказа CDEK получен сразу: {order.external_order_number}')
+                        else:
+                            import time
+                            max_attempts = 5
+                            for attempt in range(1, max_attempts + 1):
+                                time.sleep(2 * attempt)
+                                try:
+                                    order_info = adapter.get_order_info(order_uuid=order.external_order_uuid)
+                                    logger.info(f'Попытка {attempt}: Информация о заказе CDEK получена')
+                                    if 'entity' in order_info and 'cdek_number' in order_info['entity']:
+                                        cdek_number = order_info['entity'].get('cdek_number')
+                                        if cdek_number:
+                                            order.external_order_number = cdek_number
+                                            logger.info(f'Получен номер заказа CDEK: {order.external_order_number}')
+                                            break
+                                    if attempt < max_attempts:
+                                        logger.info(f'Номер заказа CDEK еще не присвоен, попытка {attempt}/{max_attempts}')
+                                    else:
+                                        logger.warning('Номер заказа CDEK не получен после всех попыток')
+                                except Exception as e:
+                                    logger.warning(f'Попытка {attempt}: Не удалось получить номер заказа CDEK: {str(e)}')
+                                    if attempt < max_attempts:
+                                        continue
+                                    else:
+                                        logger.error(f'Не удалось получить номер заказа CDEK после {max_attempts} попыток')
                     
                     has_errors = False
                     error_messages = []
@@ -201,12 +263,53 @@ class OrderCreateSerializer(serializers.ModelSerializer):
                             metadata={'cdek_response': cdek_response, 'errors': error_messages}
                         )
                     else:
-                        OrderEvent.objects.create(
-                            order=order,
-                            event_type='shipped',
-                            description=f'Заказ создан в CDEK. UUID: {order.external_order_uuid}',
-                            metadata={'cdek_response': cdek_response}
-                        )
+                        if not delivery_point_value:
+                            try:
+                                from datetime import datetime, timedelta
+                                tomorrow = datetime.now() + timedelta(days=1)
+                                courier_date = tomorrow.strftime('%Y-%m-%d')
+                                courier_time_from = '10:00'
+                                courier_time_to = '18:00'
+                                
+                                courier_result = adapter._call_courier(
+                                    order_id=order.external_order_uuid,
+                                    courier_date=courier_date,
+                                    courier_time_from=courier_time_from,
+                                    courier_time_to=courier_time_to
+                                )
+                                
+                                if courier_result:
+                                    logger.info(f'Курьер успешно вызван для заказа {order.external_order_uuid}')
+                                    OrderEvent.objects.create(
+                                        order=order,
+                                        event_type='shipped',
+                                        description=f'Заказ создан в CDEK. UUID: {order.external_order_uuid}. Курьер вызван на {courier_date} с {courier_time_from} до {courier_time_to}',
+                                        metadata={'cdek_response': cdek_response, 'courier_called': True, 'courier_date': courier_date}
+                                    )
+                                else:
+                                    logger.warning(f'Не удалось вызвать курьера для заказа {order.external_order_uuid}')
+                                    OrderEvent.objects.create(
+                                        order=order,
+                                        event_type='shipped',
+                                        description=f'Заказ создан в CDEK. UUID: {order.external_order_uuid}. Не удалось вызвать курьера',
+                                        metadata={'cdek_response': cdek_response, 'courier_called': False}
+                                    )
+                            except Exception as e:
+                                logger.error(f'Ошибка вызова курьера: {str(e)}', exc_info=True)
+                                OrderEvent.objects.create(
+                                    order=order,
+                                    event_type='shipped',
+                                    description=f'Заказ создан в CDEK. UUID: {order.external_order_uuid}. Ошибка вызова курьера: {str(e)}',
+                                    metadata={'cdek_response': cdek_response, 'courier_error': str(e)}
+                                )
+                        else:
+                            logger.info(f'Заказ в ПВЗ, курьер не требуется')
+                            OrderEvent.objects.create(
+                                order=order,
+                                event_type='shipped',
+                                description=f'Заказ создан в CDEK. UUID: {order.external_order_uuid}. Доставка в ПВЗ: {delivery_point_value}',
+                                metadata={'cdek_response': cdek_response, 'delivery_point': delivery_point_value}
+                            )
                     
                     order.save()
             except Exception as e:

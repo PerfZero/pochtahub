@@ -21,6 +21,9 @@ class Order(models.Model):
     sender_phone = models.CharField(max_length=20, verbose_name='Телефон отправителя')
     sender_address = models.TextField(verbose_name='Адрес отправителя')
     sender_city = models.CharField(max_length=100, verbose_name='Город отправителя')
+    sender_company = models.CharField(max_length=200, blank=True, null=True, verbose_name='Название компании отправителя')
+    sender_tin = models.CharField(max_length=20, blank=True, null=True, verbose_name='ИНН отправителя')
+    sender_contragent_type = models.CharField(max_length=20, blank=True, null=True, choices=[('LEGAL_ENTITY', 'Юридическое лицо'), ('INDIVIDUAL', 'Физическое лицо')], verbose_name='Тип контрагента отправителя')
 
     recipient_name = models.CharField(max_length=200, verbose_name='Имя получателя')
     recipient_phone = models.CharField(max_length=20, verbose_name='Телефон получателя')

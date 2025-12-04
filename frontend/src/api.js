@@ -39,6 +39,9 @@ export const ordersAPI = {
   createOrder: (data) => api.post('/orders/', data),
   getOrder: (id) => api.get(`/orders/${id}/`),
   updateOrder: (id, data) => api.patch(`/orders/${id}/`, data),
+  updateStatusFromCdek: (id) => api.post(`/orders/${id}/update-status/`),
+  getOrderTracking: (id) => api.get(`/orders/${id}/tracking/`),
+  getOrderDocuments: (id) => api.get(`/orders/${id}/documents/`),
 }
 
 export const paymentAPI = {

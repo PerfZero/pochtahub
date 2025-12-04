@@ -13,6 +13,7 @@ class TransportCompany(models.Model):
     api_type = models.CharField(max_length=20, choices=API_TYPE_CHOICES, default='internal', verbose_name='Тип интеграции')
     api_account = models.CharField(max_length=200, blank=True, null=True, verbose_name='API Account (CDEK)')
     api_secure_password = models.CharField(max_length=200, blank=True, null=True, verbose_name='API Secure Password (CDEK)')
+    api_developer_key = models.CharField(max_length=200, blank=True, null=True, verbose_name='Developer Key (CDEK) - для работы от третьих лиц')
     default_tariff_code = models.IntegerField(null=True, blank=True, verbose_name='Код тарифа CDEK по умолчанию')
     default_tariff_name = models.CharField(max_length=200, blank=True, verbose_name='Название тарифа по умолчанию')
     is_active = models.BooleanField(default=True, verbose_name='Активна')

@@ -94,13 +94,6 @@ function AddressInput({ value = '', onChange, onCityChange, placeholder = 'На�
         value={value}
         onChange={onChange}
         placeholder={placeholder}
-        style={{
-          width: '100%',
-          padding: '8px 12px',
-          border: '1px solid #ddd',
-          borderRadius: '4px',
-          fontSize: '14px',
-        }}
       />
     )
   }
@@ -124,28 +117,10 @@ function AddressInput({ value = '', onChange, onCityChange, placeholder = 'На�
           }
           return 'Начните вводить адрес (минимум 3 символа)'
         }}
-        styles={{
-          control: (base) => ({
-            ...base,
-            minHeight: '38px',
-            border: '1px solid #ddd',
-          }),
-        }}
       />
       {hasNoOptions && (
-        <div style={{ marginTop: '8px', fontSize: '12px', color: '#666' }}>
-          <button
-            type="button"
-            onClick={handleManualInput}
-            style={{
-              background: '#f0f0f0',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-              padding: '4px 8px',
-              cursor: 'pointer',
-              fontSize: '12px'
-            }}
-          >
+        <div>
+          <button type="button" onClick={handleManualInput}>
             Использовать "{inputValue}"
           </button>
         </div>

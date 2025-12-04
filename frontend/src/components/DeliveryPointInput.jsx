@@ -21,9 +21,15 @@ function DeliveryPointInput({ city, transportCompanyId, value, onChange, placeho
       })
       
       const points = response.data?.points || []
-      const activePoints = points.filter(point => 
-        point.work_time && point.work_time.length > 0
-      )
+      const activePoints = points.filter(point => {
+        if (point.work_time && Array.isArray(point.work_time) && point.work_time.length > 0) {
+          return true
+        }
+        if (point.work_time_list && Array.isArray(point.work_time_list) && point.work_time_list.length > 0) {
+          return true
+        }
+        return point.code || point.uuid
+      })
       const formattedOptions = activePoints.map((point) => ({
         value: point.code || point.uuid,
         label: `${point.name || point.code || ''} - ${point.location?.address || point.address || ''}`,

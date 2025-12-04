@@ -23,6 +23,9 @@ function OrderPage() {
   const [senderPhone, setSenderPhone] = useState('')
   const [senderAddress, setSenderAddress] = useState(fromAddress)
   const [senderCity, setSenderCity] = useState(fromCity)
+  const [senderCompany, setSenderCompany] = useState('')
+  const [senderTin, setSenderTin] = useState('')
+  const [senderContragentType, setSenderContragentType] = useState('')
   
   const [recipientName, setRecipientName] = useState('')
   const [recipientPhone, setRecipientPhone] = useState('')
@@ -31,23 +34,57 @@ function OrderPage() {
   const [recipientDeliveryPointCode, setRecipientDeliveryPointCode] = useState('')
   
   const [loading, setLoading] = useState(false)
+  const [checkingAuth, setCheckingAuth] = useState(true)
 
   useEffect(() => {
-    const token = localStorage.getItem('access_token')
-    if (!token) {
-      navigate('/login', { 
-        state: { 
-          returnTo: '/order', 
-          orderData: { company, weight, fromAddress, toAddress, fromCity, toCity } 
-        } 
-      })
-      return
+    const checkAuth = async () => {
+      const token = localStorage.getItem('access_token')
+      if (!token) {
+        navigate('/login', { 
+          state: { 
+            returnTo: '/order', 
+            orderData: { company, weight, fromAddress, toAddress, fromCity, toCity } 
+          } 
+        })
+        return
+      }
+      
+      try {
+        const response = await ordersAPI.getOrders()
+        if (response.status !== 200) {
+          localStorage.removeItem('access_token')
+          localStorage.removeItem('refresh_token')
+          navigate('/login', { 
+            state: { 
+              returnTo: '/order', 
+              orderData: { company, weight, fromAddress, toAddress, fromCity, toCity } 
+            } 
+          })
+          return
+        }
+      } catch (error) {
+        if (error.response?.status === 401) {
+          localStorage.removeItem('access_token')
+          localStorage.removeItem('refresh_token')
+          navigate('/login', { 
+            state: { 
+              returnTo: '/order', 
+              orderData: { company, weight, fromAddress, toAddress, fromCity, toCity } 
+            } 
+          })
+          return
+        }
+      }
+      
+      if (!company) {
+        navigate('/calculate')
+        return
+      }
+      
+      setCheckingAuth(false)
     }
     
-    if (!company) {
-      navigate('/calculate')
-      return
-    }
+    checkAuth()
   }, [company, weight, fromAddress, toAddress, fromCity, toCity, navigate])
 
   useEffect(() => {
@@ -74,6 +111,9 @@ function OrderPage() {
         sender_phone: senderPhone,
         sender_address: senderAddress,
         sender_city: senderCity,
+        sender_company: senderCompany || null,
+        sender_tin: senderTin || null,
+        sender_contragent_type: senderContragentType || null,
         recipient_name: recipientName,
         recipient_phone: recipientPhone,
         recipient_address: recipientAddress,
@@ -110,8 +150,14 @@ function OrderPage() {
     }
   }
 
-  if (!company) {
-    return null
+  if (checkingAuth || !company) {
+    return (
+      <div className="order-page">
+        <div style={{ textAlign: 'center', padding: '50px' }}>
+          <p>Проверка авторизации...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -161,6 +207,35 @@ function OrderPage() {
               placeholder="Начните вводить адрес..."
             />
           </div>
+          <div className="form-group">
+            <label>Тип контрагента</label>
+            <select
+              value={senderContragentType}
+              onChange={(e) => setSenderContragentType(e.target.value)}
+            >
+              <option value="">Выберите тип</option>
+              <option value="INDIVIDUAL">Физическое лицо</option>
+              <option value="LEGAL_ENTITY">Юридическое лицо</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Название компании</label>
+            <input
+              type="text"
+              value={senderCompany}
+              onChange={(e) => setSenderCompany(e.target.value)}
+              placeholder="Введите название компании"
+            />
+          </div>
+          <div className="form-group">
+            <label>ИНН</label>
+            <input
+              type="text"
+              value={senderTin}
+              onChange={(e) => setSenderTin(e.target.value)}
+              placeholder="Введите ИНН"
+            />
+          </div>
         </div>
 
         <div className="form-section">
@@ -199,7 +274,7 @@ function OrderPage() {
               placeholder="Начните вводить адрес..."
             />
           </div>
-          {company?.company_code === 'cdek' && (
+          {(company?.company_code === 'cdek' || company?.company_name?.toLowerCase().includes('cdek')) && (
             <div className="form-group">
               <label>ПВЗ (Пункт выдачи заказов)</label>
               <DeliveryPointInput

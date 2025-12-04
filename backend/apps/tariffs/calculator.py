@@ -32,11 +32,25 @@ class TariffCalculator:
                         weight=float(weight),
                         length=float(dimensions.get('length', 0)) if dimensions.get('length') else None,
                         width=float(dimensions.get('width', 0)) if dimensions.get('width') else None,
-                        height=float(dimensions.get('height', 0)) if dimensions.get('height') else None
+                        height=float(dimensions.get('height', 0)) if dimensions.get('height') else None,
+                        tariff_code=company.default_tariff_code
                     )
                     logger.info(f'CDEK API вернул {len(cdek_results)} тарифов')
+                    
+                    if company.default_tariff_code:
+                        filtered_results = [r for r in cdek_results if r.get('tariff_code') == company.default_tariff_code]
+                        if filtered_results:
+                            cdek_results = filtered_results
+                            logger.info(f'Отфильтровано по тарифу {company.default_tariff_code}: {len(cdek_results)} тарифов')
+                        else:
+                            logger.warning(f'Тариф {company.default_tariff_code} не найден в результатах CDEK')
+                    
                     for result in cdek_results:
                         result['company_id'] = company.id
+                        result['company_code'] = company.code
+                        result['company_name'] = company.name
+                        if company.default_tariff_name and not result.get('tariff_name'):
+                            result['tariff_name'] = company.default_tariff_name
                         results.append(result)
                 except Exception as e:
                     logger.error(f'Ошибка расчета CDEK для компании {company.name}: {str(e)}', exc_info=True)

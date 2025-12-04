@@ -82,6 +82,9 @@ function CabinetPage() {
                   </div>
                   <p>ТК: {order.transport_company_name}</p>
                   <p>Стоимость: {order.price} ₽</p>
+                  {order.external_order_number && (
+                    <p>Номер CDEK: {order.external_order_number}</p>
+                  )}
                   <p>Дата: {new Date(order.created_at).toLocaleDateString('ru-RU')}</p>
                   <Link to={`/confirmation/${order.id}`} className="view-order">
                     Подробнее
