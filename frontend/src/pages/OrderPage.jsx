@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { ordersAPI } from '../api'
 import PhoneInput from '../components/PhoneInput'
 import AddressInput from '../components/AddressInput'
 import CityInput from '../components/CityInput'
 import DeliveryPointInput from '../components/DeliveryPointInput'
-import './OrderPage.css'
+import logoSvg from '../assets/images/logo.svg'
+import iconVerify from '../assets/images/icon-verify.svg'
 
 function OrderPage() {
   const location = useLocation()
@@ -126,25 +127,17 @@ function OrderPage() {
         tariff_code: company.tariff_code,
         tariff_name: company.tariff_name,
       }
-      console.log('Order data before submit:', orderData)
-      console.log('Recipient delivery point code:', recipientDeliveryPointCode)
       const response = await ordersAPI.createOrder(orderData)
-      console.log('Order created response:', response)
-      console.log('Order data:', response.data)
       
       const orderId = response.data?.id || response.data?.pk
-      console.log('Order ID:', orderId)
       
       if (orderId) {
         navigate(`/confirmation/${orderId}`)
       } else {
-        console.error('ID заказа не найден в ответе:', response.data)
         alert('Ошибка: ID заказа не получен')
         setLoading(false)
       }
     } catch (error) {
-      console.error('Ошибка создания заказа:', error)
-      console.error('Error response:', error.response?.data)
       alert(`Ошибка создания заказа: ${error.response?.data?.detail || error.message}`)
       setLoading(false)
     }
@@ -152,155 +145,222 @@ function OrderPage() {
 
   if (checkingAuth || !company) {
     return (
-      <div className="order-page">
-        <div style={{ textAlign: 'center', padding: '50px' }}>
-          <p>Проверка авторизации...</p>
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-3 border-[#F4EEE2] border-t-[#0077FE] rounded-full animate-spin"></div>
+          <p className="text-[#2D2D2D]">Проверка авторизации...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="order-page">
-      <h1>Оформление заказа</h1>
-      <div className="order-summary">
-        <h3>Выбранная ТК: {company.company_name}</h3>
-        {company.tariff_name && <p>Тариф: {company.tariff_name}</p>}
-        <p>Стоимость: {company.price} ₽</p>
-        <p>Вес: {weight} кг</p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="order-form">
-        <div className="form-section">
-          <h2>Данные отправителя</h2>
-          <div className="form-group">
-            <label>Имя *</label>
-            <input
-              type="text"
-              value={senderName}
-              onChange={(e) => setSenderName(e.target.value)}
-              required
-            />
+    <div className="min-h-screen flex flex-col bg-[#F9F9F9]">
+      <header className="w-full bg-white border-b border-[#C8C7CC]">
+        <div className="w-full max-w-[1128px] mx-auto flex items-center gap-6 p-6">
+          <Link to="/">
+            <img src={logoSvg} alt="PochtaHub" className="h-8" />
+          </Link>
+          <div className="flex items-center gap-1">
+            <img src={iconVerify} alt="" className="w-6 h-6" />
+            <span className="text-xs text-[#2D2D2D]">Агрегатор транспортных компаний</span>
           </div>
-          <div className="form-group">
-            <label>Телефон *</label>
-            <PhoneInput
-              value={senderPhone}
-              onChange={(e) => setSenderPhone(e.target.value)}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>Город *</label>
-            <CityInput
-              value={senderCity}
-              onChange={(e) => setSenderCity(e.target.value)}
-              placeholder="Начните вводить город..."
-            />
-          </div>
-          <div className="form-group">
-            <label>Адрес *</label>
-            <AddressInput
-              value={senderAddress}
-              onChange={(e) => setSenderAddress(e.target.value)}
-              onCityChange={(e) => setSenderCity(e.target.value)}
-              placeholder="Начните вводить адрес..."
-            />
-          </div>
-          <div className="form-group">
-            <label>Тип контрагента</label>
-            <select
-              value={senderContragentType}
-              onChange={(e) => setSenderContragentType(e.target.value)}
-            >
-              <option value="">Выберите тип</option>
-              <option value="INDIVIDUAL">Физическое лицо</option>
-              <option value="LEGAL_ENTITY">Юридическое лицо</option>
-            </select>
-          </div>
-          <div className="form-group">
-            <label>Название компании</label>
-            <input
-              type="text"
-              value={senderCompany}
-              onChange={(e) => setSenderCompany(e.target.value)}
-              placeholder="Введите название компании"
-            />
-          </div>
-          <div className="form-group">
-            <label>ИНН</label>
-            <input
-              type="text"
-              value={senderTin}
-              onChange={(e) => setSenderTin(e.target.value)}
-              placeholder="Введите ИНН"
-            />
+          <div className="ml-auto flex items-center gap-3">
+            <Link to="/cabinet" className="px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#F4EEE2] text-[#2D2D2D]">
+              Личный кабинет
+            </Link>
           </div>
         </div>
+      </header>
 
-        <div className="form-section">
-          <h2>Данные получателя</h2>
-          <div className="form-group">
-            <label>Имя *</label>
-            <input
-              type="text"
-              value={recipientName}
-              onChange={(e) => setRecipientName(e.target.value)}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>Телефон *</label>
-            <PhoneInput
-              value={recipientPhone}
-              onChange={(e) => setRecipientPhone(e.target.value)}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>Город *</label>
-            <CityInput
-              value={recipientCity}
-              onChange={(e) => setRecipientCity(e.target.value)}
-              placeholder="Начните вводить город..."
-            />
-          </div>
-          <div className="form-group">
-            <label>Адрес *</label>
-            <AddressInput
-              value={recipientAddress}
-              onChange={(e) => setRecipientAddress(e.target.value)}
-              onCityChange={(e) => setRecipientCity(e.target.value)}
-              placeholder="Начните вводить адрес..."
-            />
-          </div>
-          {(company?.company_code === 'cdek' || company?.company_name?.toLowerCase().includes('cdek')) && (
-            <div className="form-group">
-              <label>ПВЗ (Пункт выдачи заказов)</label>
-              <DeliveryPointInput
-                city={recipientCity}
-                transportCompanyId={company.company_id}
-                value={recipientDeliveryPointCode}
-                onChange={(e) => {
-                  const value = e?.target?.value || e?.value || '';
-                  setRecipientDeliveryPointCode(value);
-                }}
-                placeholder="Выберите ПВЗ (опционально)"
-              />
-              <small style={{ color: '#666', fontSize: '12px', display: 'block', marginTop: '4px' }}>
-                Выберите пункт выдачи, если доставка осуществляется в ПВЗ
-              </small>
+      <main className="flex-1 w-full max-w-[1128px] mx-auto px-6 py-8">
+        <div className="mb-6">
+          <Link to="/calculate" className="text-[#0077FE] text-sm font-medium hover:underline">
+            ← Назад к расчёту
+          </Link>
+        </div>
+
+        <div className="bg-white border border-[#C8C7CC] rounded-2xl p-8 mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-[#2D2D2D] mb-2">Оформление заказа</h1>
+              <p className="text-[#858585]">{company.company_name} {company.tariff_name && `• ${company.tariff_name}`}</p>
             </div>
-          )}
+            <div className="text-right">
+              <div className="text-3xl font-bold text-[#0077FE]">{company.price} ₽</div>
+              <p className="text-sm text-[#858585]">Вес: {weight} кг</p>
+            </div>
+          </div>
         </div>
 
-        <button type="submit" disabled={loading}>
-          {loading ? 'Создание заказа...' : 'Создать заказ'}
-        </button>
-      </form>
+        <form onSubmit={handleSubmit}>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div className="bg-white border border-[#C8C7CC] rounded-2xl p-6">
+              <h2 className="text-lg font-bold text-[#2D2D2D] mb-6">Данные отправителя</h2>
+              
+              <div className="flex flex-col gap-4">
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={senderName}
+                    onChange={(e) => setSenderName(e.target.value)}
+                    className="peer w-full px-4 pt-6 pb-2 border border-[#C8C7CC] rounded-xl text-base text-[#2D2D2D] focus:outline-none focus:border-[#0077FE] placeholder-transparent"
+                    placeholder="Имя"
+                    required
+                  />
+                  <label className="absolute left-4 top-1/2 -translate-y-1/2 text-[#858585] text-base transition-all duration-200 pointer-events-none peer-focus:top-3 peer-focus:text-xs peer-focus:text-[#0077FE] peer-[:not(:placeholder-shown)]:top-3 peer-[:not(:placeholder-shown)]:text-xs">
+                    Имя *
+                  </label>
+                </div>
+
+                <PhoneInput
+                  value={senderPhone}
+                  onChange={(e) => setSenderPhone(e.target.value)}
+                  label="Телефон"
+                  required
+                />
+
+                <CityInput
+                  value={senderCity}
+                  onChange={(e) => setSenderCity(e.target.value)}
+                  label="Город"
+                  required
+                />
+
+                <AddressInput
+                  value={senderAddress}
+                  onChange={(e) => setSenderAddress(e.target.value)}
+                  onCityChange={(e) => setSenderCity(e.target.value)}
+                  label="Адрес"
+                  required
+                />
+
+                <div className="relative">
+                  <select
+                    value={senderContragentType}
+                    onChange={(e) => setSenderContragentType(e.target.value)}
+                    className="peer w-full px-4 pt-6 pb-2 border border-[#C8C7CC] rounded-xl text-base text-[#2D2D2D] focus:outline-none focus:border-[#0077FE] bg-white appearance-none"
+                  >
+                    <option value=""></option>
+                    <option value="INDIVIDUAL">Физическое лицо</option>
+                    <option value="LEGAL_ENTITY">Юридическое лицо</option>
+                  </select>
+                  <label className={`absolute left-4 transition-all duration-200 pointer-events-none ${
+                    senderContragentType 
+                      ? 'top-3 text-xs text-[#858585]' 
+                      : 'top-1/2 -translate-y-1/2 text-base text-[#858585]'
+                  }`}>
+                    Тип контрагента
+                  </label>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <svg width="12" height="8" viewBox="0 0 12 8" fill="none">
+                      <path d="M1 1.5L6 6.5L11 1.5" stroke="#858585" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={senderCompany}
+                    onChange={(e) => setSenderCompany(e.target.value)}
+                    className="peer w-full px-4 pt-6 pb-2 border border-[#C8C7CC] rounded-xl text-base text-[#2D2D2D] focus:outline-none focus:border-[#0077FE] placeholder-transparent"
+                    placeholder="Название компании"
+                  />
+                  <label className="absolute left-4 top-1/2 -translate-y-1/2 text-[#858585] text-base transition-all duration-200 pointer-events-none peer-focus:top-3 peer-focus:text-xs peer-focus:text-[#0077FE] peer-[:not(:placeholder-shown)]:top-3 peer-[:not(:placeholder-shown)]:text-xs">
+                    Название компании
+                  </label>
+                </div>
+
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={senderTin}
+                    onChange={(e) => setSenderTin(e.target.value)}
+                    className="peer w-full px-4 pt-6 pb-2 border border-[#C8C7CC] rounded-xl text-base text-[#2D2D2D] focus:outline-none focus:border-[#0077FE] placeholder-transparent"
+                    placeholder="ИНН"
+                  />
+                  <label className="absolute left-4 top-1/2 -translate-y-1/2 text-[#858585] text-base transition-all duration-200 pointer-events-none peer-focus:top-3 peer-focus:text-xs peer-focus:text-[#0077FE] peer-[:not(:placeholder-shown)]:top-3 peer-[:not(:placeholder-shown)]:text-xs">
+                    ИНН
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white border border-[#C8C7CC] rounded-2xl p-6">
+              <h2 className="text-lg font-bold text-[#2D2D2D] mb-6">Данные получателя</h2>
+              
+              <div className="flex flex-col gap-4">
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={recipientName}
+                    onChange={(e) => setRecipientName(e.target.value)}
+                    className="peer w-full px-4 pt-6 pb-2 border border-[#C8C7CC] rounded-xl text-base text-[#2D2D2D] focus:outline-none focus:border-[#0077FE] placeholder-transparent"
+                    placeholder="Имя"
+                    required
+                  />
+                  <label className="absolute left-4 top-1/2 -translate-y-1/2 text-[#858585] text-base transition-all duration-200 pointer-events-none peer-focus:top-3 peer-focus:text-xs peer-focus:text-[#0077FE] peer-[:not(:placeholder-shown)]:top-3 peer-[:not(:placeholder-shown)]:text-xs">
+                    Имя *
+                  </label>
+                </div>
+
+                <PhoneInput
+                  value={recipientPhone}
+                  onChange={(e) => setRecipientPhone(e.target.value)}
+                  label="Телефон"
+                  required
+                />
+
+                <CityInput
+                  value={recipientCity}
+                  onChange={(e) => setRecipientCity(e.target.value)}
+                  label="Город"
+                  required
+                />
+
+                <AddressInput
+                  value={recipientAddress}
+                  onChange={(e) => setRecipientAddress(e.target.value)}
+                  onCityChange={(e) => setRecipientCity(e.target.value)}
+                  label="Адрес"
+                  required
+                />
+
+                {(company?.company_code === 'cdek' || company?.company_name?.toLowerCase().includes('cdek')) && (
+                  <DeliveryPointInput
+                    city={recipientCity}
+                    transportCompanyId={company.company_id}
+                    value={recipientDeliveryPointCode}
+                    onChange={(e) => {
+                      const value = e?.target?.value || e?.value || '';
+                      setRecipientDeliveryPointCode(value);
+                    }}
+                    label="ПВЗ (Пункт выдачи)"
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-4 rounded-xl text-base font-semibold bg-[#0077FE] text-white disabled:opacity-50"
+          >
+            {loading ? 'Создание заказа...' : 'Создать заказ'}
+          </button>
+        </form>
+      </main>
+
+      <footer className="w-full bg-white border-t border-[#C8C7CC]">
+        <div className="w-full max-w-[1128px] mx-auto flex items-center justify-center gap-6 px-6 py-8">
+          <img src={logoSvg} alt="PochtaHub" className="h-6 opacity-50" />
+          <span className="text-sm text-[#858585]">© 2025 PochtaHub</span>
+        </div>
+      </footer>
     </div>
   )
 }
 
 export default OrderPage
-

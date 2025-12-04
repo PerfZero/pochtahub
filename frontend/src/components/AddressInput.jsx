@@ -1,15 +1,30 @@
-import { useState, useCallback, useEffect } from 'react'
-import Select from 'react-select'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import axios from 'axios'
 
 const DADATA_API_URL = 'https://suggestions.dadata.ru/suggestions/api/4_1/rs/suggest/address'
 const DADATA_TOKEN = import.meta.env.VITE_DADATA_TOKEN || ''
 
-function AddressInput({ value = '', onChange, onCityChange, placeholder = 'Начните вводить адрес...' }) {
+function AddressInput({ value = '', onChange, onCityChange, label = 'Адрес', required = false }) {
   const [options, setOptions] = useState([])
   const [loading, setLoading] = useState(false)
   const [inputValue, setInputValue] = useState(value)
-  const [showManualInput, setShowManualInput] = useState(false)
+  const [isOpen, setIsOpen] = useState(false)
+  const [isFocused, setIsFocused] = useState(false)
+  const wrapperRef = useRef(null)
+  const inputRef = useRef(null)
+
+  const hasValue = inputValue && inputValue.length > 0
+  const isFloating = isFocused || hasValue
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const loadSuggestions = useCallback(async (query) => {
     if (!query || query.length < 3 || !DADATA_TOKEN) {
@@ -23,7 +38,7 @@ function AddressInput({ value = '', onChange, onCityChange, placeholder = 'На�
         DADATA_API_URL,
         { 
           query, 
-          count: 20,
+          count: 10,
           locations: [],
           restrict_value: false
         },
@@ -42,8 +57,8 @@ function AddressInput({ value = '', onChange, onCityChange, placeholder = 'На�
       }))
 
       setOptions(suggestions)
+      setIsOpen(suggestions.length > 0)
     } catch (error) {
-      console.error('Ошибка загрузки адресов:', error)
       setOptions([])
     } finally {
       setLoading(false)
@@ -54,75 +69,101 @@ function AddressInput({ value = '', onChange, onCityChange, placeholder = 'На�
     setInputValue(value)
   }, [value])
 
-  const handleInputChange = (newValue) => {
-    setInputValue(newValue)
-    if (newValue && newValue.length >= 3) {
-      loadSuggestions(newValue)
-      setShowManualInput(false)
+  const handleInputChange = (e) => {
+    const val = e.target.value
+    setInputValue(val)
+    onChange({ target: { value: val } })
+    if (val && val.length >= 3) {
+      loadSuggestions(val)
     } else {
       setOptions([])
-      setShowManualInput(false)
+      setIsOpen(false)
     }
   }
 
-  const handleChange = (option) => {
-    if (option) {
-      onChange({ target: { value: option.value } })
-      setInputValue(option.value)
-      if (onCityChange && option.city) {
-        onCityChange({ target: { value: option.city } })
-      }
-      setShowManualInput(false)
-    } else {
-      onChange({ target: { value: '' } })
-      setInputValue('')
-      setShowManualInput(false)
+  const handleSelect = (option) => {
+    setInputValue(option.value)
+    onChange({ target: { value: option.value } })
+    if (onCityChange && option.city) {
+      onCityChange({ target: { value: option.city } })
     }
+    setIsOpen(false)
+    setOptions([])
   }
 
-  const handleManualInput = () => {
-    if (inputValue && inputValue.length >= 3) {
-      onChange({ target: { value: inputValue } })
-      setShowManualInput(false)
-    }
+  const handleFocus = () => {
+    setIsFocused(true)
+    if (options.length > 0) setIsOpen(true)
+  }
+
+  const handleBlur = () => {
+    setIsFocused(false)
   }
 
   if (!DADATA_TOKEN) {
     return (
-      <input
-        type="text"
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-      />
+      <div className="relative w-full">
+        <input
+          type="text"
+          value={value}
+          onChange={onChange}
+          placeholder=" "
+          className="peer w-full px-4 pt-6 pb-2 border border-[#C8C7CC] rounded-xl text-base text-[#2D2D2D] focus:outline-none focus:border-[#0077FE]"
+        />
+        <label className="absolute left-4 top-1/2 -translate-y-1/2 text-[#858585] text-base transition-all duration-200 pointer-events-none peer-focus:top-3 peer-focus:text-xs peer-focus:text-[#0077FE] peer-[:not(:placeholder-shown)]:top-3 peer-[:not(:placeholder-shown)]:text-xs">
+          {label}{required ? ' *' : ''}
+        </label>
+      </div>
     )
   }
 
-  const hasNoOptions = !loading && inputValue && inputValue.length >= 3 && options.length === 0 && inputValue !== value
-
   return (
-    <div>
-      <Select
-        value={value ? { value, label: value } : null}
-        onInputChange={handleInputChange}
-        onChange={handleChange}
-        options={options}
-        placeholder={placeholder}
-        isLoading={loading}
-        isClearable
-        isSearchable
-        noOptionsMessage={() => {
-          if (inputValue && inputValue.length >= 3) {
-            return `Адрес не найден`
-          }
-          return 'Начните вводить адрес (минимум 3 символа)'
-        }}
-      />
-      {hasNoOptions && (
-        <div>
-          <button type="button" onClick={handleManualInput}>
+    <div ref={wrapperRef} className="relative w-full">
+      <div className="relative">
+        <input
+          ref={inputRef}
+          type="text"
+          value={inputValue}
+          onChange={handleInputChange}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          placeholder=" "
+          className="peer w-full px-4 pt-6 pb-2 border border-[#C8C7CC] rounded-xl text-base text-[#2D2D2D] focus:outline-none focus:border-[#0077FE]"
+        />
+        <label className={`absolute left-4 transition-all duration-200 pointer-events-none ${
+          isFloating
+            ? 'top-3 text-xs'
+            : 'top-1/2 -translate-y-1/2 text-base'
+        } ${isFocused ? 'text-[#0077FE]' : 'text-[#858585]'}`}>
+          {label}{required ? ' *' : ''}
+        </label>
+        {loading && (
+          <div className="absolute right-4 top-1/2 -translate-y-1/2">
+            <div className="w-4 h-4 border-2 border-[#C8C7CC] border-t-[#0077FE] rounded-full animate-spin"></div>
+          </div>
+        )}
+      </div>
+      {isOpen && options.length > 0 && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#C8C7CC] rounded-xl shadow-lg z-50 max-h-60 overflow-auto">
+          {options.map((option, idx) => (
+            <div
+              key={idx}
+              onClick={() => handleSelect(option)}
+              className="px-4 py-3 text-sm text-[#2D2D2D] cursor-pointer hover:bg-[#F4EEE2] first:rounded-t-xl last:rounded-b-xl"
+            >
+              {option.label}
+            </div>
+          ))}
+        </div>
+      )}
+      {isOpen && inputValue && inputValue.length >= 3 && options.length === 0 && !loading && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#C8C7CC] rounded-xl shadow-lg z-50">
+          <div
+            onClick={() => handleSelect({ value: inputValue, label: inputValue, city: '' })}
+            className="px-4 py-3 text-sm text-[#0077FE] cursor-pointer hover:bg-[#F4EEE2] rounded-xl"
+          >
             Использовать "{inputValue}"
-          </button>
+          </div>
         </div>
       )}
     </div>

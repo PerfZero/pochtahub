@@ -22,6 +22,7 @@ function CalculatePage() {
   const [options, setOptions] = useState([])
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+  const isAuthenticated = !!localStorage.getItem('access_token')
 
   const handleCalculate = async (e) => {
     e.preventDefault()
@@ -97,7 +98,7 @@ function CalculatePage() {
               <span className="text-xs text-[#2D2D2D]">Агрегатор транспортных компаний</span>
             </div>
             <div className="ml-auto flex items-center gap-2">
-              <Link to="/login" className="px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#F4EEE2] text-[#2D2D2D]">Войти</Link>
+              <Link to={isAuthenticated ? "/cabinet" : "/login"} className="px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#F4EEE2] text-[#2D2D2D]">{isAuthenticated ? "Личный кабинет" : "Войти"}</Link>
               <button onClick={handleNewCalculation} className="px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#0077FE] text-white">Новый расчёт</button>
             </div>
           </div>
@@ -148,7 +149,7 @@ function CalculatePage() {
             <span className="text-xs text-[#2D2D2D]">Агрегатор транспортных компаний</span>
           </div>
           <div className="ml-auto flex items-center gap-2">
-            <Link to="/login" className="px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#F4EEE2] text-[#2D2D2D]">Войти</Link>
+            <Link to={isAuthenticated ? "/cabinet" : "/login"} className="px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#F4EEE2] text-[#2D2D2D]">{isAuthenticated ? "Личный кабинет" : "Войти"}</Link>
             <button className="px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#0077FE] text-white">Рассчитать</button>
           </div>
         </div>
@@ -325,7 +326,7 @@ function CalculatePage() {
               <span className="text-xs text-[#2D2D2D]">Агрегатор транспортных компаний</span>
             </div>
             <div className="ml-auto flex items-center gap-2">
-              <Link to="/login" className="px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#F4EEE2] text-[#2D2D2D]">Войти</Link>
+              <Link to={isAuthenticated ? "/cabinet" : "/login"} className="px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#F4EEE2] text-[#2D2D2D]">{isAuthenticated ? "Личный кабинет" : "Войти"}</Link>
               <button className="px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#0077FE] text-white">Рассчитать</button>
             </div>
           </div>

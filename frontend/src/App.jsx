@@ -6,6 +6,7 @@ import ConfirmationPage from './pages/ConfirmationPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import CabinetPage from './pages/CabinetPage'
+import NotFoundPage from './pages/NotFoundPage'
 import './App.css'
 
 function App() {
@@ -35,6 +36,7 @@ function App() {
           element={isAuthenticated ? <CabinetPage /> : <Navigate to="/login" />} 
         />
         <Route path="/" element={<Navigate to="/calculate" />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
   )

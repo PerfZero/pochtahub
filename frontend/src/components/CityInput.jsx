@@ -4,7 +4,7 @@ import axios from 'axios'
 const DADATA_API_URL = 'https://suggestions.dadata.ru/suggestions/api/4_1/rs/suggest/address'
 const DADATA_TOKEN = import.meta.env.VITE_DADATA_TOKEN || ''
 
-function CityInput({ value = '', onChange, placeholder = 'Откуда' }) {
+function CityInput({ value = '', onChange, label = 'Город', required = false, variant = 'default' }) {
   const [options, setOptions] = useState([])
   const [loading, setLoading] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
@@ -84,21 +84,54 @@ function CityInput({ value = '', onChange, placeholder = 'Откуда' }) {
     setIsFocused(false)
   }
 
+  if (variant === 'hero') {
+    return (
+      <div ref={wrapperRef} className="relative w-full">
+        <div 
+          className="relative cursor-text"
+          onClick={() => inputRef.current?.focus()}
+        >
+          <label 
+            className={`absolute left-0 transition-all duration-200 pointer-events-none ${
+              isFloating 
+                ? 'top-0 text-xs text-[#858585] font-semibold' 
+                : 'top-1/2 -translate-y-1/2 text-base text-[#C8C7CC] font-semibold'
+            }`}
+          >
+            {label}
+          </label>
+          <input
+            ref={inputRef}
+            type="text"
+            value={value}
+            onChange={handleInputChange}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            className={`w-full bg-transparent outline-none text-sm font-semibold text-[#2D2D2D] ${
+              isFloating ? 'pt-4 pb-1' : 'py-2'
+            }`}
+          />
+        </div>
+        {isOpen && options.length > 0 && (
+          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#C8C7CC] rounded-xl shadow-lg z-50 max-h-60 overflow-auto">
+            {options.map((option, idx) => (
+              <div
+                key={idx}
+                onClick={() => handleSelect(option)}
+                className="px-4 py-3 text-sm text-[#2D2D2D] cursor-pointer hover:bg-[#F4EEE2] first:rounded-t-xl last:rounded-b-xl"
+              >
+                {option.label}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div ref={wrapperRef} className="relative w-full">
-      <div 
-        className="relative cursor-text"
-        onClick={() => inputRef.current?.focus()}
-      >
-        <label 
-          className={`absolute left-0 transition-all duration-200 pointer-events-none ${
-            isFloating 
-              ? 'top-0 text-xs text-[#858585] font-semibold' 
-              : 'top-1/2 -translate-y-1/2 text-base text-[#C8C7CC] font-semibold'
-          }`}
-        >
-          {placeholder}
-        </label>
+      <div className="relative">
         <input
           ref={inputRef}
           type="text"
@@ -106,18 +139,29 @@ function CityInput({ value = '', onChange, placeholder = 'Откуда' }) {
           onChange={handleInputChange}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          className={`w-full bg-transparent outline-none text-sm font-semibold text-[#2D2D2D] ${
-            isFloating ? 'pt-4 pb-1' : 'py-2'
-          }`}
+          placeholder=" "
+          className="peer w-full px-4 pt-6 pb-2 border border-[#C8C7CC] rounded-xl text-base text-[#2D2D2D] focus:outline-none focus:border-[#0077FE]"
         />
+        <label className={`absolute left-4 transition-all duration-200 pointer-events-none ${
+          isFloating
+            ? 'top-3 text-xs'
+            : 'top-1/2 -translate-y-1/2 text-base'
+        } ${isFocused ? 'text-[#0077FE]' : 'text-[#858585]'}`}>
+          {label}{required ? ' *' : ''}
+        </label>
+        {loading && (
+          <div className="absolute right-4 top-1/2 -translate-y-1/2">
+            <div className="w-4 h-4 border-2 border-[#C8C7CC] border-t-[#0077FE] rounded-full animate-spin"></div>
+          </div>
+        )}
       </div>
       {isOpen && options.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#C8C7CC] rounded-lg shadow-lg z-50 max-h-60 overflow-auto">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#C8C7CC] rounded-xl shadow-lg z-50 max-h-60 overflow-auto">
           {options.map((option, idx) => (
             <div
               key={idx}
               onClick={() => handleSelect(option)}
-              className="px-4 py-2 text-sm text-[#2D2D2D] cursor-pointer hover:bg-[#F4EEE2]"
+              className="px-4 py-3 text-sm text-[#2D2D2D] cursor-pointer hover:bg-[#F4EEE2] first:rounded-t-xl last:rounded-b-xl"
             >
               {option.label}
             </div>
