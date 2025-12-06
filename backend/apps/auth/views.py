@@ -11,7 +11,7 @@ import random
 import string
 
 
-TELEGRAM_GATEWAY_TOKEN = "AAEULwAAELM5DnoXsqa9CkKdxnI-cOsKuA67I0YzFozEGQ"
+TELEGRAM_GATEWAY_TOKEN = "AAEXLwAAdHj0Jv-fq4mKpbRYx_Amf6DhvRiK1Ui7jRn6Eg"
 
 
 class SendCodeView(APIView):
@@ -39,7 +39,8 @@ class SendCodeView(APIView):
                     'phone_number': phone,
                     'code': code,
                     'code_length': 4,
-                    'ttl': 300
+                    'ttl': 300,
+                    'sender_username': 'pochtahub'
                 }
             )
             
