@@ -39,8 +39,7 @@ class SendCodeView(APIView):
                     'phone_number': phone,
                     'code': code,
                     'code_length': 4,
-                    'ttl': 300,
-                    'sender_username': 'pochtahub'
+                    'ttl': 300
                 }
             )
             
