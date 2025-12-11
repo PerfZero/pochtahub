@@ -229,7 +229,7 @@ class CDEKAdapter:
                     'company_code': 'cdek',
                     'price': float(result.get('total_sum', 0)),
                     'tariff_name': result.get('tariff_name', ''),
-                    'tariff_code': result.get('tariff_code'),
+                    'tariff_code': result.get('tariff_code') or tariff_code,
                     'delivery_time': result.get('period_max', 0)
                 })
             

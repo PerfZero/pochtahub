@@ -17,8 +17,12 @@ class TariffCalculator:
         
         for company in companies:
             if company.api_type == 'cdek' and company.api_account and company.api_secure_password and from_city and to_city:
+                if not company.default_tariff_code:
+                    logger.warning(f'Для компании {company.name} не назначен тариф CDEK (default_tariff_code). Тарифы не будут возвращены.')
+                    continue
+                
                 logger.info(f'Вызов CDEK API для компании {company.name} (ID: {company.id})')
-                logger.info(f'Параметры: from_city={from_city}, to_city={to_city}, weight={weight}')
+                logger.info(f'Параметры: from_city={from_city}, to_city={to_city}, weight={weight}, tariff_code={company.default_tariff_code}')
                 try:
                     adapter = CDEKAdapter(
                         account=company.api_account,
@@ -37,15 +41,13 @@ class TariffCalculator:
                     )
                     logger.info(f'CDEK API вернул {len(cdek_results)} тарифов')
                     
-                    if company.default_tariff_code:
-                        filtered_results = [r for r in cdek_results if r.get('tariff_code') == company.default_tariff_code]
-                        if filtered_results:
-                            cdek_results = filtered_results
-                            logger.info(f'Отфильтровано по тарифу {company.default_tariff_code}: {len(cdek_results)} тарифов')
-                        else:
-                            logger.warning(f'Тариф {company.default_tariff_code} не найден в результатах CDEK')
+                    if not cdek_results:
+                        logger.warning(f'CDEK API не вернул результатов для тарифа {company.default_tariff_code}')
+                        continue
                     
                     for result in cdek_results:
+                        if not result.get('tariff_code'):
+                            result['tariff_code'] = company.default_tariff_code
                         result['company_id'] = company.id
                         result['company_code'] = company.code
                         result['company_name'] = company.name

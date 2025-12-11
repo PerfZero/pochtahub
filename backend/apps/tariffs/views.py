@@ -1,5 +1,7 @@
 from rest_framework import generics, permissions
 from rest_framework.response import Response
+from rest_framework.authentication import SessionAuthentication
+from apps.auth.authentication import OptionalJWTAuthentication
 from decouple import config
 from openai import OpenAI
 import base64
@@ -296,9 +298,13 @@ class DeliveryPointsView(generics.GenericAPIView):
 
 
 class GetTariffsView(generics.GenericAPIView):
-    permission_classes = [permissions.IsAdminUser]
+    authentication_classes = [SessionAuthentication, OptionalJWTAuthentication]
+    permission_classes = [permissions.AllowAny]
 
     def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not request.user.is_staff:
+            return Response({'detail': 'Учетные данные не были предоставлены.'}, status=401)
+        
         transport_company_id = request.query_params.get('transport_company_id')
         from_city = request.query_params.get('from_city')
         to_city = request.query_params.get('to_city')

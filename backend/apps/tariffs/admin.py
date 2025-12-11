@@ -143,7 +143,7 @@ class TransportCompanyAdmin(admin.ModelAdmin):
         }),
         ('Тариф CDEK', {
             'fields': ('default_tariff_code', 'default_tariff_name'),
-            'description': 'Выберите тариф из списка после загрузки'
+            'description': 'Выберите тариф из списка после загрузки. Только назначенный тариф будет использоваться для расчетов.'
         }),
         ('Дата создания', {
             'fields': ('created_at',)

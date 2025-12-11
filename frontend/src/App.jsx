@@ -1,6 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import CalculatePage from './pages/CalculatePage'
+import WizardPage from './pages/WizardPage'
+import OffersPage from './pages/OffersPage'
+import PaymentPage from './pages/PaymentPage'
 import OrderPage from './pages/OrderPage'
 import ConfirmationPage from './pages/ConfirmationPage'
 import LoginPage from './pages/LoginPage'
@@ -29,6 +32,9 @@ function App() {
         <Route path="/login" element={<LoginPage setIsAuthenticated={setIsAuthenticated} />} />
         <Route path="/register" element={<RegisterPage setIsAuthenticated={setIsAuthenticated} />} />
         <Route path="/calculate" element={<CalculatePage />} />
+        <Route path="/wizard" element={<WizardPage />} />
+        <Route path="/offers" element={<OffersPage />} />
+        <Route path="/payment" element={<PaymentPage />} />
         <Route path="/order" element={<OrderPage />} />
         <Route path="/confirmation/:orderId" element={<ConfirmationPage />} />
         <Route 

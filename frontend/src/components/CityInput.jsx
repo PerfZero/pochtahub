@@ -113,7 +113,7 @@ function CityInput({ value = '', onChange, label = 'Город', required = fals
           />
         </div>
         {isOpen && options.length > 0 && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#C8C7CC] rounded-xl shadow-lg z-50 max-h-60 overflow-auto">
+          <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-xl shadow-lg z-50 max-h-60 overflow-auto">
             {options.map((option, idx) => (
               <div
                 key={idx}
@@ -140,7 +140,7 @@ function CityInput({ value = '', onChange, label = 'Город', required = fals
           onFocus={handleFocus}
           onBlur={handleBlur}
           placeholder=" "
-          className="peer w-full px-4 pt-6 pb-2 border border-[#C8C7CC] rounded-xl text-base text-[#2D2D2D] focus:outline-none focus:border-[#0077FE]"
+          className="peer w-full px-4 pt-6 pb-2 border-0 rounded-xl text-base text-[#2D2D2D] focus:outline-none focus:border-[#0077FE]"
         />
         <label className={`absolute left-4 transition-all duration-200 pointer-events-none ${
           isFloating
