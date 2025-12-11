@@ -45,6 +45,8 @@ function OffersPage() {
   const [filterCourierDelivery, setFilterCourierDelivery] = useState(true)
   const [sortBy, setSortBy] = useState('price')
   const [shareSuccess, setShareSuccess] = useState(false)
+  
+  const isFromUrl = !location.state?.wizardData && location.search.includes('data=')
 
   useEffect(() => {
     let currentWizardData = wizardData
@@ -345,17 +347,19 @@ function OffersPage() {
                         )}
                       </div>
 
-                      <button
-                        onClick={() => handleSelectOffer(offer)}
-                        className={` px-3 py-3 rounded-xl font-size-14px font-semibold transition-colors rounded-8px px-16px w-171px h-40px text-sm
+                      {!isFromUrl && (
+                        <button
+                          onClick={() => handleSelectOffer(offer)}
+                          className={` px-3 py-3 rounded-xl font-size-14px font-semibold transition-colors rounded-8px px-16px w-171px h-40px text-sm
  ${
-                          isCheapest || isFastest
-                            ? 'bg-[#0077FE] text-white hover:bg-[#0066CC]'
-                            : 'bg-[#F5F5F5] text-[#2D2D2D] hover:bg-[#E5E5E5]'
-                        }`}
-                      >
-                        Оформить отправку
-                      </button>
+                            isCheapest || isFastest
+                              ? 'bg-[#0077FE] text-white hover:bg-[#0066CC]'
+                              : 'bg-[#F5F5F5] text-[#2D2D2D] hover:bg-[#E5E5E5]'
+                          }`}
+                        >
+                          Оформить отправку
+                        </button>
+                      )}
                     </div>
                   )
                 })}
@@ -363,20 +367,22 @@ function OffersPage() {
             )}
           </div>
 
-          <div className="bg-white rounded-2xl p-8 relative">
-            <h2 className="text-2xl font-bold text-[#2D2D2D] mb-2">
-              Сомневаешься что выбрать?
-            </h2>
-            <p className="text-base text-[#2D2D2D] mb-6">
-              Поделись расчётом с получателем, он сам выберет
-            </p>
-            <button 
-              onClick={handleShare}
-              className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold hover:bg-[#0066CC] transition-colors"
-            >
-              {shareSuccess ? 'Ссылка скопирована!' : 'Поделиться расчётом'}
-            </button>
-          </div>
+          {!isFromUrl && (
+            <div className="bg-white rounded-2xl p-8 relative">
+              <h2 className="text-2xl font-bold text-[#2D2D2D] mb-2">
+                Сомневаешься что выбрать?
+              </h2>
+              <p className="text-base text-[#2D2D2D] mb-6">
+                Поделись расчётом с получателем, он сам выберет
+              </p>
+              <button 
+                onClick={handleShare}
+                className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold hover:bg-[#0066CC] transition-colors"
+              >
+                {shareSuccess ? 'Ссылка скопирована!' : 'Поделиться расчётом'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
