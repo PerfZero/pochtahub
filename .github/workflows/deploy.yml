@@ -38,7 +38,7 @@ jobs:
           echo "=== Deploying Backend ==="
           cd /var/www/pochtahub/backend
           source ../venv/bin/activate
-          pip install -r requirements.txt --quiet
+          pip install -r requirements.txt --quiet --no-build-isolation
           python manage.py collectstatic --noinput
           python manage.py migrate --noinput
           
