@@ -20,6 +20,30 @@ function OrderPage() {
   const [fromCity, setFromCity] = useState(orderData.fromCity || '')
   const [toCity, setToCity] = useState(orderData.toCity || '')
   
+  useEffect(() => {
+    if (location.state?.orderData) {
+      const data = location.state.orderData
+      if (data.company) {
+        setCompany(data.company)
+      }
+      if (data.weight) {
+        setWeight(data.weight)
+      }
+      if (data.fromAddress) {
+        setFromAddress(data.fromAddress)
+      }
+      if (data.toAddress) {
+        setToAddress(data.toAddress)
+      }
+      if (data.fromCity) {
+        setFromCity(data.fromCity)
+      }
+      if (data.toCity) {
+        setToCity(data.toCity)
+      }
+    }
+  }, [location.state])
+  
   const [senderName, setSenderName] = useState('')
   const [senderPhone, setSenderPhone] = useState('')
   const [senderAddress, setSenderAddress] = useState(fromAddress)
@@ -38,55 +62,13 @@ function OrderPage() {
   const [checkingAuth, setCheckingAuth] = useState(true)
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const token = localStorage.getItem('access_token')
-      if (!token) {
-        navigate('/login', { 
-          state: { 
-            returnTo: '/order', 
-            orderData: { company, weight, fromAddress, toAddress, fromCity, toCity } 
-          } 
-        })
-        return
-      }
-      
-      try {
-        const response = await ordersAPI.getOrders()
-        if (response.status !== 200) {
-          localStorage.removeItem('access_token')
-          localStorage.removeItem('refresh_token')
-          navigate('/login', { 
-            state: { 
-              returnTo: '/order', 
-              orderData: { company, weight, fromAddress, toAddress, fromCity, toCity } 
-            } 
-          })
-          return
-        }
-      } catch (error) {
-        if (error.response?.status === 401) {
-          localStorage.removeItem('access_token')
-          localStorage.removeItem('refresh_token')
-          navigate('/login', { 
-            state: { 
-              returnTo: '/order', 
-              orderData: { company, weight, fromAddress, toAddress, fromCity, toCity } 
-            } 
-          })
-          return
-        }
-      }
-      
-      if (!company) {
-        navigate('/calculate')
-        return
-      }
-      
-      setCheckingAuth(false)
+    const currentCompany = location.state?.orderData?.company || company
+    if (!currentCompany) {
+      navigate('/calculate')
+      return
     }
-    
-    checkAuth()
-  }, [company, weight, fromAddress, toAddress, fromCity, toCity, navigate])
+    setCheckingAuth(false)
+  }, [location.state, company, navigate])
 
   useEffect(() => {
     if (fromAddress) {
@@ -107,6 +89,13 @@ function OrderPage() {
     e.preventDefault()
     setLoading(true)
     try {
+      const currentCompany = location.state?.orderData?.company || company
+      if (!currentCompany || !currentCompany.company_id) {
+        alert('Ошибка: данные компании не найдены')
+        setLoading(false)
+        return
+      }
+      
       const orderData = {
         sender_name: senderName,
         sender_phone: senderPhone,
@@ -121,11 +110,11 @@ function OrderPage() {
         recipient_city: recipientCity,
         recipient_delivery_point_code: recipientDeliveryPointCode || null,
         weight: parseFloat(weight),
-        transport_company_id: company.company_id,
-        transport_company_name: company.company_name,
-        price: company.price,
-        tariff_code: company.tariff_code,
-        tariff_name: company.tariff_name,
+        transport_company_id: currentCompany.company_id,
+        transport_company_name: currentCompany.company_name,
+        price: currentCompany.price,
+        tariff_code: currentCompany.tariff_code,
+        tariff_name: currentCompany.tariff_name,
       }
       const response = await ordersAPI.createOrder(orderData)
       
@@ -184,11 +173,11 @@ function OrderPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-[#2D2D2D] mb-2">Оформление заказа</h1>
-              <p className="text-[#858585]">{company.company_name} {company.tariff_name && `• ${company.tariff_name}`}</p>
+              <p className="text-[#858585]">{(location.state?.orderData?.company || company)?.company_name || ''} {(location.state?.orderData?.company || company)?.tariff_name && `• ${(location.state?.orderData?.company || company).tariff_name}`}</p>
             </div>
             <div className="text-right">
-              <div className="text-3xl font-bold text-[#0077FE]">{company.price} ₽</div>
-              <p className="text-sm text-[#858585]">Вес: {weight} кг</p>
+              <div className="text-3xl font-bold text-[#0077FE]">{(location.state?.orderData?.company || company)?.price || 0} ₽</div>
+              <p className="text-sm text-[#858585]">Вес: {location.state?.orderData?.weight || weight} кг</p>
             </div>
           </div>
         </div>
@@ -327,10 +316,10 @@ function OrderPage() {
                   required
                 />
 
-                {(company?.company_code === 'cdek' || company?.company_name?.toLowerCase().includes('cdek')) && (
+                {((location.state?.orderData?.company || company)?.company_code === 'cdek' || (location.state?.orderData?.company || company)?.company_name?.toLowerCase().includes('cdek')) && (
                   <DeliveryPointInput
                     city={recipientCity}
-                    transportCompanyId={company.company_id}
+                    transportCompanyId={(location.state?.orderData?.company || company)?.company_id}
                     value={recipientDeliveryPointCode}
                     onChange={(e) => {
                       const value = e?.target?.value || e?.value || '';

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import logoSvg from '../assets/whitelogo.svg'
+import { ordersAPI } from '../api'
 
 function PaymentPage() {
   const location = useLocation()
@@ -11,8 +12,10 @@ function PaymentPage() {
   const offer = {
     company_id: orderData.company,
     company_name: orderData.companyName || 'CDEK',
+    company_code: orderData.companyCode || 'cdek',
     price: orderData.price || 0,
     tariff_code: orderData.tariffCode,
+    tariff_name: orderData.tariffName,
     delivery_time: orderData.deliveryTime,
   }
 
@@ -27,29 +30,64 @@ function PaymentPage() {
   const insurancePrice = 10
   const totalPrice = deliveryPrice + packagingPrice + storagePrice + insurancePrice
 
+  const [loading, setLoading] = useState(false)
+
   const getCompanyInitial = (name) => {
     if (!name) return 'C'
     return name.charAt(0).toUpperCase()
   }
 
-  const handlePayment = () => {
-    navigate('/order', {
-      state: {
-        ...orderData,
-        orderData: {
-          company: offer.company_id,
-          companyName: offer.company_name,
-          price: offer.price,
-          tariffCode: offer.tariff_code,
-          deliveryTime: offer.delivery_time,
-          fromCity: wizardData.fromCity,
-          toCity: wizardData.toCity,
-          fromAddress: wizardData.senderAddress || wizardData.fromCity,
-          toAddress: wizardData.deliveryAddress || wizardData.recipientAddress || wizardData.toCity,
-          weight: wizardData.weight,
-        }
+  const handlePayment = async () => {
+    const senderName = wizardData.senderFIO || wizardData.senderName
+    const senderPhone = wizardData.senderPhone || wizardData.userPhone
+    const recipientName = wizardData.recipientFIO || wizardData.recipientName
+    const recipientPhone = wizardData.recipientPhone
+    
+    if (!senderName || !senderPhone || !recipientName || !recipientPhone) {
+      console.log('Проверка полей:', { senderName, senderPhone, recipientName, recipientPhone, wizardData })
+      alert('Заполните все обязательные поля: имя и телефон отправителя и получателя')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const orderData = {
+        sender_name: senderName,
+        sender_phone: senderPhone,
+        sender_address: wizardData.senderAddress || wizardData.fromCity,
+        sender_city: wizardData.fromCity,
+        sender_company: wizardData.senderCompany || null,
+        sender_tin: wizardData.senderTin || null,
+        sender_contragent_type: wizardData.senderContragentType || null,
+        recipient_name: recipientName,
+        recipient_phone: recipientPhone,
+        recipient_address: wizardData.deliveryAddress || wizardData.recipientAddress || wizardData.toCity,
+        recipient_city: wizardData.toCity,
+        recipient_delivery_point_code: wizardData.recipientDeliveryPointCode || null,
+        weight: parseFloat(wizardData.weight),
+        length: wizardData.length ? parseFloat(wizardData.length) : null,
+        width: wizardData.width ? parseFloat(wizardData.width) : null,
+        height: wizardData.height ? parseFloat(wizardData.height) : null,
+        transport_company_id: offer.company_id,
+        transport_company_name: offer.company_name,
+        price: offer.price,
+        tariff_code: offer.tariff_code,
+        tariff_name: offer.tariff_name,
       }
-    })
+      
+      const response = await ordersAPI.createOrder(orderData)
+      const orderId = response.data?.id || response.data?.pk
+      
+      if (orderId) {
+        navigate(`/confirmation/${orderId}`)
+      } else {
+        alert('Ошибка: ID заказа не получен')
+        setLoading(false)
+      }
+    } catch (error) {
+      alert(`Ошибка создания заказа: ${error.response?.data?.detail || error.response?.data?.error || error.message}`)
+      setLoading(false)
+    }
   }
 
   return (
@@ -74,6 +112,12 @@ function PaymentPage() {
 
             <div className="mb-8 space-y-4">
               <div className="flex justify-between items-center py-3 border-b border-dashed border-[#E5E5E5]">
+                <span className="text-base text-[#858585]">Отправитель</span>
+                <span className="text-base font-semibold text-[#2D2D2D] text-right">
+                  {wizardData.senderFIO || ''}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-3 border-b border-dashed border-[#E5E5E5]">
                 <span className="text-base text-[#858585]">Телефон отправителя</span>
                 <span className="text-base font-semibold text-[#2D2D2D]">
                   {wizardData.senderPhone || wizardData.userPhone || '+7 (___) ___-__-__'}
@@ -83,6 +127,12 @@ function PaymentPage() {
                 <span className="text-base text-[#858585]">Откуда</span>
                 <span className="text-base font-semibold text-[#2D2D2D] text-right">
                   {wizardData.senderAddress || wizardData.fromCity || ''}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-3 border-b border-dashed border-[#E5E5E5]">
+                <span className="text-base text-[#858585]">Получатель</span>
+                <span className="text-base font-semibold text-[#2D2D2D] text-right">
+                  {wizardData.recipientFIO || ''}
                 </span>
               </div>
               <div className="flex justify-between items-center py-3 border-b border-dashed border-[#E5E5E5]">
@@ -154,9 +204,10 @@ function PaymentPage() {
 
             <button
               onClick={handlePayment}
-              className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold hover:bg-[#0066CC] transition-colors mb-6"
+              disabled={loading}
+              className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold hover:bg-[#0066CC] transition-colors mb-6 disabled:opacity-50"
             >
-              Перейти к оплате
+              {loading ? 'Создание заказа...' : 'Оформить заказ'}
             </button>
           </div>
 

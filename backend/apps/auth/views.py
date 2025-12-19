@@ -5,13 +5,17 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from django.core.cache import cache
+from django.contrib.auth import get_user_model
 from .serializers import RegisterSerializer, LoginSerializer
-import requests
+import notificore_restapi as notificore_api
 import random
 import string
+import ssl
+import requests
 
+User = get_user_model()
 
-TELEGRAM_GATEWAY_TOKEN = "AAEXLwAAdHj0Jv-fq4mKpbRYx_Amf6DhvRiK1Ui7jRn6Eg"
+NOTIFICORE_API_KEY = "test_wbtaHxnHd5RlL8akZuCb"
 
 
 class SendCodeView(APIView):
@@ -29,31 +33,43 @@ class SendCodeView(APIView):
         code = ''.join(random.choices(string.digits, k=4))
         
         try:
-            response = requests.post(
-                'https://gatewayapi.telegram.org/sendVerificationMessage',
-                headers={
-                    'Authorization': f'Bearer {TELEGRAM_GATEWAY_TOKEN}',
-                    'Content-Type': 'application/json'
-                },
-                json={
-                    'phone_number': phone,
-                    'code': code,
-                    'code_length': 4,
-                    'ttl': 300
-                }
-            )
+            phone_clean = phone.replace('+', '').replace(' ', '').replace('-', '').replace('(', '').replace(')', '')
+            phone_number = int(phone_clean)
             
-            result = response.json()
-            
-            if result.get('ok'):
-                cache.set(f'verify_code_{phone}', code, 300)
-                return Response({'success': True, 'message': 'Код отправлен в Telegram'})
-            else:
-                error_msg = result.get('error', 'Ошибка отправки')
-                return Response({'error': error_msg}, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                original_verify = notificore_api.Requester.session.verify
+                notificore_api.Requester.session.verify = False
                 
+                client = notificore_api.SMSAPI(config={'api_key': NOTIFICORE_API_KEY})
+                message_text = f'Ваш код подтверждения: {code}'
+                
+                result = client.send(
+                    message=notificore_api.SMSMessage(body=message_text),
+                    recipients=notificore_api.Recipient(phone_number)
+                )
+                
+                notificore_api.Requester.session.verify = original_verify
+                
+                if result and isinstance(result, dict):
+                    if result.get('result') or result.get('success'):
+                        cache.set(f'verify_code_{phone}', code, 300)
+                        return Response({'success': True, 'message': 'Код отправлен в SMS'})
+                    else:
+                        error_msg = result.get('error') or result.get('message') or 'Ошибка отправки SMS'
+                        return Response({'error': error_msg}, status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    cache.set(f'verify_code_{phone}', code, 300)
+                    return Response({'success': True, 'message': 'Код отправлен в SMS'})
+            except Exception as api_err:
+                notificore_api.Requester.session.verify = True
+                raise api_err
+                
+        except ValueError:
+            return Response({'error': 'Неверный формат номера телефона'}, status=status.HTTP_400_BAD_REQUEST)
+        except notificore_api.APIError as e:
+            return Response({'error': f'Ошибка API Notificore: {e.description}'}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'error': f'Ошибка отправки SMS: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class VerifyCodeView(APIView):
@@ -81,7 +97,25 @@ class VerifyCodeView(APIView):
         cache.set(f'verified_phone_{phone}', True, 600)
         cache.delete(f'verify_code_{phone}')
         
-        return Response({'success': True, 'message': 'Телефон подтверждён'})
+        try:
+            user = User.objects.get(phone=phone)
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'success': True,
+                'message': 'Телефон подтверждён',
+                'user': {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'phone': user.phone,
+                },
+                'tokens': {
+                    'refresh': str(refresh),
+                    'access': str(refresh.access_token),
+                }
+            })
+        except User.DoesNotExist:
+            return Response({'success': True, 'message': 'Телефон подтверждён', 'user_exists': False})
 
 
 class RegisterView(generics.CreateAPIView):

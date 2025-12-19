@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import CityInput from '../components/CityInput'
-import SizeDropdown from '../components/SizeDropdown'
+import PhoneInput from '../components/PhoneInput'
+import CodeInput from '../components/CodeInput'
+import { authAPI } from '../api'
 
 import logoSvg from '../assets/images/logo.svg'
 import iconTelegram from '../assets/images/icon-telegram.svg'
@@ -19,21 +21,90 @@ import qrCode from '../assets/images/qr-code.svg'
 function CalculatePage() {
   const [fromCity, setFromCity] = useState('')
   const [toCity, setToCity] = useState('')
-  const [selectedSize, setSelectedSize] = useState(null)
+  const [showLoginPopup, setShowLoginPopup] = useState(false)
+  const [phone, setPhone] = useState('')
+  const [smsCode, setSmsCode] = useState('')
+  const [codeSent, setCodeSent] = useState(false)
+  const [codeLoading, setCodeLoading] = useState(false)
+  const [codeError, setCodeError] = useState('')
+  const [verifyLoading, setVerifyLoading] = useState(false)
   const navigate = useNavigate()
   const isAuthenticated = !!localStorage.getItem('access_token')
+  
+  const handleSendCode = async () => {
+    if (!phone) {
+      setCodeError('Введите номер телефона')
+      return
+    }
+    setCodeLoading(true)
+    setCodeError('')
+    try {
+      await authAPI.sendCode(phone)
+      setCodeSent(true)
+    } catch (err) {
+      setCodeError(err.response?.data?.error || 'Ошибка отправки кода')
+    } finally {
+      setCodeLoading(false)
+    }
+  }
+  
+  const handleVerifyCode = async (code = null) => {
+    const codeToVerify = code || smsCode
+    if (!codeToVerify || codeToVerify.length !== 4) {
+      setCodeError('Введите код')
+      return
+    }
+    setVerifyLoading(true)
+    setCodeError('')
+    try {
+      const response = await authAPI.verifyCode(phone, codeToVerify)
+      
+      if (response.data && response.data.tokens) {
+        localStorage.setItem('access_token', response.data.tokens.access)
+        localStorage.setItem('refresh_token', response.data.tokens.refresh)
+        setShowLoginPopup(false)
+        setPhone('')
+        setSmsCode('')
+        setCodeSent(false)
+        window.location.reload()
+      } else if (response.data && !response.data.user_exists) {
+        setCodeError('Пользователь не найден. Пожалуйста, зарегистрируйтесь.')
+      }
+    } catch (err) {
+      setCodeError(err.response?.data?.error || err.message || 'Неверный код')
+    } finally {
+      setVerifyLoading(false)
+    }
+  }
+  
+  const handleResendCode = () => {
+    setCodeSent(false)
+    setSmsCode('')
+    setCodeError('')
+    handleSendCode()
+  }
 
-  const handleCalculate = (e) => {
+  const handleCalculate = async (e) => {
     e.preventDefault()
     if (!fromCity || !toCity) {
       alert('Заполните поля откуда и куда')
       return
     }
-    navigate('/wizard', {
+    
+    const wizardData = {
+      fromCity,
+      toCity,
+      weight: '0.1',
+      length: '23',
+      width: '16',
+      height: '2',
+      senderAddress: fromCity,
+      deliveryAddress: toCity
+    }
+    
+    navigate('/offers', {
       state: {
-        fromCity,
-        toCity,
-        selectedSizeId: selectedSize?.id
+        wizardData
       }
     })
   }
@@ -46,14 +117,123 @@ function CalculatePage() {
     navigate('/wizard', {
       state: {
         fromCity,
-        toCity,
-        selectedSize
+        toCity
       }
     })
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center bg-white">
+    <>
+      {showLoginPopup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-[420px] w-full relative">
+            <button
+              onClick={() => {
+                setShowLoginPopup(false)
+                setPhone('')
+                setSmsCode('')
+                setCodeSent(false)
+                setCodeError('')
+              }}
+              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center text-[#2D2D2D] hover:bg-[#F5F5F5] rounded-full transition-colors"
+            >
+              <span className="text-2xl">×</span>
+            </button>
+            
+            <div className="p-8">
+              <h2 className="text-3xl font-bold text-[#2D2D2D] mb-2 text-center">
+                Вход в профиль
+              </h2>
+              <p className="text-base text-center text-[#2D2D2D] mb-6">
+                Введите номер телефона, подойдет любой российский номер
+              </p>
+              
+              {!codeSent ? (
+                <>
+                  <div className="mb-6">
+                    <PhoneInput
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      label="Телефон"
+                    />
+                  </div>
+                  {codeError && (
+                    <p className="text-sm text-red-500 mb-4 text-center">{codeError}</p>
+                  )}
+                  <button
+                    onClick={handleSendCode}
+                    disabled={codeLoading || !phone}
+                    className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold hover:bg-[#0066CC] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {codeLoading ? 'Отправка...' : 'Продолжить'}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="mb-6">
+                    <CodeInput
+                      value={smsCode}
+                      onChange={(e) => setSmsCode(e.target.value)}
+                      onComplete={(code) => {
+                        setSmsCode(code)
+                        if (code && code.length === 4) {
+                          handleVerifyCode(code)
+                        }
+                      }}
+                    />
+                  </div>
+                  {codeError && (
+                    <p className="text-sm text-red-500 mb-4 text-center">{codeError}</p>
+                  )}
+                  <div className="flex flex-col gap-3 mb-6">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCodeSent(false)
+                        setSmsCode('')
+                        setCodeError('')
+                      }}
+                      className="text-sm text-[#0077FE] hover:underline text-center"
+                    >
+                      Изменить номер
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleResendCode}
+                      disabled={codeLoading}
+                      className="text-sm text-[#858585] hover:text-[#2D2D2D] disabled:opacity-50 text-center"
+                    >
+                      Получить новый код
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => handleVerifyCode()}
+                    disabled={verifyLoading || !smsCode || smsCode.length !== 4}
+                    className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold hover:bg-[#0066CC] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {verifyLoading ? 'Проверка...' : 'Продолжить'}
+                  </button>
+                </>
+              )}
+              
+              <div className="mt-6 text-center">
+                <button className="text-sm text-[#0077FE] hover:underline">
+                  Нет доступа к СМС
+                </button>
+              </div>
+              
+              <p className="text-xs text-center text-[#858585] mt-6">
+                Авторизуясь, вы соглашаетесь{' '}
+                <a href="#" className="text-[#0077FE] hover:underline">с Пользовательским соглашением</a>
+                {' '}и{' '}
+                <a href="#" className="text-[#0077FE] hover:underline">Политикой конфиденциальности</a>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      <div className="min-h-screen flex flex-col items-center bg-white">
       {/* TopLine */}
       <div className="w-full bg-[#ADD3FF] flex justify-center cursor-pointer">
         <div className="w-full max-w-[1128px] px-6 py-2 flex items-center justify-center gap-3">
@@ -72,7 +252,16 @@ function CalculatePage() {
             <span className="text-xs text-[#2D2D2D]">Агрегатор транспортных компаний</span>
           </div>
           <div className="ml-auto flex items-center gap-2">
-            <Link to={isAuthenticated ? "/cabinet" : "/login"} className="px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#F4EEE2] text-[#2D2D2D]">{isAuthenticated ? "Личный кабинет" : "Войти"}</Link>
+            {isAuthenticated ? (
+              <Link to="/cabinet" className="px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#F4EEE2] text-[#2D2D2D]">Личный кабинет</Link>
+            ) : (
+              <button 
+                onClick={() => setShowLoginPopup(true)}
+                className="px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#F4EEE2] text-[#2D2D2D]"
+              >
+                Войти
+              </button>
+            )}
             <button className="px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#0077FE] text-white">Рассчитать</button>
           </div>
         </div>
@@ -94,24 +283,21 @@ function CalculatePage() {
             </div>
           </div>
           <form className="bg-white border-t border-[#C8C7CC] shadow-[0_4px_8px_0_rgba(0,0,0,0.08)] flex" onSubmit={handleCalculate}>
-            <div className="flex-1 flex items-center px-6 py-4">
+            <div className="flex-1 flex items-center ">
               <CityInput
                 placeholder="Откуда"
                 value={fromCity}
                 onChange={(e) => setFromCity(e.target.value)}
               />
             </div>
-            <div className="flex-1 flex items-center px-6 py-4 border-l border-[#C8C7CC]">
+            <div className="flex-1 flex items-center border-l border-[#C8C7CC]">
               <CityInput
                 placeholder="Куда"
                 value={toCity}
                 onChange={(e) => setToCity(e.target.value)}
               />
             </div>
-            <div className="flex-1 flex items-center border-l border-[#C8C7CC]">
-              <SizeDropdown value={selectedSize} onChange={setSelectedSize} />
-            </div>
-            <div className="flex items-center justify-center px-1.5 py-4">
+            <div className="flex items-center justify-center px-1.5 py-1">
               <button type="submit" className="px-8 py-4 rounded-[10px] text-base font-semibold bg-[#0077FE] text-white whitespace-nowrap">Рассчитать и оформить</button>
             </div>
           </form>
@@ -255,7 +441,16 @@ function CalculatePage() {
               <span className="text-xs text-[#2D2D2D]">Агрегатор транспортных компаний</span>
             </div>
             <div className="ml-auto flex items-center gap-2">
-              <Link to={isAuthenticated ? "/cabinet" : "/login"} className="px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#F4EEE2] text-[#2D2D2D]">{isAuthenticated ? "Личный кабинет" : "Войти"}</Link>
+              {isAuthenticated ? (
+                <Link to="/cabinet" className="px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#F4EEE2] text-[#2D2D2D]">Личный кабинет</Link>
+              ) : (
+                <button 
+                  onClick={() => setShowLoginPopup(true)}
+                  className="px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#F4EEE2] text-[#2D2D2D]"
+                >
+                  Войти
+                </button>
+              )}
               <button className="px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#0077FE] text-white">Рассчитать</button>
             </div>
           </div>
@@ -276,7 +471,8 @@ function CalculatePage() {
           </div>
         </div>
       </footer>
-    </div>
+      </div>
+    </>
   )
 }
 

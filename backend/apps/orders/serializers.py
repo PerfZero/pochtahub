@@ -1,5 +1,9 @@
 from rest_framework import serializers
 from .models import Order, OrderEvent
+from django.contrib.auth import get_user_model
+import uuid
+
+User = get_user_model()
 
 
 class OrderEventSerializer(serializers.ModelSerializer):
@@ -43,8 +47,24 @@ class OrderCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         user = self.context['request'].user
+        
         if not user or not user.is_authenticated:
-            raise serializers.ValidationError('Требуется авторизация для создания заказа')
+            sender_phone = validated_data.get('sender_phone', '')
+            if sender_phone:
+                phone_clean = sender_phone.replace(' ', '').replace('-', '').replace('(', '').replace(')', '').replace('+', '')
+                if not phone_clean.startswith('+'):
+                    phone_clean = '+' + phone_clean
+                
+                try:
+                    user = User.objects.get(phone=phone_clean)
+                except User.DoesNotExist:
+                    username = f"user_{phone_clean.replace('+', '')}_{uuid.uuid4().hex[:6]}"
+                    user = User.objects.create_user(
+                        username=username,
+                        phone=phone_clean,
+                        first_name=validated_data.get('sender_name', '')[:30] if validated_data.get('sender_name') else ''
+                    )
+        
         validated_data['user'] = user
         
         order = Order.objects.create(**validated_data)

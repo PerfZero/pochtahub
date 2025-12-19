@@ -3,7 +3,13 @@ import { useNavigate, useLocation, Link } from 'react-router-dom'
 import logoSvg from '../assets/whitelogo.svg'
 import cdekIcon from '../assets/images/cdek.svg'
 import CityInput from '../components/CityInput'
+import NumberInput from '../components/NumberInput'
 import { tariffsAPI } from '../api'
+import assistantAvatar from '../assets/images/assistant-avatar-336dfe.png'
+import iconPhone from '../assets/images/icon-phone.svg'
+import iconIron from '../assets/images/icon-iron.svg'
+import iconShoes from '../assets/images/icon-shoes.svg'
+import iconMicrowave from '../assets/images/icon-microwave.svg'
 
 function OffersPage() {
   const location = useLocation()
@@ -45,8 +51,230 @@ function OffersPage() {
   const [filterCourierDelivery, setFilterCourierDelivery] = useState(true)
   const [sortBy, setSortBy] = useState('price')
   const [shareSuccess, setShareSuccess] = useState(false)
+  const [showAssistant, setShowAssistant] = useState(true)
+  const [typedText, setTypedText] = useState('')
+  const [assistantStep, setAssistantStep] = useState('initial')
+  const [showPackagePopup, setShowPackagePopup] = useState(false)
+  const [packageOption, setPackageOption] = useState(null)
+  const [selectedPackageOption, setSelectedPackageOption] = useState(null)
+  const [recalculating, setRecalculating] = useState(false)
+  const [photoFile, setPhotoFile] = useState(null)
+  const [photoPreview, setPhotoPreview] = useState(null)
+  const [photoError, setPhotoError] = useState('')
+  const [length, setLength] = useState('')
+  const [width, setWidth] = useState('')
+  const [height, setHeight] = useState('')
+  const [weight, setWeight] = useState('')
+  const [estimatedValue, setEstimatedValue] = useState('')
+  const [selectedSize, setSelectedSize] = useState(null)
+  
+  const assistantMessageInitial = 'Привет! Я виртуальный ассистент Саша. Я помогу оформить доставку без лишних действий. Хотите, чтобы получатель сам выбрал доставку и указал точный адрес?'
+  const assistantMessageSecond = 'Привет! Я виртуальный ассистент Саша. Я помогу быстро отправить или получить посылку. Представленный расчёт ниже, сейчас ориентировочный. Хотите сделать его точнее?'
+  const assistantMessageSuccess = 'Отлично! Теперь мы можем посчитать точную стоимость вашей посылки. Выберите наиболее подходящее предложение ниже.'
+  
+  const getCurrentMessage = () => {
+    if (selectedPackageOption) {
+      return assistantMessageSuccess
+    }
+    return assistantStep === 'initial' ? assistantMessageInitial : assistantMessageSecond
+  }
+  
+  const currentMessage = getCurrentMessage()
+  
+  const sizeOptions = [
+    {
+      id: 'smartphone',
+      name: 'Как коробка от смартфона',
+      dimensions: '17х12х9 см',
+      weight: 'до 1 кг',
+      icon: iconPhone
+    },
+    {
+      id: 'iron',
+      name: 'Как коробка от утюга',
+      dimensions: '21х20х11 см',
+      weight: 'до 3 кг',
+      icon: iconIron
+    },
+    {
+      id: 'shoes',
+      name: 'Как коробка от обуви',
+      dimensions: '33х25х15 см',
+      weight: 'до 7 кг',
+      icon: iconShoes
+    },
+    {
+      id: 'microwave',
+      name: 'Как коробка от микроволновки',
+      dimensions: '42х35х30 см',
+      weight: 'до 15кг',
+      icon: iconMicrowave
+    }
+  ]
+  
+  const handlePackageContinue = async () => {
+    setRecalculating(true)
+    setShowPackagePopup(false)
+    
+    if (packageOption === 'photo' && photoPreview) {
+      let finalWeight = '1'
+      let finalLength = ''
+      let finalWidth = ''
+      let finalHeight = ''
+      
+      if (photoFile) {
+        try {
+          const formData = new FormData()
+          formData.append('image', photoFile)
+          const response = await tariffsAPI.analyzeImage(formData)
+          if (response.data) {
+            finalWeight = response.data.weight || '1'
+            finalLength = response.data.length || ''
+            finalWidth = response.data.width || ''
+            finalHeight = response.data.height || ''
+          }
+        } catch (err) {
+          console.error('Ошибка анализа изображения:', err)
+        }
+      }
+      
+      const updatedWizardData = {
+        ...wizardData,
+        weight: finalWeight,
+        length: finalLength,
+        width: finalWidth,
+        height: finalHeight,
+        packageOption: 'photo',
+        photoFile
+      }
+      
+      setWizardData(updatedWizardData)
+      setSelectedPackageOption('photo')
+      
+      try {
+        const response = await tariffsAPI.calculate({
+          weight: parseFloat(finalWeight),
+          length: parseFloat(finalLength) || 0,
+          width: parseFloat(finalWidth) || 0,
+          height: parseFloat(finalHeight) || 0,
+          from_city: updatedWizardData.fromCity,
+          to_city: updatedWizardData.toCity,
+          from_address: updatedWizardData.senderAddress || updatedWizardData.fromCity,
+          to_address: updatedWizardData.deliveryAddress || updatedWizardData.toCity,
+        })
+        
+        if (response.data && response.data.options) {
+          setOffers(response.data.options)
+        }
+      } finally {
+        setRecalculating(false)
+      }
+    } else if (packageOption === 'manual' && length && width && height && weight) {
+      const updatedWizardData = {
+        ...wizardData,
+        weight,
+        length,
+        width,
+        height,
+        packageOption: 'manual'
+      }
+      
+      setWizardData(updatedWizardData)
+      setSelectedPackageOption('manual')
+      
+      try {
+        const response = await tariffsAPI.calculate({
+          weight: parseFloat(weight),
+          length: parseFloat(length),
+          width: parseFloat(width),
+          height: parseFloat(height),
+          from_city: updatedWizardData.fromCity,
+          to_city: updatedWizardData.toCity,
+          from_address: updatedWizardData.senderAddress || updatedWizardData.fromCity,
+          to_address: updatedWizardData.deliveryAddress || updatedWizardData.toCity,
+        })
+        
+        if (response.data && response.data.options) {
+          setOffers(response.data.options)
+        }
+      } finally {
+        setRecalculating(false)
+      }
+    } else if (packageOption === 'unknown' && selectedSize) {
+      const sizeOption = sizeOptions.find(opt => opt.id === selectedSize)
+      let finalWeight = '1'
+      let finalLength = ''
+      let finalWidth = ''
+      let finalHeight = ''
+      
+      if (sizeOption) {
+        const weightMatch = sizeOption.weight.match(/(\d+)/)
+        finalWeight = weightMatch ? weightMatch[1] : '5'
+        const dimMatch = sizeOption.dimensions.match(/(\d+)х(\d+)х(\d+)/)
+        if (dimMatch) {
+          finalLength = dimMatch[1]
+          finalWidth = dimMatch[2]
+          finalHeight = dimMatch[3]
+        }
+      }
+      
+      const updatedWizardData = {
+        ...wizardData,
+        weight: finalWeight,
+        length: finalLength,
+        width: finalWidth,
+        height: finalHeight,
+        selectedSize,
+        packageOption: 'unknown'
+      }
+      
+      setWizardData(updatedWizardData)
+      setSelectedPackageOption('unknown')
+      
+      try {
+        const response = await tariffsAPI.calculate({
+          weight: parseFloat(finalWeight),
+          length: parseFloat(finalLength),
+          width: parseFloat(finalWidth),
+          height: parseFloat(finalHeight),
+          from_city: updatedWizardData.fromCity,
+          to_city: updatedWizardData.toCity,
+          from_address: updatedWizardData.senderAddress || updatedWizardData.fromCity,
+          to_address: updatedWizardData.deliveryAddress || updatedWizardData.toCity,
+        })
+        
+        if (response.data && response.data.options) {
+          setOffers(response.data.options)
+        }
+      } finally {
+        setRecalculating(false)
+      }
+    } else {
+      setRecalculating(false)
+    }
+  }
+  
+  const isPhotoValid = packageOption === 'photo' && photoPreview
+  const isManualValid = packageOption === 'manual' && length && width && height && weight
+  const isUnknownValid = packageOption === 'unknown' && selectedSize
+  const isContinueDisabled = !isPhotoValid && !isManualValid && !isUnknownValid
   
   const isFromUrl = !location.state?.wizardData && location.search.includes('data=')
+  
+  useEffect(() => {
+    if (showAssistant && typedText.length < currentMessage.length) {
+      const timeout = setTimeout(() => {
+        setTypedText(currentMessage.slice(0, typedText.length + 1))
+      }, 15)
+      return () => clearTimeout(timeout)
+    }
+  }, [showAssistant, typedText, currentMessage])
+  
+  useEffect(() => {
+    if (showAssistant) {
+      setTypedText('')
+    }
+  }, [showAssistant, assistantStep, selectedPackageOption])
 
   useEffect(() => {
     let currentWizardData = wizardData
@@ -139,8 +367,10 @@ function OffersPage() {
         wizardData,
         company: offer.company_id,
         companyName: offer.company_name,
+        companyCode: offer.company_code,
         price: offer.price,
         tariffCode: offer.tariff_code,
+        tariffName: offer.tariff_name,
         deliveryTime: offer.delivery_time,
       }
     })
@@ -205,16 +435,406 @@ function OffersPage() {
         </div>
       </header>
 
+      {showPackagePopup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-[468px] w-full max-h-[90vh] overflow-y-auto relative">
+            <button
+              onClick={() => {
+                setShowPackagePopup(false)
+                setPackageOption(null)
+                setPhotoFile(null)
+                setPhotoPreview(null)
+                setPhotoError('')
+                setLength('')
+                setWidth('')
+                setHeight('')
+                setWeight('')
+                setSelectedSize(null)
+              }}
+              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center text-[#2D2D2D] hover:bg-[#F5F5F5] rounded-full transition-colors"
+            >
+              <span className="text-2xl">×</span>
+            </button>
+            
+            {packageOption === 'photo' && (
+              <div className="p-8">
+                <h2 className="text-3xl font-bold text-[#2D2D2D] mb-8 text-center">
+                  Загрузить фото
+                </h2>
+                
+                <div className="mb-6">
+                  <div className="border-2 border-dashed border-[#0077FE] rounded-xl p-8 mb-6">
+                    {!photoPreview ? (
+                      <div className="flex flex-col items-center gap-4">
+                        <p className="text-sm text-[#2D2D2D]">Фотография весом не более 5 мб.</p>
+                        <input
+                          type="file"
+                          id="photo-upload-popup"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files[0]
+                            if (file) {
+                              if (file.size > 5 * 1024 * 1024) {
+                                setPhotoError('Файл слишком большой. Максимальный размер 5 МБ.')
+                                setPhotoFile(null)
+                                setPhotoPreview(null)
+                              } else {
+                                setPhotoFile(file)
+                                setPhotoError('')
+                                const reader = new FileReader()
+                                reader.onloadend = () => {
+                                  setPhotoPreview(reader.result)
+                                }
+                                reader.readAsDataURL(file)
+                              }
+                            }
+                          }}
+                          className="hidden"
+                        />
+                        <label
+                          htmlFor="photo-upload-popup"
+                          className="px-6 py-3 bg-[#0077FE] text-white rounded-xl text-base font-semibold cursor-pointer hover:bg-[#0066CC] transition-colors"
+                        >
+                          Загрузить фото
+                        </label>
+                        {photoError && (
+                          <p className="text-sm text-red-500">{photoError}</p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center">
+                        <div className="relative inline-block">
+                          <img
+                            src={photoPreview}
+                            alt="Загруженное фото"
+                            className="max-w-full h-auto rounded-lg max-h-64"
+                          />
+                          <button
+                            onClick={() => {
+                              setPhotoFile(null)
+                              setPhotoPreview(null)
+                              setPhotoError('')
+                              const input = document.getElementById('photo-upload-popup')
+                              if (input) input.value = ''
+                            }}
+                            className="absolute top-2 right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-lg hover:bg-gray-100 transition-colors"
+                          >
+                            <span className="text-[#2D2D2D] text-lg font-bold">×</span>
+                          </button>
+                        </div>
+                        <div className="mt-4 text-center">
+                          <input
+                            type="file"
+                            id="photo-replace-popup"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files[0]
+                              if (file) {
+                                if (file.size > 5 * 1024 * 1024) {
+                                  setPhotoError('Файл слишком большой. Максимальный размер 5 МБ.')
+                                } else {
+                                  setPhotoFile(file)
+                                  setPhotoError('')
+                                  const reader = new FileReader()
+                                  reader.onloadend = () => {
+                                    setPhotoPreview(reader.result)
+                                  }
+                                  reader.readAsDataURL(file)
+                                }
+                              }
+                            }}
+                            className="hidden"
+                          />
+                          <label
+                            htmlFor="photo-replace-popup"
+                            className="text-sm text-[#0077FE] cursor-pointer hover:underline"
+                          >
+                            Загрузить другое фото
+                          </label>
+                        </div>
+                        {photoError && (
+                          <p className="text-sm text-red-500 mt-2 text-center">{photoError}</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <button
+                    onClick={handlePackageContinue}
+                    disabled={isContinueDisabled}
+                    className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold hover:bg-[#0066CC] transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0077FE]"
+                  >
+                    Продолжить
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            {packageOption === 'manual' && (
+              <div className="p-8">
+                  <h2 className="text-3xl font-bold text-[#2D2D2D] mb-8">
+                    Указать точные размеры
+                  </h2>
+                  
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <NumberInput
+                      value={length}
+                      onChange={(e) => setLength(e.target.value)}
+                      label="Длина, см"
+                    />
+                    <NumberInput
+                      value={height}
+                      onChange={(e) => setHeight(e.target.value)}
+                      label="Высота, см"
+                    />
+                    <NumberInput
+                      value={width}
+                      onChange={(e) => setWidth(e.target.value)}
+                      label="Ширина, см"
+                    />
+                    <NumberInput
+                      value={weight}
+                      onChange={(e) => setWeight(e.target.value)}
+                      label="Вес, кг"
+                    />
+                  </div>
+                  
+                  <div className="mb-6">
+                    <NumberInput
+                      value={estimatedValue}
+                      onChange={(e) => setEstimatedValue(e.target.value)}
+                      label="Оценочная стоимость"
+                    />
+                  </div>
+                  
+                  <div className="mb-6 text-center">
+                    <button
+                      onClick={() => {
+                        setPackageOption('unknown')
+                        setLength('')
+                        setWidth('')
+                        setHeight('')
+                        setWeight('')
+                      }}
+                      className="text-sm text-[#0077FE] hover:underline"
+                    >
+                      Не знаю габариты
+                    </button>
+                  </div>
+                  
+                  <button
+                    onClick={handlePackageContinue}
+                    disabled={isContinueDisabled}
+                    className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold hover:bg-[#0066CC] transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0077FE]"
+                  >
+                    Продолжить
+                  </button>
+                </div>
+              )}
+            
+            {packageOption === 'unknown' && (
+                <div className="p-8">
+                  <h2 className="text-3xl font-bold text-[#2D2D2D] mb-8">
+                    Указать точные размеры
+                  </h2>
+                  
+                  <div className="grid grid-cols-2 tablet:grid-cols-4 gap-4 mb-6">
+                    {sizeOptions.map((option) => (
+                      <button
+                        key={option.id}
+                        onClick={() => setSelectedSize(option.id)}
+                        className={`p-4 rounded-xl border transition-all ${
+                          selectedSize === option.id
+                            ? 'border-[#0077FE] bg-[#F0F7FF]'
+                            : 'border-[#E5E5E5] bg-white hover:border-[#0077FE]'
+                        }`}
+                      >
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="w-12 h-12 flex items-center justify-center">
+                            <img src={option.icon} alt="" className="w-full h-full" />
+                          </div>
+                          <div className="text-center">
+                            <p className="text-sm font-semibold text-[#2D2D2D] mb-1">{option.name}</p>
+                            <p className="text-xs text-[#2D2D2D]">{option.dimensions}</p>
+                            <p className="text-xs text-[#2D2D2D]">{option.weight}</p>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  
+                  <div className="mb-6">
+                    <NumberInput
+                      value={estimatedValue}
+                      onChange={(e) => setEstimatedValue(e.target.value)}
+                      label="Оценочная стоимость"
+                    />
+                  </div>
+                  
+                  <div className="mb-6 text-center">
+                    <button
+                      onClick={() => {
+                        setPackageOption('manual')
+                        setSelectedSize(null)
+                      }}
+                      className="text-sm text-[#0077FE] hover:underline"
+                    >
+                      Я знаю габариты
+                    </button>
+                  </div>
+                  
+                  <button
+                    onClick={handlePackageContinue}
+                    disabled={isContinueDisabled}
+                    className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold hover:bg-[#0066CC] transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0077FE]"
+                  >
+                    Продолжить
+                  </button>
+                </div>
+              )}
+          </div>
+        </div>
+      )}
+      
       <div className="flex justify-center pt-12 pb-8">
         <div className="w-full max-w-[720px] mx-6">
+          {showAssistant && (
+            <div className="bg-white rounded-2xl   px-4 py-4 mb-6 flex gap-3">
+              <div className="w-16 h-16 rounded-full overflow-hidden flex-shrink-0">
+                <img src={assistantAvatar} alt="Саша" className="w-full h-full object-cover" />
+              </div>
+              <div className="flex-1 flex flex-col gap-1">
+                <p className="text-sm font-semibold text-[#2D2D2D]">Ассистент Саша</p>
+                <div className="bg-[#F9F6F0] rounded-tl-[5px] rounded-tr-[12px] rounded-bl-[8px] rounded-br-[8px] px-3 py-2 mb-1">
+                  <p className="text-base text-[#2D2D2D]">
+                    {recalculating ? 'Пересчитываем предложения...' : (
+                      <>
+                        {typedText}
+                        {typedText.length < currentMessage.length && (
+                          <span className="inline-block w-0.5 h-4 bg-[#2D2D2D] ml-1 animate-pulse"></span>
+                        )}
+                      </>
+                    )}
+                  </p>
+                </div>
+                {recalculating ? null : assistantStep === 'initial' ? (
+                  <div className="flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigate('/wizard', {
+                          state: {
+                            fromCity: wizardData.fromCity || fromCity,
+                            toCity: wizardData.toCity || toCity,
+                            inviteRecipient: true,
+                            selectedRole: 'sender'
+                          }
+                        })
+                      }}
+                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[8px] rounded-br-[12px] px-3 py-2 text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
+                    >
+                      🤝 Да, пригласить получателя
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAssistantStep('second')
+                        setTypedText('')
+                      }}
+                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[12px] rounded-br-[8px] px-3 py-2 text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
+                    >
+                      📦 Нет, оформлю сам
+                    </button>
+                  </div>
+                ) : selectedPackageOption === 'photo' ? (
+                  <div className="flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPackageOption('photo')
+                        setShowPackagePopup(true)
+                        setPhotoFile(null)
+                        setPhotoPreview(null)
+                      }}
+                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[8px] rounded-br-[12px] px-3 py-2 text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
+                    >
+                      📸 Загрузить другое фото
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPackageOption('manual')
+                        setShowPackagePopup(true)
+                        setLength('')
+                        setWidth('')
+                        setHeight('')
+                        setWeight('')
+                      }}
+                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[12px] rounded-br-[8px] px-3 py-2 text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
+                    >
+                      📐 Указать точные размеры
+                    </button>
+                  </div>
+                ) : selectedPackageOption === 'manual' ? (
+                  <div className="flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPackageOption('photo')
+                        setShowPackagePopup(true)
+                        setPhotoFile(null)
+                        setPhotoPreview(null)
+                      }}
+                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[8px] rounded-br-[12px] px-3 py-2 text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
+                    >
+                      📸 Загрузить фото посылки
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPackageOption('manual')
+                        setShowPackagePopup(true)
+                      }}
+                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[12px] rounded-br-[8px] px-3 py-2 text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
+                    >
+                      📐 Указать другие размеры
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPackageOption('photo')
+                        setShowPackagePopup(true)
+                      }}
+                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[8px] rounded-br-[12px] px-3 py-2 text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
+                    >
+                      📸 Загрузить фото посылки
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPackageOption('manual')
+                        setShowPackagePopup(true)
+                      }}
+                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[12px] rounded-br-[8px] px-3 py-2 text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
+                    >
+                      📐 Указать точные размеры
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
           <div className=" rounded-2xl 8 mb-6">
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center justify-center gap-2 mb-2">
               <h1 className="text-3xl text-center font-bold text-[#2D2D2D]">
-                Подобрали лучшие предложения по вашим параметрам
+              Предложения по вашим параметрам 🔥
               </h1>
             </div>
             <p className="text-base text-center text-[#2D2D2D] mb-6">
-            Выберите и оформите наиболее подходящий вариант доставки 👇
+            Выберите наиболее подходящий вариант доставки 👇
             </p>
 
             <div className="flex items-center gap-4 mb-6 flex-wrap">

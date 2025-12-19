@@ -15,10 +15,10 @@ import iconMicrowave from '../assets/images/icon-microwave.svg'
 function WizardPage() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { fromCity: initialFromCity, toCity: initialToCity } = location.state || {}
+  const { fromCity: initialFromCity, toCity: initialToCity, inviteRecipient, selectedRole: initialSelectedRole } = location.state || {}
   const [fromCity, setFromCity] = useState(initialFromCity || '')
   const [toCity, setToCity] = useState(initialToCity || '')
-  const [selectedRole, setSelectedRole] = useState(null)
+  const [selectedRole, setSelectedRole] = useState(initialSelectedRole || null)
   const [packageOption, setPackageOption] = useState(null)
   const [length, setLength] = useState('')
   const [width, setWidth] = useState('')
@@ -29,7 +29,9 @@ function WizardPage() {
   const [photoPreview, setPhotoPreview] = useState(null)
   const [photoError, setPhotoError] = useState('')
   const [selectedSize, setSelectedSize] = useState(null)
-  const [packageDataCompleted, setPackageDataCompleted] = useState(false)
+  const [packageDataCompleted, setPackageDataCompleted] = useState(() => {
+    return inviteRecipient && initialSelectedRole === 'sender'
+  })
   const [senderPhone, setSenderPhone] = useState('')
   const [senderFIO, setSenderFIO] = useState('')
   const [senderAddress, setSenderAddress] = useState(initialFromCity || '')
@@ -40,7 +42,12 @@ function WizardPage() {
   const [codeLoading, setCodeLoading] = useState(false)
   const [codeError, setCodeError] = useState('')
   const [paymentPayer, setPaymentPayer] = useState(null)
-  const [currentStep, setCurrentStep] = useState('package')
+  const [currentStep, setCurrentStep] = useState(() => {
+    if (inviteRecipient && initialSelectedRole === 'sender') {
+      return 'recipientPhone'
+    }
+    return 'package'
+  })
   const [fioFocused, setFioFocused] = useState(false)
   const [contactPhone, setContactPhone] = useState('')
   const [deliveryMethod, setDeliveryMethod] = useState(null)

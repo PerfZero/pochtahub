@@ -12,6 +12,8 @@ class OrderListView(generics.ListCreateAPIView):
     serializer_class = OrderSerializer
 
     def get_permissions(self):
+        if self.request.method == 'POST':
+            return [permissions.AllowAny()]
         return [permissions.IsAuthenticated()]
 
     def get_queryset(self):

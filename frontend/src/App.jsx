@@ -29,7 +29,6 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<LoginPage setIsAuthenticated={setIsAuthenticated} />} />
         <Route path="/register" element={<RegisterPage setIsAuthenticated={setIsAuthenticated} />} />
         <Route path="/calculate" element={<CalculatePage />} />
         <Route path="/wizard" element={<WizardPage />} />
@@ -39,7 +38,7 @@ function App() {
         <Route path="/confirmation/:orderId" element={<ConfirmationPage />} />
         <Route 
           path="/cabinet" 
-          element={isAuthenticated ? <CabinetPage /> : <Navigate to="/login" />} 
+          element={isAuthenticated ? <CabinetPage /> : <Navigate to="/calculate" />} 
         />
         <Route path="/" element={<Navigate to="/calculate" />} />
         <Route path="*" element={<NotFoundPage />} />
