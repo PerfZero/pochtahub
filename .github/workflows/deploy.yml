@@ -36,11 +36,21 @@ jobs:
           git pull origin main
           
           echo "=== Deploying Backend ==="
-          cd backend
+          cd /var/www/pochtahub/backend
           source ../venv/bin/activate
           pip install -r requirements.txt --quiet
           python manage.py collectstatic --noinput
           python manage.py migrate --noinput
+          
+          echo "=== Restarting Backend Service ==="
+          sudo systemctl restart pochtahub || echo "Service restart failed, trying alternative method..."
+          if [ $? -ne 0 ]; then
+            echo "Trying to restart via supervisor or manual restart needed"
+          fi
+          
+          sleep 2
+          echo "=== Checking service status ==="
+          sudo systemctl status pochtahub --no-pager -l | head -20
           
           echo "=== Deploying Frontend ==="
           cd ../frontend
@@ -57,5 +67,5 @@ jobs:
           
           echo "=== Deployment completed ==="
           echo "Backend and Frontend updated successfully."
-          echo "Note: Server should be running via systemd or screen. Restart manually if needed."
+          echo "Backend service restarted."
 

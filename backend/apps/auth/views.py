@@ -10,8 +10,6 @@ from .serializers import RegisterSerializer, LoginSerializer
 import notificore_restapi as notificore_api
 import random
 import string
-import ssl
-import requests
 
 User = get_user_model()
 
