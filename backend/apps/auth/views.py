@@ -7,13 +7,15 @@ from django.contrib.auth import authenticate
 from django.core.cache import cache
 from django.contrib.auth import get_user_model
 from .serializers import RegisterSerializer, LoginSerializer
-import notificore_restapi as notificore_api
+import requests
 import random
 import string
+import json
 
 User = get_user_model()
 
 NOTIFICORE_API_KEY = "test_wbtaHxnHd5RlL8akZuCb"
+NOTIFICORE_API_URL = "https://app.notificore.com/rest"
 
 
 class SendCodeView(APIView):
@@ -34,38 +36,48 @@ class SendCodeView(APIView):
             phone_clean = phone.replace('+', '').replace(' ', '').replace('-', '').replace('(', '').replace(')', '')
             phone_number = int(phone_clean)
             
+            message_text = f'Ваш код подтверждения: {code}'
+            
+            headers = {
+                'X-API-KEY': NOTIFICORE_API_KEY,
+                'Content-Type': 'application/json; charset=utf-8',
+                'Accept': 'application/json'
+            }
+            
+            payload = {
+                'destination': 'phone',
+                'body': message_text,
+                'msisdn': str(phone_number),
+                'originator': 'PochtaHub'
+            }
+            
             try:
-                original_verify = notificore_api.Requester.session.verify
-                notificore_api.Requester.session.verify = False
-                
-                client = notificore_api.SMSAPI(config={'api_key': NOTIFICORE_API_KEY})
-                message_text = f'Ваш код подтверждения: {code}'
-                
-                result = client.send(
-                    message=notificore_api.SMSMessage(body=message_text),
-                    recipients=notificore_api.Recipient(phone_number)
+                response = requests.post(
+                    f'{NOTIFICORE_API_URL}/sms/create',
+                    json=payload,
+                    headers=headers,
+                    timeout=30,
+                    verify=True
                 )
+                response.raise_for_status()
+                result = response.json()
                 
-                notificore_api.Requester.session.verify = original_verify
-                
-                if result and isinstance(result, dict):
-                    if result.get('result') or result.get('success'):
-                        cache.set(f'verify_code_{phone}', code, 300)
-                        return Response({'success': True, 'message': 'Код отправлен в SMS'})
-                    else:
-                        error_msg = result.get('error') or result.get('message') or 'Ошибка отправки SMS'
-                        return Response({'error': error_msg}, status=status.HTTP_400_BAD_REQUEST)
-                else:
+                if result and (result.get('result') or not result.get('error')):
                     cache.set(f'verify_code_{phone}', code, 300)
                     return Response({'success': True, 'message': 'Код отправлен в SMS'})
-            except Exception as api_err:
-                notificore_api.Requester.session.verify = True
-                raise api_err
+                else:
+                    error_msg = result.get('errorDescription') or result.get('error') or 'Ошибка отправки SMS'
+                    return Response({'error': error_msg}, status=status.HTTP_400_BAD_REQUEST)
+                    
+            except requests.exceptions.ConnectionError as conn_err:
+                return Response({'error': f'Ошибка подключения к Notificore API: {str(conn_err)}'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            except requests.exceptions.Timeout:
+                return Response({'error': 'Таймаут при подключении к Notificore API'}, status=status.HTTP_504_GATEWAY_TIMEOUT)
+            except requests.exceptions.RequestException as req_err:
+                return Response({'error': f'Ошибка запроса к Notificore API: {str(req_err)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 
         except ValueError:
             return Response({'error': 'Неверный формат номера телефона'}, status=status.HTTP_400_BAD_REQUEST)
-        except notificore_api.APIError as e:
-            return Response({'error': f'Ошибка API Notificore: {e.description}'}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({'error': f'Ошибка отправки SMS: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
