@@ -41,6 +41,8 @@ function WizardPage() {
   const [codeSent, setCodeSent] = useState(false)
   const [codeLoading, setCodeLoading] = useState(false)
   const [codeError, setCodeError] = useState('')
+  const [telegramAvailable, setTelegramAvailable] = useState(false)
+  const [telegramSent, setTelegramSent] = useState(false)
   const [paymentPayer, setPaymentPayer] = useState(null)
   const [currentStep, setCurrentStep] = useState(() => {
     if (inviteRecipient && initialSelectedRole === 'sender') {
@@ -129,6 +131,8 @@ function WizardPage() {
           setCodeSent(false)
           setSmsCode('')
           setCodeError('')
+          setTelegramAvailable(false)
+          setTelegramSent(false)
         } else {
           setCurrentStep('contactPhone')
         }
@@ -139,12 +143,16 @@ function WizardPage() {
       setCodeSent(false)
       setSmsCode('')
       setCodeError('')
+      setTelegramAvailable(false)
+      setTelegramSent(false)
     } else if (currentStep === 'contactPhone') {
       setCurrentStep('package')
     } else if (currentStep === 'userPhone' && codeSent) {
       setCodeSent(false)
       setSmsCode('')
       setCodeError('')
+      setTelegramAvailable(false)
+      setTelegramSent(false)
     } else if (currentStep === 'userPhone') {
       setCurrentStep('deliveryAddress')
     } else if (currentStep === 'deliveryAddress') {
@@ -238,7 +246,7 @@ function WizardPage() {
     setCurrentStep('package')
   }
 
-  const handleSendCode = async () => {
+  const handleSendCode = async (method = 'sms') => {
     const phoneToUse = currentStep === 'contactPhone' ? contactPhone : userPhone
     if (!phoneToUse) {
       setCodeError('Введите номер телефона')
@@ -246,17 +254,30 @@ function WizardPage() {
     }
     setCodeLoading(true)
     setCodeError('')
+    setTelegramAvailable(false)
+    setTelegramSent(false)
     try {
-      await authAPI.sendCode(phoneToUse)
+      const response = await authAPI.sendCode(phoneToUse, method)
+      if (response.data?.telegram_sent) {
+        setTelegramSent(true)
+      }
       setCodeSent(true)
       if (currentStep === 'contactPhone') {
         setUserPhone(contactPhone)
       }
     } catch (err) {
-      setCodeError(err.response?.data?.error || 'Ошибка отправки кода')
+      const errorData = err.response?.data
+      if (errorData?.telegram_available) {
+        setTelegramAvailable(true)
+      }
+      setCodeError(errorData?.error || 'Ошибка отправки кода')
     } finally {
       setCodeLoading(false)
     }
+  }
+  
+  const handleSendTelegramCode = async () => {
+    await handleSendCode('telegram')
   }
 
   const handleVerifyCode = async (code = null) => {
@@ -285,6 +306,8 @@ function WizardPage() {
     setCodeSent(false)
     setSmsCode('')
     setCodeError('')
+    setTelegramAvailable(false)
+    setTelegramSent(false)
     handleSendCode()
   }
 
@@ -738,7 +761,21 @@ function WizardPage() {
                     />
                   </div>
                   {codeError && (
-                    <p className="text-sm text-red-500 mb-4 text-center">{codeError}</p>
+                    <div className="mb-4">
+                      <p className="text-sm text-red-500 text-center mb-2">{codeError}</p>
+                      {telegramAvailable && (
+                        <p className="text-sm text-[#0077FE] text-center">
+                          SMS не пришла?{' '}
+                          <button
+                            onClick={handleSendTelegramCode}
+                            disabled={codeLoading}
+                            className="underline font-semibold hover:no-underline disabled:opacity-50"
+                          >
+                            Получить код в Telegram
+                          </button>
+                        </p>
+                      )}
+                    </div>
                   )}
                   <button 
                     onClick={handleContinue}
@@ -747,16 +784,29 @@ function WizardPage() {
                   >
                     {codeLoading ? 'Отправка...' : 'Продолжить'}
                   </button>
+                  <div className="mt-4 text-center">
+                    <button
+                      onClick={handleSendTelegramCode}
+                      disabled={codeLoading || !contactPhone}
+                      className="text-sm text-[#0077FE] hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Получить код в Telegram
+                    </button>
+                  </div>
                 </div>
               )}
 
               {currentStep === 'contactPhone' && codeSent && (
                 <div className="mb-8">
                   <h1 className="text-3xl font-bold text-[#2D2D2D] mb-2 text-center">
-                    Введите код из СМС
+                    {telegramSent ? 'Введите код из Telegram' : 'Введите код из СМС'}
                   </h1>
                   <p className="text-base text-[#2D2D2D] mb-8 text-center">
-                    Отправили на <strong>{contactPhone}</strong>
+                    {telegramSent ? (
+                      <>Отправили в <strong>Telegram</strong></>
+                    ) : (
+                      <>Отправили на <strong>{contactPhone}</strong></>
+                    )}
                   </p>
                   <div className="mb-6">
                     <CodeInput
@@ -771,7 +821,26 @@ function WizardPage() {
                     />
                   </div>
                   {codeError && (
-                    <p className="text-sm text-red-500 mb-4 text-center">{codeError}</p>
+                    <div className="mb-4">
+                      <p className="text-sm text-red-500 text-center mb-2">{codeError}</p>
+                      {telegramAvailable && (
+                        <p className="text-sm text-[#0077FE] text-center">
+                          SMS не пришла?{' '}
+                          <button
+                            onClick={handleSendTelegramCode}
+                            disabled={codeLoading}
+                            className="underline font-semibold hover:no-underline disabled:opacity-50"
+                          >
+                            Получить код в Telegram
+                          </button>
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {telegramSent && (
+                    <p className="text-sm text-green-600 mb-4 text-center">
+                      Код отправлен в Telegram
+                    </p>
                   )}
                   <div className="flex flex-col gap-3">
                     <button
@@ -780,6 +849,8 @@ function WizardPage() {
                         setCodeSent(false)
                         setSmsCode('')
                         setCodeError('')
+                        setTelegramAvailable(false)
+                        setTelegramSent(false)
                       }}
                       className="text-sm text-[#0077FE] hover:underline"
                     >
@@ -977,7 +1048,21 @@ function WizardPage() {
                     />
                   </div>
                   {codeError && (
-                    <p className="text-sm text-red-500 mb-4 text-center">{codeError}</p>
+                    <div className="mb-4">
+                      <p className="text-sm text-red-500 text-center mb-2">{codeError}</p>
+                      {telegramAvailable && (
+                        <p className="text-sm text-[#0077FE] text-center">
+                          SMS не пришла?{' '}
+                          <button
+                            onClick={handleSendTelegramCode}
+                            disabled={codeLoading}
+                            className="underline font-semibold hover:no-underline disabled:opacity-50"
+                          >
+                            Получить код в Telegram
+                          </button>
+                        </p>
+                      )}
+                    </div>
                   )}
                   <button 
                     onClick={handleContinue}
@@ -986,16 +1071,29 @@ function WizardPage() {
                   >
                     {codeLoading ? 'Отправка...' : 'Продолжить'}
                   </button>
+                  <div className="mt-4 text-center">
+                    <button
+                      onClick={handleSendTelegramCode}
+                      disabled={codeLoading || !userPhone}
+                      className="text-sm text-[#0077FE] hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Получить код в Telegram
+                    </button>
+                  </div>
                 </div>
               )}
 
               {currentStep === 'userPhone' && codeSent && (
                 <div className="mb-8">
                   <h1 className="text-3xl font-bold text-[#2D2D2D] mb-2 text-center">
-                    Введите код из СМС
+                    {telegramSent ? 'Введите код из Telegram' : 'Введите код из СМС'}
                   </h1>
                   <p className="text-base text-[#2D2D2D] mb-8 text-center">
-                    Отправили на <strong>{userPhone}</strong>
+                    {telegramSent ? (
+                      <>Отправили в <strong>Telegram</strong></>
+                    ) : (
+                      <>Отправили на <strong>{userPhone}</strong></>
+                    )}
                   </p>
                   <div className="mb-6">
                     <CodeInput
@@ -1010,7 +1108,26 @@ function WizardPage() {
                     />
                   </div>
                   {codeError && (
-                    <p className="text-sm text-red-500 mb-4 text-center">{codeError}</p>
+                    <div className="mb-4">
+                      <p className="text-sm text-red-500 text-center mb-2">{codeError}</p>
+                      {telegramAvailable && (
+                        <p className="text-sm text-[#0077FE] text-center">
+                          SMS не пришла?{' '}
+                          <button
+                            onClick={handleSendTelegramCode}
+                            disabled={codeLoading}
+                            className="underline font-semibold hover:no-underline disabled:opacity-50"
+                          >
+                            Получить код в Telegram
+                          </button>
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {telegramSent && (
+                    <p className="text-sm text-green-600 mb-4 text-center">
+                      Код отправлен в Telegram
+                    </p>
                   )}
                   <div className="flex flex-col gap-3">
                     <button
@@ -1019,6 +1136,8 @@ function WizardPage() {
                         setCodeSent(false)
                         setSmsCode('')
                         setCodeError('')
+                        setTelegramAvailable(false)
+                        setTelegramSent(false)
                       }}
                       className="text-sm text-[#0077FE] hover:underline"
                     >

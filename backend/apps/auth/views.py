@@ -11,11 +11,50 @@ import requests
 import random
 import string
 import json
+import os
 
 User = get_user_model()
 
 NOTIFICORE_API_KEY = "test_wbtaHxnHd5RlL8akZuCb"
-NOTIFICORE_API_URL = "https://app.notificore.com/rest"
+NOTIFICORE_API_URL_V1 = "https://api.notificore.ru/rest"
+NOTIFICORE_API_URL_V2 = "http://one-api.notificore.ru"
+
+TELEGRAM_GATEWAY_TOKEN = os.getenv('TELEGRAM_GATEWAY_TOKEN', 'AAEXLwAAdHj0Jv-fq4mKpbRYx_Amf6DhvRiK1Ui7jRn6Eg')
+TELEGRAM_GATEWAY_URL = 'https://gatewayapi.telegram.org/sendVerificationMessage'
+
+
+def send_telegram_message(phone, code):
+    if not TELEGRAM_GATEWAY_TOKEN:
+        return False
+    
+    try:
+        phone_clean = phone.replace('+', '').replace(' ', '').replace('-', '').replace('(', '').replace(')', '')
+        phone_e164 = f'+{phone_clean}' if not phone.startswith('+') else phone
+        
+        headers = {
+            'Authorization': f'Bearer {TELEGRAM_GATEWAY_TOKEN}',
+            'Content-Type': 'application/json'
+        }
+        
+        payload = {
+            'phone_number': phone_e164,
+            'code': code
+        }
+        
+        response = requests.post(
+            TELEGRAM_GATEWAY_URL,
+            json=payload,
+            headers=headers,
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            return result.get('ok', False)
+        
+        return False
+    except Exception:
+        return False
 
 
 class SendCodeView(APIView):
@@ -23,6 +62,8 @@ class SendCodeView(APIView):
 
     def post(self, request):
         phone = request.data.get('phone')
+        method = request.data.get('method', 'sms')
+        
         if not phone:
             return Response({'error': 'Телефон обязателен'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -31,6 +72,21 @@ class SendCodeView(APIView):
             phone = '+' + phone
 
         code = ''.join(random.choices(string.digits, k=4))
+        
+        if method == 'telegram':
+            telegram_sent = send_telegram_message(phone, code)
+            if telegram_sent:
+                cache.set(f'verify_code_{phone}', code, 300)
+                return Response({
+                    'success': True,
+                    'message': 'Код отправлен в Telegram',
+                    'telegram_sent': True
+                })
+            else:
+                return Response({
+                    'error': 'Не удалось отправить код через Telegram',
+                    'telegram_available': True
+                }, status=status.HTTP_400_BAD_REQUEST)
         
         try:
             phone_clean = phone.replace('+', '').replace(' ', '').replace('-', '').replace('(', '').replace(')', '')
@@ -52,13 +108,40 @@ class SendCodeView(APIView):
             }
             
             try:
-                response = requests.post(
-                    f'{NOTIFICORE_API_URL}/sms/create',
-                    json=payload,
-                    headers=headers,
-                    timeout=30,
-                    verify=True
-                )
+                try:
+                    response = requests.post(
+                        f'{NOTIFICORE_API_URL_V1}/sms/create',
+                        json=payload,
+                        headers=headers,
+                        timeout=30,
+                        verify=True
+                    )
+                except (requests.exceptions.ConnectionError, requests.exceptions.SSLError) as https_err:
+                    token_response = requests.post(
+                        f'{NOTIFICORE_API_URL_V2}/api/auth/login',
+                        json={'api_key': NOTIFICORE_API_KEY},
+                        timeout=30
+                    )
+                    if token_response.status_code == 200:
+                        token_data = token_response.json()
+                        bearer_token = token_data.get('bearer')
+                        headers_v2 = {
+                            'Authorization': f'Bearer {bearer_token}',
+                            'Content-Type': 'application/json'
+                        }
+                        payload_v2 = {
+                            'destination': 'phone',
+                            'body': message_text,
+                            'msisdn': str(phone_number)
+                        }
+                        response = requests.post(
+                            f'{NOTIFICORE_API_URL_V2}/api/sms/send',
+                            json=payload_v2,
+                            headers=headers_v2,
+                            timeout=30
+                        )
+                    else:
+                        raise https_err
                 response.raise_for_status()
                 result = response.json()
                 
@@ -67,19 +150,74 @@ class SendCodeView(APIView):
                     return Response({'success': True, 'message': 'Код отправлен в SMS'})
                 else:
                     error_msg = result.get('errorDescription') or result.get('error') or 'Ошибка отправки SMS'
-                    return Response({'error': error_msg}, status=status.HTTP_400_BAD_REQUEST)
+                    telegram_sent = send_telegram_message(phone, code)
+                    if telegram_sent:
+                        cache.set(f'verify_code_{phone}', code, 300)
+                        return Response({
+                            'success': True, 
+                            'message': 'Код отправлен в Telegram',
+                            'telegram_sent': True
+                        })
+                    return Response({
+                        'error': error_msg,
+                        'telegram_available': True
+                    }, status=status.HTTP_400_BAD_REQUEST)
                     
             except requests.exceptions.ConnectionError as conn_err:
-                return Response({'error': f'Ошибка подключения к Notificore API: {str(conn_err)}'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+                telegram_sent = send_telegram_message(phone, code)
+                if telegram_sent:
+                    cache.set(f'verify_code_{phone}', code, 300)
+                    return Response({
+                        'success': True,
+                        'message': 'Код отправлен в Telegram',
+                        'telegram_sent': True
+                    })
+                return Response({
+                    'error': f'Ошибка подключения к Notificore API: {str(conn_err)}',
+                    'telegram_available': True
+                }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
             except requests.exceptions.Timeout:
-                return Response({'error': 'Таймаут при подключении к Notificore API'}, status=status.HTTP_504_GATEWAY_TIMEOUT)
+                telegram_sent = send_telegram_message(phone, code)
+                if telegram_sent:
+                    cache.set(f'verify_code_{phone}', code, 300)
+                    return Response({
+                        'success': True,
+                        'message': 'Код отправлен в Telegram',
+                        'telegram_sent': True
+                    })
+                return Response({
+                    'error': 'Таймаут при подключении к Notificore API',
+                    'telegram_available': True
+                }, status=status.HTTP_504_GATEWAY_TIMEOUT)
             except requests.exceptions.RequestException as req_err:
-                return Response({'error': f'Ошибка запроса к Notificore API: {str(req_err)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                telegram_sent = send_telegram_message(phone, code)
+                if telegram_sent:
+                    cache.set(f'verify_code_{phone}', code, 300)
+                    return Response({
+                        'success': True,
+                        'message': 'Код отправлен в Telegram',
+                        'telegram_sent': True
+                    })
+                return Response({
+                    'error': f'Ошибка запроса к Notificore API: {str(req_err)}',
+                    'telegram_available': True
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 
         except ValueError:
             return Response({'error': 'Неверный формат номера телефона'}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            return Response({'error': f'Ошибка отправки SMS: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            telegram_sent = send_telegram_message(phone, code)
+            if telegram_sent:
+                cache.set(f'verify_code_{phone}', code, 300)
+                return Response({
+                    'success': True,
+                    'message': 'Код отправлен в Telegram',
+                    'telegram_sent': True
+                })
+            return Response({
+                'error': f'Ошибка отправки SMS: {str(e)}',
+                'telegram_available': True
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class VerifyCodeView(APIView):

@@ -44,3 +44,6 @@ ps aux | grep "manage.py runserver" | grep -v grep
 echo ""
 echo "=== 10. Проверка порта 8000 ==="
 netstat -tlnp | grep 8000 || ss -tlnp | grep 8000
+
+
+

@@ -10,3 +10,6 @@ send "tail -50 /var/www/pochtahub/server.log\r"
 expect "# "
 send "exit\r"
 expect eof
+
+
+

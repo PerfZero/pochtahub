@@ -18,7 +18,7 @@ api.interceptors.request.use((config) => {
 })
 
 export const authAPI = {
-  sendCode: (phone) => api.post('/auth/send-code/', { phone }),
+  sendCode: (phone, method = 'sms') => api.post('/auth/send-code/', { phone, method }),
   verifyCode: (phone, code) => api.post('/auth/verify-code/', { phone, code }),
   register: (data) => api.post('/auth/register/', data),
   login: (data) => api.post('/auth/login/', data),
