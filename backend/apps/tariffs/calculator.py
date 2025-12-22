@@ -5,7 +5,7 @@ from .cdek_adapter import CDEKAdapter
 class TariffCalculator:
     @staticmethod
     def calculate(weight, dimensions, transport_company_id=None, from_city=None, to_city=None, 
-                 from_address=None, to_address=None):
+                 from_address=None, to_address=None, courier_pickup=False, courier_delivery=False):
         if transport_company_id:
             companies = TransportCompany.objects.filter(id=transport_company_id, is_active=True)
         else:
@@ -20,12 +20,28 @@ class TariffCalculator:
         for company in companies:
             logger.info(f'Обработка компании: {company.name} (ID: {company.id}, api_type: {company.api_type}, is_active: {company.is_active})')
             if company.api_type == 'cdek' and company.api_account and company.api_secure_password and from_city and to_city:
-                if not company.default_tariff_code:
-                    logger.warning(f'Для компании {company.name} не назначен тариф CDEK (default_tariff_code). Тарифы не будут возвращены.')
-                    continue
-                
                 logger.info(f'Вызов CDEK API для компании {company.name} (ID: {company.id})')
-                logger.info(f'Параметры: from_city={from_city}, to_city={to_city}, weight={weight}, tariff_code={company.default_tariff_code}')
+                logger.info(f'Параметры: from_city={from_city}, to_city={to_city}, weight={weight}, courier_pickup={courier_pickup}, courier_delivery={courier_delivery}')
+                
+                # Определяем тарифы CDEK в зависимости от типа доставки
+                # 136 - склад-склад, 137 - склад-дверь, 138 - дверь-склад, 139 - дверь-дверь
+                tariff_codes_to_check = []
+                
+                if courier_pickup and courier_delivery:
+                    # Курьер забирает И привозит - дверь-дверь
+                    tariff_codes_to_check = [139]
+                elif courier_pickup and not courier_delivery:
+                    # Курьер только забирает - дверь-склад
+                    tariff_codes_to_check = [138]
+                elif not courier_pickup and courier_delivery:
+                    # Курьер только привозит - склад-дверь
+                    tariff_codes_to_check = [137]
+                else:
+                    # Без курьера - склад-склад
+                    tariff_codes_to_check = [136]
+                
+                logger.info(f'Выбранные тарифы для проверки: {tariff_codes_to_check} (courier_pickup={courier_pickup}, courier_delivery={courier_delivery})')
+                
                 try:
                     adapter = CDEKAdapter(
                         account=company.api_account,
@@ -33,32 +49,39 @@ class TariffCalculator:
                         test_mode=False
                     )
                     logger.info(f'CDEK адаптер создан, API URL: {adapter.api_url}')
-                    cdek_results = adapter.calculate_price(
-                        from_city=from_city,
-                        to_city=to_city,
-                        weight=float(weight),
-                        length=float(dimensions.get('length', 0)) if dimensions.get('length') else None,
-                        width=float(dimensions.get('width', 0)) if dimensions.get('width') else None,
-                        height=float(dimensions.get('height', 0)) if dimensions.get('height') else None,
-                        tariff_code=company.default_tariff_code
-                    )
-                    logger.info(f'CDEK API вернул {len(cdek_results)} тарифов')
                     
-                    if not cdek_results:
-                        logger.warning(f'CDEK API не вернул результатов для тарифа {company.default_tariff_code}')
-                        continue
+                    # Пробуем получить тарифы для всех подходящих кодов
+                    for tariff_code in tariff_codes_to_check:
+                        try:
+                            cdek_results = adapter.calculate_price(
+                                from_city=from_city,
+                                to_city=to_city,
+                                weight=float(weight),
+                                length=float(dimensions.get('length', 0)) if dimensions.get('length') else None,
+                                width=float(dimensions.get('width', 0)) if dimensions.get('width') else None,
+                                height=float(dimensions.get('height', 0)) if dimensions.get('height') else None,
+                                tariff_code=tariff_code
+                            )
+                            logger.info(f'CDEK API вернул {len(cdek_results)} тарифов для кода {tariff_code}')
+                            
+                            if cdek_results:
+                                for result in cdek_results:
+                                    if not result.get('tariff_code'):
+                                        result['tariff_code'] = tariff_code
+                                    result['company_id'] = company.id
+                                    result['company_code'] = company.code
+                                    result['company_name'] = company.name
+                                    if company.logo:
+                                        result['company_logo'] = company.logo.url
+                                    results.append(result)
+                                # Если получили результат, прекращаем поиск
+                                break
+                        except Exception as e:
+                            logger.warning(f'Ошибка расчета CDEK для тарифа {tariff_code}: {str(e)}')
+                            continue
                     
-                    for result in cdek_results:
-                        if not result.get('tariff_code'):
-                            result['tariff_code'] = company.default_tariff_code
-                        result['company_id'] = company.id
-                        result['company_code'] = company.code
-                        result['company_name'] = company.name
-                        if company.default_tariff_name and not result.get('tariff_name'):
-                            result['tariff_name'] = company.default_tariff_name
-                        if company.logo:
-                            result['company_logo'] = company.logo.url
-                        results.append(result)
+                    if not any(r.get('company_id') == company.id for r in results):
+                        logger.warning(f'CDEK API не вернул результатов ни для одного из тарифов: {tariff_codes_to_check}')
                 except Exception as e:
                     logger.error(f'Ошибка расчета CDEK для компании {company.name}: {str(e)}', exc_info=True)
             

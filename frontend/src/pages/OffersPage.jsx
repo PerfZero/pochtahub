@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import logoSvg from '../assets/whitelogo.svg'
 import cdekIcon from '../assets/images/cdek.svg'
@@ -67,7 +67,7 @@ function OffersPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [filterCourierPickup, setFilterCourierPickup] = useState(false)
-  const [filterCourierDelivery, setFilterCourierDelivery] = useState(true)
+  const [filterCourierDelivery, setFilterCourierDelivery] = useState(false)
   const [sortBy, setSortBy] = useState('price')
   const [shareSuccess, setShareSuccess] = useState(false)
   const [showAssistant, setShowAssistant] = useState(true)
@@ -353,6 +353,8 @@ function OffersPage() {
           to_city: currentWizardData.toCity,
           from_address: currentWizardData.senderAddress || currentWizardData.fromCity,
           to_address: currentWizardData.deliveryAddress || currentWizardData.toCity,
+          courier_pickup: filterCourierPickup,
+          courier_delivery: filterCourierDelivery,
         })
 
         console.log('Ответ API расчета тарифов:', response.data)
@@ -417,7 +419,7 @@ function OffersPage() {
     })
   }
 
-  const handleCalculate = async () => {
+  const handleCalculate = useCallback(async () => {
     if (!fromCity || !toCity || !wizardData.weight) {
       return
     }
@@ -447,6 +449,8 @@ function OffersPage() {
         to_city: toCity,
         from_address: updatedWizardData.senderAddress || fromCity,
         to_address: updatedWizardData.deliveryAddress || toCity,
+        courier_pickup: filterCourierPickup,
+        courier_delivery: filterCourierDelivery,
       })
 
       console.log('Ответ API расчета тарифов (handleCalculate):', response.data)
@@ -463,7 +467,51 @@ function OffersPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [fromCity, toCity, wizardData, filterCourierPickup, filterCourierDelivery])
+
+  // Пересчет тарифов при изменении фильтров доставки
+  useEffect(() => {
+    if (!wizardData?.weight || !fromCity || !toCity) {
+      return
+    }
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        setLoading(true)
+        setError('')
+        
+        const dimensions = {
+          length: wizardData.length || 0,
+          width: wizardData.width || 0,
+          height: wizardData.height || 0,
+        }
+        
+        const response = await tariffsAPI.calculate({
+          weight: parseFloat(wizardData.weight),
+          ...dimensions,
+          from_city: fromCity,
+          to_city: toCity,
+          from_address: wizardData.senderAddress || fromCity,
+          to_address: wizardData.deliveryAddress || toCity,
+          courier_pickup: filterCourierPickup,
+          courier_delivery: filterCourierDelivery,
+        })
+
+        if (response.data && response.data.options) {
+          setOffers(response.data.options)
+        } else {
+          setError('Не удалось получить предложения')
+        }
+      } catch (err) {
+        setError(err.response?.data?.error || 'Ошибка загрузки предложений')
+      } finally {
+        setLoading(false)
+      }
+    }, 300) // Debounce 300ms
+    
+    return () => clearTimeout(timeoutId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterCourierPickup, filterCourierDelivery])
 
   const handleShare = async () => {
     try {
@@ -945,7 +993,9 @@ function OffersPage() {
                   <input
                     type="checkbox"
                     checked={filterCourierPickup}
-                    onChange={(e) => setFilterCourierPickup(e.target.checked)}
+                    onChange={(e) => {
+                      setFilterCourierPickup(e.target.checked)
+                    }}
                     className="sr-only"
                   />
                   <div className={`w-11 h-6 rounded-full transition-colors duration-200 ${
@@ -963,7 +1013,9 @@ function OffersPage() {
                   <input
                     type="checkbox"
                     checked={filterCourierDelivery}
-                    onChange={(e) => setFilterCourierDelivery(e.target.checked)}
+                    onChange={(e) => {
+                      setFilterCourierDelivery(e.target.checked)
+                    }}
                     className="sr-only"
                   />
                   <div className={`w-11 h-6 rounded-full transition-colors duration-200 ${
