@@ -11,7 +11,14 @@ const getMediaUrl = (path) => {
   if (path.startsWith('http')) return path
   if (path.startsWith('/media')) {
     if (API_URL.startsWith('http')) {
+      // Если API_URL полный URL (например, http://127.0.0.1:8000/api), используем его базовый URL
       return `${API_URL.replace('/api', '')}${path}`
+    }
+    // Если API_URL относительный (/api), определяем базовый URL
+    // Для локальной разработки обычно бэкенд на 127.0.0.1:8000
+    const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    if (isLocalDev && window.location.port !== '8000') {
+      return `http://127.0.0.1:8000${path}`
     }
     return `${window.location.origin}${path}`
   }
