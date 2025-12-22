@@ -300,7 +300,9 @@ function CalculatePage() {
       {/* Header */}
       <header className="w-full flex justify-center items-center p-6">
         <div className="w-full max-w-[1128px] flex items-center gap-6">
-          <img src={logoSvg} alt="PochtaHub" className="h-8" />
+          <Link to="/calculate">
+            <img src={logoSvg} alt="PochtaHub" className="h-8" />
+          </Link>
           <div className="flex items-center gap-1">
             <img src={iconVerify} alt="" className="w-6 h-6" />
             <span className="text-xs text-[#2D2D2D]">Агрегатор транспортных компаний</span>

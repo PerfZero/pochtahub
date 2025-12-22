@@ -41,7 +41,7 @@ function LoginPage({ setIsAuthenticated }) {
     <div className="min-h-screen flex flex-col bg-white">
       <header className="w-full flex justify-center items-center p-6">
         <div className="w-full max-w-[1128px] flex items-center gap-6">
-          <Link to="/">
+          <Link to="/calculate">
             <img src={logoSvg} alt="PochtaHub" className="h-8" />
           </Link>
           <div className="flex items-center gap-1">
@@ -114,7 +114,9 @@ function LoginPage({ setIsAuthenticated }) {
 
       <footer className="w-full flex justify-center px-6 py-8">
         <div className="w-full max-w-[1128px] flex items-center justify-center gap-6 border-t border-[#C8C7CC] pt-8">
-          <img src={logoSvg} alt="PochtaHub" className="h-6 opacity-50" />
+          <Link to="/calculate">
+            <img src={logoSvg} alt="PochtaHub" className="h-6 opacity-50" />
+          </Link>
           <span className="text-sm text-[#858585]">© 2025 PochtaHub</span>
         </div>
       </footer>

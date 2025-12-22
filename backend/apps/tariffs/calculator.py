@@ -15,7 +15,10 @@ class TariffCalculator:
         import logging
         logger = logging.getLogger(__name__)
         
+        logger.info(f'Начало расчета тарифов. Найдено компаний: {companies.count()}')
+        
         for company in companies:
+            logger.info(f'Обработка компании: {company.name} (ID: {company.id}, api_type: {company.api_type}, is_active: {company.is_active})')
             if company.api_type == 'cdek' and company.api_account and company.api_secure_password and from_city and to_city:
                 if not company.default_tariff_code:
                     logger.warning(f'Для компании {company.name} не назначен тариф CDEK (default_tariff_code). Тарифы не будут возвращены.')
@@ -53,6 +56,8 @@ class TariffCalculator:
                         result['company_name'] = company.name
                         if company.default_tariff_name and not result.get('tariff_name'):
                             result['tariff_name'] = company.default_tariff_name
+                        if company.logo:
+                            result['company_logo'] = company.logo.url
                         results.append(result)
                 except Exception as e:
                     logger.error(f'Ошибка расчета CDEK для компании {company.name}: {str(e)}', exc_info=True)
@@ -64,15 +69,24 @@ class TariffCalculator:
                 is_active=True
             ).order_by('base_price')
 
+            logger.info(f'Найдено внутренних тарифов для компании {company.name}: {tariffs.count()}')
+            
             if tariffs.exists():
                 tariff = tariffs.first()
                 total_price = float(tariff.base_price) + (float(weight) * float(tariff.price_per_kg))
-                results.append({
+                result = {
                     'company_id': company.id,
                     'company_name': company.name,
                     'company_code': company.code,
                     'price': round(total_price, 2),
                     'tariff_name': tariff.name,
-                })
+                }
+                if company.logo:
+                    result['company_logo'] = company.logo.url
+                logger.info(f'Добавлен внутренний тариф: {result}')
+                results.append(result)
 
-        return sorted(results, key=lambda x: x['price'])
+        logger.info(f'Всего результатов: {len(results)}')
+        sorted_results = sorted(results, key=lambda x: x['price'])
+        logger.info(f'Отсортированные результаты: {sorted_results}')
+        return sorted_results

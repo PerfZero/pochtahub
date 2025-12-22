@@ -93,7 +93,9 @@ function PaymentPage() {
   return (
     <div className="min-h-screen bg-[#F5F5F5]">
       <header className="w-full bg-[#0077FE] flex flex-col items-center px-6 py-6 gap-6">
-        <img src={logoSvg} alt="PochtaHub" className="h-8" />
+        <Link to="/calculate">
+          <img src={logoSvg} alt="PochtaHub" className="h-8" />
+        </Link>
       </header>
 
       <div className="flex justify-center pt-12 pb-8">

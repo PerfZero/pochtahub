@@ -146,7 +146,7 @@ function ConfirmationPage() {
       <div className="min-h-screen flex flex-col bg-white">
         <header className="w-full flex justify-center items-center p-6 border-b border-[#C8C7CC]">
           <div className="w-full max-w-[1128px] flex items-center gap-6">
-            <Link to="/">
+            <Link to="/calculate">
               <img src={logoSvg} alt="PochtaHub" className="h-8" />
             </Link>
           </div>
@@ -298,7 +298,9 @@ function ConfirmationPage() {
 
       <footer className="w-full bg-white border-t border-[#C8C7CC]">
         <div className="w-full max-w-[1128px] mx-auto flex items-center justify-center gap-6 px-6 py-8">
-          <img src={logoSvg} alt="PochtaHub" className="h-6 opacity-50" />
+          <Link to="/calculate">
+            <img src={logoSvg} alt="PochtaHub" className="h-6 opacity-50" />
+          </Link>
           <span className="text-sm text-[#858585]">© 2025 PochtaHub</span>
         </div>
       </footer>

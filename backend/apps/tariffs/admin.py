@@ -125,13 +125,13 @@ class TransportCompanyAdminForm(forms.ModelForm):
 @admin.register(TransportCompany)
 class TransportCompanyAdmin(admin.ModelAdmin):
     form = TransportCompanyAdminForm
-    list_display = ('name', 'code', 'api_type', 'default_tariff_code', 'default_tariff_name', 'is_active', 'created_at')
+    list_display = ('name', 'code', 'api_type', 'default_tariff_code', 'default_tariff_name', 'logo', 'is_active', 'created_at')
     list_filter = ('api_type', 'is_active', 'created_at')
     search_fields = ('name', 'code')
     readonly_fields = ('created_at',)
     fieldsets = (
         ('Основная информация', {
-            'fields': ('name', 'code', 'is_active')
+            'fields': ('name', 'code', 'logo', 'is_active')
         }),
         ('Интеграция API', {
             'fields': ('api_type', 'api_url', 'api_account', 'api_secure_password', 'api_developer_key'),

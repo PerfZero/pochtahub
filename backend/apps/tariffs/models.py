@@ -16,6 +16,7 @@ class TransportCompany(models.Model):
     api_developer_key = models.CharField(max_length=200, blank=True, null=True, verbose_name='Developer Key (CDEK) - для работы от третьих лиц')
     default_tariff_code = models.IntegerField(null=True, blank=True, verbose_name='Код тарифа CDEK по умолчанию')
     default_tariff_name = models.CharField(max_length=200, blank=True, verbose_name='Название тарифа по умолчанию')
+    logo = models.FileField(upload_to='company_logos/', blank=True, null=True, verbose_name='Логотип')
     is_active = models.BooleanField(default=True, verbose_name='Активна')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
 

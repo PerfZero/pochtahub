@@ -75,7 +75,7 @@ function CabinetPage() {
     <div className="min-h-screen flex flex-col bg-[#F9F9F9]">
       <header className="w-full bg-white border-b border-[#C8C7CC]">
         <div className="w-full max-w-[1128px] mx-auto flex items-center gap-6 p-6">
-          <Link to="/">
+          <Link to="/calculate">
             <img src={logoSvg} alt="PochtaHub" className="h-8" />
           </Link>
           <div className="flex items-center gap-1">
@@ -214,7 +214,9 @@ function CabinetPage() {
 
       <footer className="w-full bg-white border-t border-[#C8C7CC]">
         <div className="w-full max-w-[1128px] mx-auto flex items-center justify-center gap-6 px-6 py-8">
-          <img src={logoSvg} alt="PochtaHub" className="h-6 opacity-50" />
+          <Link to="/calculate">
+            <img src={logoSvg} alt="PochtaHub" className="h-6 opacity-50" />
+          </Link>
           <span className="text-sm text-[#858585]">© 2025 PochtaHub</span>
         </div>
       </footer>

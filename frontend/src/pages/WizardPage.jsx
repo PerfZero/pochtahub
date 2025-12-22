@@ -428,7 +428,9 @@ function WizardPage() {
   return (
     <div className="min-h-screen bg-[#F5F5F5]">
       <header className="w-full bg-[#0077FE] flex flex-col items-center px-6 py-6 gap-6">
-        <img src={logoSvg} alt="PochtaHub" className="h-8" />
+        <Link to="/calculate">
+          <img src={logoSvg} alt="PochtaHub" className="h-8" />
+        </Link>
         <div className="w-full max-w-[720px] bg-white rounded-2xl flex items-stretch overflow-hidden p-2">
           <div className="flex-1 px-6 py-2 border-r border-[#E5E5E5]">
             <CityInput

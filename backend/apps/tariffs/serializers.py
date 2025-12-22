@@ -3,9 +3,19 @@ from .models import TransportCompany, Tariff
 
 
 class TransportCompanySerializer(serializers.ModelSerializer):
+    logo_url = serializers.SerializerMethodField()
+    
     class Meta:
         model = TransportCompany
-        fields = ('id', 'name', 'code', 'api_type', 'is_active')
+        fields = ('id', 'name', 'code', 'api_type', 'is_active', 'logo_url')
+    
+    def get_logo_url(self, obj):
+        if obj.logo:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.logo.url)
+            return obj.logo.url
+        return None
 
 
 class TariffSerializer(serializers.ModelSerializer):

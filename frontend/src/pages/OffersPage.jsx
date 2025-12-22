@@ -5,6 +5,18 @@ import cdekIcon from '../assets/images/cdek.svg'
 import CityInput from '../components/CityInput'
 import NumberInput from '../components/NumberInput'
 import { tariffsAPI } from '../api'
+
+const API_URL = import.meta.env.VITE_API_URL || '/api'
+const getMediaUrl = (path) => {
+  if (path.startsWith('http')) return path
+  if (path.startsWith('/media')) {
+    if (API_URL.startsWith('http')) {
+      return `${API_URL.replace('/api', '')}${path}`
+    }
+    return `http://127.0.0.1:8000${path}`
+  }
+  return path
+}
 import assistantAvatar from '../assets/images/assistant-avatar-336dfe.png'
 import iconPhone from '../assets/images/icon-phone.svg'
 import iconIron from '../assets/images/icon-iron.svg'
@@ -286,39 +298,11 @@ function OffersPage() {
 
   useEffect(() => {
     if (fromCity || toCity) {
-      setWizardData(prev => {
-        const updated = {
-          ...prev,
-          fromCity,
-          toCity,
-        }
-        
-        if (prev.weight) {
-          const shareData = {
-            fromCity,
-            toCity,
-            weight: prev.weight || '',
-            length: prev.length || '',
-            width: prev.width || '',
-            height: prev.height || '',
-            senderAddress: prev.senderAddress || '',
-            deliveryAddress: prev.deliveryAddress || '',
-          }
-          
-          const jsonString = JSON.stringify(shareData)
-          const bytes = new TextEncoder().encode(jsonString)
-          let binaryString = ''
-          for (let i = 0; i < bytes.length; i++) {
-            binaryString += String.fromCharCode(bytes[i])
-          }
-          const base64 = btoa(binaryString)
-          const encoded = encodeURIComponent(base64)
-          const newUrl = `${window.location.pathname}?data=${encoded}`
-          window.history.replaceState({}, '', newUrl)
-        }
-        
-        return updated
-      })
+      setWizardData(prev => ({
+        ...prev,
+        fromCity,
+        toCity,
+      }))
     }
   }, [fromCity, toCity])
 
@@ -364,9 +348,13 @@ function OffersPage() {
           to_address: currentWizardData.deliveryAddress || currentWizardData.toCity,
         })
 
+        console.log('Ответ API расчета тарифов:', response.data)
+        
         if (response.data && response.data.options) {
+          console.log('Найдено предложений:', response.data.options.length)
           setOffers(response.data.options)
         } else {
+          console.error('Нет предложений в ответе:', response.data)
           setError('Не удалось получить предложения')
         }
       } catch (err) {
@@ -454,9 +442,13 @@ function OffersPage() {
         to_address: updatedWizardData.deliveryAddress || toCity,
       })
 
+      console.log('Ответ API расчета тарифов (handleCalculate):', response.data)
+      
       if (response.data && response.data.options) {
+        console.log('Найдено предложений:', response.data.options.length)
         setOffers(response.data.options)
       } else {
+        console.error('Нет предложений в ответе:', response.data)
         setError('Не удалось получить предложения')
       }
     } catch (err) {
@@ -499,7 +491,9 @@ function OffersPage() {
   return (
     <div className="min-h-screen bg-[#F5F5F5]">
       <header className="w-full bg-[#0077FE] flex flex-col items-center px-6 py-6 gap-6">
-        <img src={logoSvg} alt="PochtaHub" className="h-8" />
+        <Link to="/calculate">
+          <img src={logoSvg} alt="PochtaHub" className="h-8" />
+        </Link>
         <div className="w-full max-w-[720px] bg-white rounded-2xl flex items-stretch  p-2">
           <div className="flex-1 px-6 py-2 border-r border-[#E5E5E5]">
             <CityInput
@@ -1030,7 +1024,13 @@ function OffersPage() {
                       )}
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-4">
-                          {isCDEK ? (
+                          {offer.company_logo ? (
+                            <img 
+                              src={getMediaUrl(offer.company_logo)} 
+                              alt={offer.company_name} 
+                              className="w-12 h-12 object-contain" 
+                            />
+                          ) : isCDEK ? (
                             <img src={cdekIcon} alt="CDEK" className="w-12 h-12" />
                           ) : (
                             <div className={`w-12 h-12 rounded-full ${getCompanyColor(index)} flex items-center justify-center text-white text-lg font-bold`}>
