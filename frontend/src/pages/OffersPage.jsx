@@ -13,7 +13,7 @@ const getMediaUrl = (path) => {
     if (API_URL.startsWith('http')) {
       return `${API_URL.replace('/api', '')}${path}`
     }
-    return `http://127.0.0.1:8000${path}`
+    return `${window.location.origin}${path}`
   }
   return path
 }
