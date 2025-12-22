@@ -20,6 +20,7 @@ if [ ! -d "venv" ]; then
 fi
 
 source venv/bin/activate
+cd backend
 pip install -r requirements.txt
 
 if [ ! -f ".env" ]; then
@@ -38,16 +39,18 @@ CORS_ALLOWED_ORIGINS=http://109.172.46.96,http://localhost:3000
 EOF
 fi
 
-python manage.py migrate
-python manage.py collectstatic --noinput
+python3 manage.py migrate
+python3 manage.py collectstatic --noinput
 
-if ! python manage.py shell -c "from apps.users.models import User; User.objects.filter(is_superuser=True).exists()" 2>/dev/null | grep -q True; then
-    python manage.py shell -c "from apps.users.models import User; User.objects.create_superuser('admin', 'admin@example.com', 'admin123')" 2>/dev/null || echo "Суперпользователь уже существует"
+if ! python3 manage.py shell -c "from apps.users.models import User; User.objects.filter(is_superuser=True).exists()" 2>/dev/null | grep -q True; then
+    python3 manage.py shell -c "from apps.users.models import User; User.objects.create_superuser('admin', 'admin@example.com', 'admin123')" 2>/dev/null || echo "Суперпользователь уже существует"
 fi
+
+systemctl restart pochtahub || echo "Сервис не найден, запустите вручную"
 
 echo "Развертывание завершено!"
 echo "Для запуска сервера выполните:"
-echo "cd $PROJECT_DIR && source venv/bin/activate && python manage.py runserver 0.0.0.0:8000"
+echo "cd $PROJECT_DIR/backend && source ../venv/bin/activate && python3 manage.py runserver 0.0.0.0:8000"
 ENDSSH
 
 
