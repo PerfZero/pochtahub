@@ -315,6 +315,64 @@ function WizardPage() {
     handleSendCode()
   }
 
+  const handleCalculate = () => {
+    if (!fromCity || !toCity) {
+      return
+    }
+
+    if (packageDataCompleted) {
+      let finalWeight = '1'
+      let finalLength = ''
+      let finalWidth = ''
+      let finalHeight = ''
+
+      if (packageOption === 'manual') {
+        finalWeight = weight || '1'
+        finalLength = length || ''
+        finalWidth = width || ''
+        finalHeight = height || ''
+      } else if (packageOption === 'unknown' && selectedSize) {
+        const sizeOption = sizeOptions.find(opt => opt.id === selectedSize)
+        if (sizeOption) {
+          const weightMatch = sizeOption.weight.match(/(\d+)/)
+          finalWeight = weightMatch ? weightMatch[1] : '5'
+          const dimMatch = sizeOption.dimensions.match(/(\d+)х(\d+)х(\d+)/)
+          if (dimMatch) {
+            finalLength = dimMatch[1]
+            finalWidth = dimMatch[2]
+            finalHeight = dimMatch[3]
+          }
+        }
+      }
+
+      const wizardData = {
+        fromCity,
+        toCity,
+        selectedRole,
+        length: finalLength,
+        width: finalWidth,
+        height: finalHeight,
+        weight: finalWeight,
+        selectedSize,
+        packageOption,
+        senderPhone,
+        senderFIO,
+        senderAddress: deliveryMethod === 'courier' ? senderAddress : fromCity,
+        deliveryAddress,
+        recipientPhone,
+        recipientAddress,
+        recipientFIO,
+        userPhone: contactPhone || userPhone,
+        email,
+        deliveryMethod,
+        paymentPayer,
+        photoFile,
+      }
+      
+      navigate('/offers', { state: { wizardData } })
+    }
+  }
+
   const handleNavigateToOffers = () => {
     let finalWeight = '1'
     let finalLength = ''
@@ -390,7 +448,11 @@ function WizardPage() {
               label="Куда"
             />
           </div>
-          <button className="bg-[#0077FE] text-white px-4 py-2 text-base font-semibold whitespace-nowrap rounded-xl">
+          <button 
+            onClick={handleCalculate}
+            disabled={!fromCity || !toCity}
+            className="bg-[#0077FE] text-white px-4 py-2 text-base font-semibold whitespace-nowrap rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             Рассчитать стоимость
           </button>
         </div>

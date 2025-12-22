@@ -54,6 +54,7 @@ function OffersPage() {
   const [showAssistant, setShowAssistant] = useState(true)
   const [typedText, setTypedText] = useState('')
   const [assistantStep, setAssistantStep] = useState('initial')
+  const [isThinking, setIsThinking] = useState(true)
   const [showPackagePopup, setShowPackagePopup] = useState(false)
   const [packageOption, setPackageOption] = useState(null)
   const [selectedPackageOption, setSelectedPackageOption] = useState(null)
@@ -69,7 +70,7 @@ function OffersPage() {
   const [selectedSize, setSelectedSize] = useState(null)
   
   const assistantMessageInitial = 'Привет! Я виртуальный ассистент Саша. Я помогу оформить доставку без лишних действий. Хотите, чтобы получатель сам выбрал доставку и указал точный адрес?'
-  const assistantMessageSecond = 'Привет! Я виртуальный ассистент Саша. Я помогу быстро отправить или получить посылку. Представленный расчёт ниже, сейчас ориентировочный. Хотите сделать его точнее?'
+  const assistantMessageSecond = 'Я помогу быстро отправить или получить посылку. Представленный расчёт ниже, сейчас ориентировочный. Хотите сделать его точнее?'
   const assistantMessageSuccess = 'Отлично! Теперь мы можем посчитать точную стоимость вашей посылки. Выберите наиболее подходящее предложение ниже.'
   
   const getCurrentMessage = () => {
@@ -262,19 +263,64 @@ function OffersPage() {
   const isFromUrl = !location.state?.wizardData && location.search.includes('data=')
   
   useEffect(() => {
-    if (showAssistant && typedText.length < currentMessage.length) {
+    if (showAssistant) {
+      setIsThinking(true)
+      setTypedText('')
+      
+      const thinkingTimeout = setTimeout(() => {
+        setIsThinking(false)
+      }, 1000)
+      
+      return () => clearTimeout(thinkingTimeout)
+    }
+  }, [showAssistant, assistantStep, selectedPackageOption])
+  
+  useEffect(() => {
+    if (showAssistant && !isThinking && typedText.length < currentMessage.length) {
       const timeout = setTimeout(() => {
         setTypedText(currentMessage.slice(0, typedText.length + 1))
       }, 15)
       return () => clearTimeout(timeout)
     }
-  }, [showAssistant, typedText, currentMessage])
-  
+  }, [showAssistant, typedText, currentMessage, isThinking])
+
   useEffect(() => {
-    if (showAssistant) {
-      setTypedText('')
+    if (fromCity || toCity) {
+      setWizardData(prev => {
+        const updated = {
+          ...prev,
+          fromCity,
+          toCity,
+        }
+        
+        if (prev.weight) {
+          const shareData = {
+            fromCity,
+            toCity,
+            weight: prev.weight || '',
+            length: prev.length || '',
+            width: prev.width || '',
+            height: prev.height || '',
+            senderAddress: prev.senderAddress || '',
+            deliveryAddress: prev.deliveryAddress || '',
+          }
+          
+          const jsonString = JSON.stringify(shareData)
+          const bytes = new TextEncoder().encode(jsonString)
+          let binaryString = ''
+          for (let i = 0; i < bytes.length; i++) {
+            binaryString += String.fromCharCode(bytes[i])
+          }
+          const base64 = btoa(binaryString)
+          const encoded = encodeURIComponent(base64)
+          const newUrl = `${window.location.pathname}?data=${encoded}`
+          window.history.replaceState({}, '', newUrl)
+        }
+        
+        return updated
+      })
     }
-  }, [showAssistant, assistantStep, selectedPackageOption])
+  }, [fromCity, toCity])
 
   useEffect(() => {
     let currentWizardData = wizardData
@@ -376,6 +422,50 @@ function OffersPage() {
     })
   }
 
+  const handleCalculate = async () => {
+    if (!fromCity || !toCity || !wizardData.weight) {
+      return
+    }
+
+    try {
+      setLoading(true)
+      setError('')
+      
+      const updatedWizardData = {
+        ...wizardData,
+        fromCity,
+        toCity,
+      }
+
+      setWizardData(updatedWizardData)
+
+      const dimensions = {
+        length: updatedWizardData.length || 0,
+        width: updatedWizardData.width || 0,
+        height: updatedWizardData.height || 0,
+      }
+      
+      const response = await tariffsAPI.calculate({
+        weight: parseFloat(updatedWizardData.weight),
+        ...dimensions,
+        from_city: fromCity,
+        to_city: toCity,
+        from_address: updatedWizardData.senderAddress || fromCity,
+        to_address: updatedWizardData.deliveryAddress || toCity,
+      })
+
+      if (response.data && response.data.options) {
+        setOffers(response.data.options)
+      } else {
+        setError('Не удалось получить предложения')
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || 'Ошибка загрузки предложений')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleShare = async () => {
     try {
       const shareData = {
@@ -410,7 +500,7 @@ function OffersPage() {
     <div className="min-h-screen bg-[#F5F5F5]">
       <header className="w-full bg-[#0077FE] flex flex-col items-center px-6 py-6 gap-6">
         <img src={logoSvg} alt="PochtaHub" className="h-8" />
-        <div className="w-full max-w-[720px] bg-white rounded-2xl flex items-stretch overflow-hidden p-2">
+        <div className="w-full max-w-[720px] bg-white rounded-2xl flex items-stretch  p-2">
           <div className="flex-1 px-6 py-2 border-r border-[#E5E5E5]">
             <CityInput
               placeholder="Откуда"
@@ -429,8 +519,12 @@ function OffersPage() {
               label="Куда"
             />
           </div>
-          <button className="bg-[#0077FE] text-white px-4 py-2 text-base font-semibold whitespace-nowrap rounded-xl">
-            Рассчитать стоимость
+          <button 
+            onClick={handleCalculate}
+            disabled={!fromCity || !toCity || !wizardData.weight || loading}
+            className="bg-[#0077FE] text-white px-4 py-2 text-base font-semibold whitespace-nowrap rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Расчет...' : 'Рассчитать стоимость'}
           </button>
         </div>
       </header>
@@ -707,7 +801,13 @@ function OffersPage() {
                 <p className="text-sm font-semibold text-[#2D2D2D]">Ассистент Саша</p>
                 <div className="bg-[#F9F6F0] rounded-tl-[5px] rounded-tr-[12px] rounded-bl-[8px] rounded-br-[8px] px-3 py-2 mb-1">
                   <p className="text-base text-[#2D2D2D]">
-                    {recalculating ? 'Пересчитываем предложения...' : (
+                    {recalculating ? 'Пересчитываем предложения...' : isThinking ? (
+                      <span className="inline-flex gap-1">
+                        <span className="animate-pulse">.</span>
+                        <span className="animate-pulse" style={{ animationDelay: '0.2s' }}>.</span>
+                        <span className="animate-pulse" style={{ animationDelay: '0.4s' }}>.</span>
+                      </span>
+                    ) : (
                       <>
                         {typedText}
                         {typedText.length < currentMessage.length && (

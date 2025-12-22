@@ -37,9 +37,7 @@ function CityInput({ value = '', onChange, label = 'Город', required = fals
         DADATA_API_URL,
         { 
           query, 
-          count: 10,
-          from_bound: { value: 'city' },
-          to_bound: { value: 'city' }
+          count: 20
         },
         {
           headers: {
@@ -49,10 +47,21 @@ function CityInput({ value = '', onChange, label = 'Город', required = fals
         }
       )
 
-      const suggestions = response.data.suggestions.map((item) => ({
-        value: item.data.city || item.value,
-        label: item.data.city || item.value,
-      }))
+      const suggestions = response.data.suggestions
+        .filter((item) => item.data.street || item.data.street_with_type)
+        .map((item) => {
+          const street = item.data.street_with_type || item.data.street || ''
+          const city = item.data.city_with_type || item.data.city || item.data.settlement_with_type || item.data.settlement || ''
+          const house = item.data.house ? `${item.data.house_type || ''} ${item.data.house}`.trim() : ''
+          const fullStreet = house ? `${street}, ${house}` : street
+          const label = city ? `${city}, ${fullStreet}` : fullStreet
+          return {
+            value: street,
+            label: label,
+            id: item.data.fias_id || item.value || label
+          }
+        })
+        .slice(0, 10)
 
       setOptions(suggestions)
       setIsOpen(suggestions.length > 0)
@@ -70,7 +79,7 @@ function CityInput({ value = '', onChange, label = 'Город', required = fals
   }
 
   const handleSelect = (option) => {
-    onChange({ target: { value: option.value } })
+    onChange({ target: { value: option.label } })
     setIsOpen(false)
     setOptions([])
   }
@@ -107,16 +116,16 @@ function CityInput({ value = '', onChange, label = 'Город', required = fals
             onChange={handleInputChange}
             onFocus={handleFocus}
             onBlur={handleBlur}
-            className={`w-full bg-transparent outline-none text-sm font-semibold text-[#2D2D2D] ${
+            className={`w-full bg-transparent outline-none text-sm font-semibold text-[#2D2D2D] truncate ${
               isFloating ? 'pt-4 pb-1' : 'py-2'
             }`}
           />
         </div>
         {isOpen && options.length > 0 && (
           <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-xl shadow-lg z-50 max-h-60 overflow-auto">
-            {options.map((option, idx) => (
+            {options.map((option) => (
               <div
-                key={idx}
+                key={option.id}
                 onClick={() => handleSelect(option)}
                 className="px-4 py-3 text-sm text-[#2D2D2D] cursor-pointer hover:bg-[#F4EEE2] first:rounded-t-xl last:rounded-b-xl"
               >
@@ -157,9 +166,9 @@ function CityInput({ value = '', onChange, label = 'Город', required = fals
       </div>
       {isOpen && options.length > 0 && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#C8C7CC] rounded-xl shadow-lg z-50 max-h-60 overflow-auto">
-          {options.map((option, idx) => (
+          {options.map((option) => (
             <div
-              key={idx}
+              key={option.id}
               onClick={() => handleSelect(option)}
               className="px-4 py-3 text-sm text-[#2D2D2D] cursor-pointer hover:bg-[#F4EEE2] first:rounded-t-xl last:rounded-b-xl"
             >

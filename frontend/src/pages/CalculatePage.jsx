@@ -324,7 +324,7 @@ function CalculatePage() {
       {/* Hero */}
       <section className="w-full flex justify-center px-6">
         <div className="w-full max-w-[1128px] border border-[#C8C7CC] rounded-2xl ">
-          <div className="bg-[#EEE5D3] py-2 flex items-center justify-center">
+          <div className="bg-[#EEE5D3] py-2 flex items-center justify-center border rounded-t-2xl">
             <img src={logosStrip} alt=""  />
           </div>
           <div className="bg-[#F9F6F0] px-[72px] py-0 flex items-end justify-center gap-8">
@@ -355,7 +355,7 @@ function CalculatePage() {
               <button type="submit" className="px-8 py-4 rounded-[10px] text-base font-semibold bg-[#0077FE] text-white whitespace-nowrap">Рассчитать и оформить</button>
             </div>
           </form>
-          <div className="bg-[#F9F6F0] px-6 py-4 flex items-center justify-center border-t border-[#C8C7CC]">
+          <div className="bg-[#F9F6F0] px-6 py-4 flex items-center justify-center border-t border-[#C8C7CC] rounded-b-2xl">
             <p className="text-sm text-[#2D2D2D]">Начать оформление может как отправитель, так и получатель</p>
           </div>
         </div>
