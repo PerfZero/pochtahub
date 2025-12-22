@@ -258,19 +258,23 @@ function WizardPage() {
     setTelegramSent(false)
     try {
       const response = await authAPI.sendCode(phoneToUse, method)
-      if (response.data?.telegram_sent) {
-        setTelegramSent(true)
-      }
-      setCodeSent(true)
-      if (currentStep === 'contactPhone') {
-        setUserPhone(contactPhone)
+      if (response.data?.success || response.data?.telegram_sent) {
+        if (response.data?.telegram_sent) {
+          setTelegramSent(true)
+        }
+        setCodeSent(true)
+        if (currentStep === 'contactPhone') {
+          setUserPhone(contactPhone)
+        }
+      } else {
+        setCodeError(response.data?.error || 'Ошибка отправки кода')
       }
     } catch (err) {
       const errorData = err.response?.data
       if (errorData?.telegram_available) {
         setTelegramAvailable(true)
       }
-      setCodeError(errorData?.error || 'Ошибка отправки кода')
+      setCodeError(errorData?.error || err.message || 'Ошибка отправки кода')
     } finally {
       setCodeLoading(false)
     }
@@ -767,7 +771,7 @@ function WizardPage() {
                         <p className="text-sm text-[#0077FE] text-center">
                           SMS не пришла?{' '}
                           <button
-                            onClick={handleSendTelegramCode}
+                            onClick={() => handleSendTelegramCode()}
                             disabled={codeLoading}
                             className="underline font-semibold hover:no-underline disabled:opacity-50"
                           >
@@ -786,7 +790,7 @@ function WizardPage() {
                   </button>
                   <div className="mt-4 text-center">
                     <button
-                      onClick={handleSendTelegramCode}
+                      onClick={() => handleSendTelegramCode()}
                       disabled={codeLoading || !contactPhone}
                       className="text-sm text-[#0077FE] hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -827,7 +831,7 @@ function WizardPage() {
                         <p className="text-sm text-[#0077FE] text-center">
                           SMS не пришла?{' '}
                           <button
-                            onClick={handleSendTelegramCode}
+                            onClick={() => handleSendTelegramCode()}
                             disabled={codeLoading}
                             className="underline font-semibold hover:no-underline disabled:opacity-50"
                           >
@@ -1054,7 +1058,7 @@ function WizardPage() {
                         <p className="text-sm text-[#0077FE] text-center">
                           SMS не пришла?{' '}
                           <button
-                            onClick={handleSendTelegramCode}
+                            onClick={() => handleSendTelegramCode()}
                             disabled={codeLoading}
                             className="underline font-semibold hover:no-underline disabled:opacity-50"
                           >
@@ -1114,7 +1118,7 @@ function WizardPage() {
                         <p className="text-sm text-[#0077FE] text-center">
                           SMS не пришла?{' '}
                           <button
-                            onClick={handleSendTelegramCode}
+                            onClick={() => handleSendTelegramCode()}
                             disabled={codeLoading}
                             className="underline font-semibold hover:no-underline disabled:opacity-50"
                           >

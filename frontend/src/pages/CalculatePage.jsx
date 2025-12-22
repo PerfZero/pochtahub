@@ -44,16 +44,20 @@ function CalculatePage() {
     setTelegramSent(false)
     try {
       const response = await authAPI.sendCode(phone, method)
-      if (response.data?.telegram_sent) {
-        setTelegramSent(true)
+      if (response.data?.success || response.data?.telegram_sent) {
+        if (response.data?.telegram_sent) {
+          setTelegramSent(true)
+        }
+        setCodeSent(true)
+      } else {
+        setCodeError(response.data?.error || 'Ошибка отправки кода')
       }
-      setCodeSent(true)
     } catch (err) {
       const errorData = err.response?.data
       if (errorData?.telegram_available) {
         setTelegramAvailable(true)
       }
-      setCodeError(errorData?.error || 'Ошибка отправки кода')
+      setCodeError(errorData?.error || err.message || 'Ошибка отправки кода')
     } finally {
       setCodeLoading(false)
     }
@@ -190,7 +194,7 @@ function CalculatePage() {
                     </div>
                   )}
                   <button
-                    onClick={handleSendCode}
+                    onClick={() => handleSendCode()}
                     disabled={codeLoading || !phone}
                     className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold hover:bg-[#0066CC] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
@@ -264,7 +268,7 @@ function CalculatePage() {
               
               <div className="mt-6 text-center">
                 <button
-                  onClick={handleSendTelegramCode}
+                  onClick={() => handleSendTelegramCode()}
                   disabled={codeLoading || !phone}
                   className="text-sm text-[#0077FE] hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
                 >
