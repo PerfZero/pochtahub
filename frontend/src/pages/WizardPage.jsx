@@ -431,7 +431,7 @@ function WizardPage() {
         <Link to="/calculate">
           <img src={logoSvg} alt="PochtaHub" className="h-8" />
         </Link>
-        <div className="w-full max-w-[720px] bg-white rounded-2xl flex items-stretch overflow-hidden p-2">
+        <div className="w-full max-w-[720px] bg-white rounded-2xl flex items-stretch p-2">
           <div className="flex-1 px-6 py-2 border-r border-[#E5E5E5]">
             <CityInput
               placeholder="Откуда"
