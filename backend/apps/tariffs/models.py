@@ -37,6 +37,13 @@ class Tariff(models.Model):
     max_weight = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Максимальный вес (кг)')
     base_price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Базовая цена')
     price_per_kg = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='Цена за кг')
+    delivery_days = models.IntegerField(null=True, blank=True, verbose_name='Срок доставки (дней)')
+    delivery_days_min = models.IntegerField(null=True, blank=True, verbose_name='Минимальный срок доставки (дней)')
+    delivery_days_max = models.IntegerField(null=True, blank=True, verbose_name='Максимальный срок доставки (дней)')
+    courier_pickup_supported = models.BooleanField(default=False, verbose_name='Поддерживает забор курьером')
+    courier_delivery_supported = models.BooleanField(default=False, verbose_name='Поддерживает доставку курьером')
+    courier_pickup_price = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='Дополнительная стоимость за забор курьером')
+    courier_delivery_price = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='Дополнительная стоимость за доставку курьером')
     is_active = models.BooleanField(default=True, verbose_name='Активен')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
 

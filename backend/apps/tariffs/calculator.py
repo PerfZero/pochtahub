@@ -90,13 +90,28 @@ class TariffCalculator:
                 min_weight__lte=weight,
                 max_weight__gte=weight,
                 is_active=True
-            ).order_by('base_price')
+            )
+            
+            # Фильтруем тарифы по поддержке курьерской доставки
+            if courier_pickup:
+                tariffs = tariffs.filter(courier_pickup_supported=True)
+            if courier_delivery:
+                tariffs = tariffs.filter(courier_delivery_supported=True)
+            
+            tariffs = tariffs.order_by('base_price')
 
             logger.info(f'Найдено внутренних тарифов для компании {company.name}: {tariffs.count()}')
             
             if tariffs.exists():
                 tariff = tariffs.first()
                 total_price = float(tariff.base_price) + (float(weight) * float(tariff.price_per_kg))
+                
+                # Добавляем стоимость курьерской доставки
+                if courier_pickup and tariff.courier_pickup_supported:
+                    total_price += float(tariff.courier_pickup_price)
+                if courier_delivery and tariff.courier_delivery_supported:
+                    total_price += float(tariff.courier_delivery_price)
+                
                 result = {
                     'company_id': company.id,
                     'company_name': company.name,
@@ -106,6 +121,12 @@ class TariffCalculator:
                 }
                 if company.logo:
                     result['company_logo'] = company.logo.url
+                # Добавляем срок доставки из тарифа
+                if tariff.delivery_days:
+                    result['delivery_time'] = tariff.delivery_days
+                elif tariff.delivery_days_min and tariff.delivery_days_max:
+                    result['delivery_time_min'] = tariff.delivery_days_min
+                    result['delivery_time_max'] = tariff.delivery_days_max
                 logger.info(f'Добавлен внутренний тариф: {result}')
                 results.append(result)
 

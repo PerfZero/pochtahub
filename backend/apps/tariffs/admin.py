@@ -172,6 +172,29 @@ class TransportCompanyAdmin(admin.ModelAdmin):
 
 @admin.register(Tariff)
 class TariffAdmin(admin.ModelAdmin):
-    list_display = ('name', 'transport_company', 'min_weight', 'max_weight', 'base_price', 'price_per_kg', 'is_active')
-    list_filter = ('transport_company', 'is_active', 'created_at')
+    list_display = ('name', 'transport_company', 'min_weight', 'max_weight', 'base_price', 'price_per_kg', 'delivery_days', 'courier_pickup_supported', 'courier_delivery_supported', 'is_active')
+    list_filter = ('transport_company', 'is_active', 'courier_pickup_supported', 'courier_delivery_supported', 'created_at')
     search_fields = ('name', 'transport_company__name')
+    fieldsets = (
+        ('Основная информация', {
+            'fields': ('transport_company', 'name', 'is_active')
+        }),
+        ('Параметры веса', {
+            'fields': ('min_weight', 'max_weight')
+        }),
+        ('Ценообразование', {
+            'fields': ('base_price', 'price_per_kg')
+        }),
+        ('Срок доставки', {
+            'fields': ('delivery_days', 'delivery_days_min', 'delivery_days_max'),
+            'description': 'Укажите либо точный срок (delivery_days), либо диапазон (delivery_days_min и delivery_days_max)'
+        }),
+        ('Курьерская доставка', {
+            'fields': ('courier_pickup_supported', 'courier_pickup_price', 'courier_delivery_supported', 'courier_delivery_price'),
+            'description': 'Укажите, поддерживает ли тариф курьерскую доставку и дополнительные стоимости'
+        }),
+        ('Дата создания', {
+            'fields': ('created_at',)
+        }),
+    )
+    readonly_fields = ('created_at',)

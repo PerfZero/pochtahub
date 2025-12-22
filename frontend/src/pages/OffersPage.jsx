@@ -65,6 +65,7 @@ function OffersPage() {
   const [toCity, setToCity] = useState(wizardData.toCity || '')
   const [offers, setOffers] = useState([])
   const [loading, setLoading] = useState(true)
+  const [isRecalculating, setIsRecalculating] = useState(false)
   const [error, setError] = useState('')
   const [filterCourierPickup, setFilterCourierPickup] = useState(false)
   const [filterCourierDelivery, setFilterCourierDelivery] = useState(false)
@@ -471,13 +472,13 @@ function OffersPage() {
 
   // Пересчет тарифов при изменении фильтров доставки
   useEffect(() => {
-    if (!wizardData?.weight || !fromCity || !toCity) {
+    if (!wizardData?.weight || !fromCity || !toCity || offers.length === 0) {
       return
     }
 
     const timeoutId = setTimeout(async () => {
       try {
-        setLoading(true)
+        setIsRecalculating(true)
         setError('')
         
         const dimensions = {
@@ -505,7 +506,7 @@ function OffersPage() {
       } catch (err) {
         setError(err.response?.data?.error || 'Ошибка загрузки предложений')
       } finally {
-        setLoading(false)
+        setIsRecalculating(false)
       }
     }, 300) // Debounce 300ms
     
@@ -1038,8 +1039,19 @@ function OffersPage() {
             </div>
 
             {loading && (
-              <div className="text-center py-12">
-                <p className="text-[#858585]">Загрузка предложений...</p>
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="relative flex items-center justify-between flex-row rounded-xl p-6 border-b-4 border-[#add3ff] rounded-b-2xl bg-white animate-pulse">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full bg-gray-200"></div>
+                      <div>
+                        <div className="h-6 w-24 bg-gray-200 rounded mb-2"></div>
+                        <div className="h-4 w-32 bg-gray-200 rounded"></div>
+                      </div>
+                    </div>
+                    <div className="h-10 w-40 bg-gray-200 rounded-xl"></div>
+                  </div>
+                ))}
               </div>
             )}
 
@@ -1056,6 +1068,15 @@ function OffersPage() {
             )}
 
             {!loading && !error && sortedOffers.length > 0 && (
+              <div className="relative pt-4">
+                {isRecalculating && (
+                  <div className="absolute inset-0 top-0 bg-white/80 backdrop-blur-sm z-20 flex items-center justify-center rounded-xl">
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-8 h-8 border-4 border-[#0077FE] border-t-transparent rounded-full animate-spin"></div>
+                      <p className="text-sm text-[#858585]">Пересчитываем...</p>
+                    </div>
+                  </div>
+                )}
               <div className="space-y-4">
                 {sortedOffers.map((offer, index) => {
                   const isCheapest = offer === cheapestOffer
@@ -1142,6 +1163,7 @@ function OffersPage() {
                     </div>
                   )
                 })}
+                </div>
               </div>
             )}
           </div>
