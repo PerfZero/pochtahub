@@ -37,7 +37,9 @@ function CityInput({ value = '', onChange, label = 'Город', required = fals
         DADATA_API_URL,
         { 
           query, 
-          count: 20
+          count: 20,
+          from_bound: { value: "city" },
+          to_bound: { value: "settlement" }
         },
         {
           headers: {
@@ -48,19 +50,21 @@ function CityInput({ value = '', onChange, label = 'Город', required = fals
       )
 
       const suggestions = response.data.suggestions
-        .filter((item) => item.data.street || item.data.street_with_type)
+        .filter((item) => {
+          const data = item.data
+          return (data.city || data.settlement) && !data.street && !data.house
+        })
         .map((item) => {
-          const street = item.data.street_with_type || item.data.street || ''
           const city = item.data.city_with_type || item.data.city || item.data.settlement_with_type || item.data.settlement || ''
-          const house = item.data.house ? `${item.data.house_type || ''} ${item.data.house}`.trim() : ''
-          const fullStreet = house ? `${street}, ${house}` : street
-          const label = city ? `${city}, ${fullStreet}` : fullStreet
           return {
-            value: street,
-            label: label,
-            id: item.data.fias_id || item.value || label
+            value: city,
+            label: city,
+            id: item.data.fias_id || item.value || city
           }
         })
+        .filter((item, index, self) => 
+          index === self.findIndex((t) => t.value === item.value)
+        )
         .slice(0, 10)
 
       setOptions(suggestions)
@@ -79,7 +83,7 @@ function CityInput({ value = '', onChange, label = 'Город', required = fals
   }
 
   const handleSelect = (option) => {
-    onChange({ target: { value: option.label } })
+    onChange({ target: { value: option.value } })
     setIsOpen(false)
     setOptions([])
   }

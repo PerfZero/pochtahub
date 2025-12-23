@@ -406,17 +406,22 @@ function OffersPage() {
   const fastestOffer = [...offers].sort((a, b) => (a.delivery_time || 999) - (b.delivery_time || 999))[0]
 
   const handleSelectOffer = (offer) => {
-    navigate('/payment', {
-      state: {
-        wizardData,
-        company: offer.company_id,
-        companyName: offer.company_name,
-        companyCode: offer.company_code,
+    const updatedWizardData = {
+      ...wizardData,
+      fromCity: wizardData.fromCity || fromCity,
+      toCity: wizardData.toCity || toCity,
+      selectedOffer: {
+        company_id: offer.company_id,
+        company_name: offer.company_name,
+        company_code: offer.company_code,
         price: offer.price,
-        tariffCode: offer.tariff_code,
-        tariffName: offer.tariff_name,
-        deliveryTime: offer.delivery_time,
+        tariff_code: offer.tariff_code,
+        tariff_name: offer.tariff_name,
+        delivery_time: offer.delivery_time,
       }
+    }
+    navigate('/wizard', {
+      state: updatedWizardData
     })
   }
 
