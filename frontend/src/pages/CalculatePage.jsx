@@ -28,19 +28,17 @@ function CalculatePage() {
   const [codeLoading, setCodeLoading] = useState(false)
   const [codeError, setCodeError] = useState('')
   const [verifyLoading, setVerifyLoading] = useState(false)
-  const [telegramAvailable, setTelegramAvailable] = useState(false)
   const [telegramSent, setTelegramSent] = useState(false)
   const navigate = useNavigate()
   const isAuthenticated = !!localStorage.getItem('access_token')
   
-  const handleSendCode = async (method = 'sms') => {
+  const handleSendCode = async (method = 'telegram') => {
     if (!phone) {
       setCodeError('Введите номер телефона')
       return
     }
     setCodeLoading(true)
     setCodeError('')
-    setTelegramAvailable(false)
     setTelegramSent(false)
     try {
       const response = await authAPI.sendCode(phone, method)
@@ -54,17 +52,14 @@ function CalculatePage() {
       }
     } catch (err) {
       const errorData = err.response?.data
-      if (errorData?.telegram_available) {
-        setTelegramAvailable(true)
-      }
       setCodeError(errorData?.error || err.message || 'Ошибка отправки кода')
     } finally {
       setCodeLoading(false)
     }
   }
   
-  const handleSendTelegramCode = async () => {
-    await handleSendCode('telegram')
+  const handleSendSmsCode = async () => {
+    await handleSendCode('sms')
   }
   
   const handleVerifyCode = async (code = null) => {
@@ -97,12 +92,10 @@ function CalculatePage() {
   }
   
   const handleResendCode = () => {
-    setCodeSent(false)
     setSmsCode('')
     setCodeError('')
-    setTelegramAvailable(false)
     setTelegramSent(false)
-    handleSendCode()
+    setCodeSent(false)
   }
 
   const handleCalculate = async (e) => {
@@ -155,7 +148,6 @@ function CalculatePage() {
                 setSmsCode('')
                 setCodeSent(false)
                 setCodeError('')
-                setTelegramAvailable(false)
                 setTelegramSent(false)
               }}
               className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center text-[#2D2D2D] hover:bg-[#F5F5F5] rounded-full transition-colors"
@@ -168,7 +160,11 @@ function CalculatePage() {
                 Вход в профиль
               </h2>
               <p className="text-base text-center text-[#2D2D2D] mb-6">
-                Введите номер телефона, подойдет любой российский номер
+                {!codeSent 
+                  ? 'Введите номер телефона, код будет отправлен в Telegram'
+                  : telegramSent 
+                    ? 'Введите код из Telegram'
+                    : 'Введите код из SMS'}
               </p>
               
               {!codeSent ? (
@@ -183,22 +179,21 @@ function CalculatePage() {
                   {codeError && (
                     <div className="mb-4">
                       <p className="text-sm text-red-500 text-center mb-2">{codeError}</p>
-                      {telegramAvailable && (
-                        <p className="text-sm text-[#0077FE] text-center">
-                          SMS не пришла? Попробуйте получить код через{' '}
-                          <a href="https://t.me/pochtahub_bot" target="_blank" rel="noopener noreferrer" className="underline font-semibold">
-                            Telegram-бот
-                          </a>
-                        </p>
-                      )}
                     </div>
                   )}
                   <button
-                    onClick={() => handleSendCode()}
+                    onClick={() => handleSendCode('telegram')}
                     disabled={codeLoading || !phone}
                     className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold hover:bg-[#0066CC] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {codeLoading ? 'Отправка...' : 'Продолжить'}
+                    {codeLoading ? 'Отправка...' : 'Получить код в Telegram'}
+                  </button>
+                  <button
+                    onClick={handleSendSmsCode}
+                    disabled={codeLoading || !phone}
+                    className="w-full bg-[#F5F5F5] text-[#2D2D2D] px-6 py-4 rounded-xl text-base font-semibold hover:bg-[#E5E5E5] transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-3"
+                  >
+                    {codeLoading ? 'Отправка...' : 'Отправить SMS'}
                   </button>
                 </>
               ) : (
@@ -218,19 +213,16 @@ function CalculatePage() {
                   {codeError && (
                     <div className="mb-4">
                       <p className="text-sm text-red-500 text-center mb-2">{codeError}</p>
-                      {telegramAvailable && (
-                        <p className="text-sm text-[#0077FE] text-center">
-                          SMS не пришла? Попробуйте получить код через{' '}
-                          <a href="https://t.me/pochtahub_bot" target="_blank" rel="noopener noreferrer" className="underline font-semibold">
-                            Telegram-бот
-                          </a>
-                        </p>
-                      )}
                     </div>
                   )}
                   {telegramSent && (
                     <p className="text-sm text-green-600 mb-4 text-center">
                       Код отправлен в Telegram
+                    </p>
+                  )}
+                  {!telegramSent && codeSent && (
+                    <p className="text-sm text-[#858585] mb-4 text-center">
+                      Код отправлен в SMS
                     </p>
                   )}
                   <div className="flex flex-col gap-3 mb-6">
@@ -253,7 +245,7 @@ function CalculatePage() {
                       disabled={codeLoading}
                       className="text-sm text-[#858585] hover:text-[#2D2D2D] disabled:opacity-50 text-center"
                     >
-                      Получить новый код
+                      Отправить код заново
                     </button>
                   </div>
                   <button
@@ -265,16 +257,6 @@ function CalculatePage() {
                   </button>
                 </>
               )}
-              
-              <div className="mt-6 text-center">
-                <button
-                  onClick={() => handleSendTelegramCode()}
-                  disabled={codeLoading || !phone}
-                  className="text-sm text-[#0077FE] hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Получить код в Telegram
-                </button>
-              </div>
               
               <p className="text-xs text-center text-[#858585] mt-6">
                 Авторизуясь, вы соглашаетесь{' '}

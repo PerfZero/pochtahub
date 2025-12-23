@@ -67,7 +67,7 @@ class SendCodeView(APIView):
 
     def post(self, request):
         phone = request.data.get('phone')
-        method = request.data.get('method', 'sms')
+        method = request.data.get('method', 'telegram')
         
         if not phone:
             return Response({'error': 'Телефон обязателен'}, status=status.HTTP_400_BAD_REQUEST)
@@ -78,20 +78,26 @@ class SendCodeView(APIView):
 
         code = ''.join(random.choices(string.digits, k=4))
         
-        if method == 'telegram':
+        logger.info(f'Попытка отправить код для {phone}, метод: {method}')
+        
+        if method == 'telegram' or method == 'auto':
             telegram_sent = send_telegram_message(phone, code)
             if telegram_sent:
                 cache.set(f'verify_code_{phone}', str(code), 300)
+                logger.info(f'Код успешно отправлен в Telegram для {phone}')
                 return Response({
                     'success': True,
                     'message': 'Код отправлен в Telegram',
                     'telegram_sent': True
                 })
             else:
-                return Response({
-                    'error': 'Не удалось отправить код через Telegram',
-                    'telegram_available': True
-                }, status=status.HTTP_400_BAD_REQUEST)
+                logger.warning(f'Не удалось отправить код в Telegram для {phone}, пробуем SMS')
+                if method == 'telegram':
+                    return Response({
+                        'error': 'Не удалось отправить код через Telegram',
+                        'telegram_available': False,
+                        'sms_available': True
+                    }, status=status.HTTP_400_BAD_REQUEST)
         
         try:
             phone_clean = phone.replace('+', '').replace(' ', '').replace('-', '').replace('(', '').replace(')', '')
@@ -170,73 +176,42 @@ class SendCodeView(APIView):
                             error_msg = first_item.get('errorDescription') or first_item.get('error') or error_msg
                     
                     logger.warning(f'Ошибка отправки SMS для {phone}: {error_msg}')
-                    telegram_sent = send_telegram_message(phone, code)
-                    if telegram_sent:
-                        cache.set(f'verify_code_{phone}', str(code), 300)
-                        return Response({
-                            'success': True, 
-                            'message': 'Код отправлен в Telegram',
-                            'telegram_sent': True
-                        })
                     return Response({
                         'error': error_msg,
-                        'telegram_available': True
+                        'telegram_available': False,
+                        'sms_available': False
                     }, status=status.HTTP_400_BAD_REQUEST)
                     
             except requests.exceptions.ConnectionError as conn_err:
-                telegram_sent = send_telegram_message(phone, code)
-                if telegram_sent:
-                    cache.set(f'verify_code_{phone}', str(code), 300)
-                    return Response({
-                        'success': True,
-                        'message': 'Код отправлен в Telegram',
-                        'telegram_sent': True
-                    })
+                logger.error(f'Ошибка подключения к Notificore API: {str(conn_err)}')
                 return Response({
-                    'error': f'Ошибка подключения к Notificore API: {str(conn_err)}',
-                    'telegram_available': True
+                    'error': f'Ошибка подключения к SMS API: {str(conn_err)}',
+                    'telegram_available': False,
+                    'sms_available': False
                 }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
             except requests.exceptions.Timeout:
-                telegram_sent = send_telegram_message(phone, code)
-                if telegram_sent:
-                    cache.set(f'verify_code_{phone}', str(code), 300)
-                    return Response({
-                        'success': True,
-                        'message': 'Код отправлен в Telegram',
-                        'telegram_sent': True
-                    })
+                logger.error('Таймаут при подключении к Notificore API')
                 return Response({
-                    'error': 'Таймаут при подключении к Notificore API',
-                    'telegram_available': True
+                    'error': 'Таймаут при подключении к SMS API',
+                    'telegram_available': False,
+                    'sms_available': False
                 }, status=status.HTTP_504_GATEWAY_TIMEOUT)
             except requests.exceptions.RequestException as req_err:
-                telegram_sent = send_telegram_message(phone, code)
-                if telegram_sent:
-                    cache.set(f'verify_code_{phone}', str(code), 300)
-                    return Response({
-                        'success': True,
-                        'message': 'Код отправлен в Telegram',
-                        'telegram_sent': True
-                    })
+                logger.error(f'Ошибка запроса к Notificore API: {str(req_err)}')
                 return Response({
-                    'error': f'Ошибка запроса к Notificore API: {str(req_err)}',
-                    'telegram_available': True
+                    'error': f'Ошибка запроса к SMS API: {str(req_err)}',
+                    'telegram_available': False,
+                    'sms_available': False
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 
         except ValueError:
             return Response({'error': 'Неверный формат номера телефона'}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            telegram_sent = send_telegram_message(phone, code)
-            if telegram_sent:
-                cache.set(f'verify_code_{phone}', str(code), 300)
-                return Response({
-                    'success': True,
-                    'message': 'Код отправлен в Telegram',
-                    'telegram_sent': True
-                })
+            logger.error(f'Неожиданная ошибка при отправке SMS: {str(e)}')
             return Response({
                 'error': f'Ошибка отправки SMS: {str(e)}',
-                'telegram_available': True
+                'telegram_available': False,
+                'sms_available': False
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 

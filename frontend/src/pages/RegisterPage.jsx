@@ -24,6 +24,8 @@ function RegisterPage({ setIsAuthenticated }) {
     setFormData({ ...formData, [e.target.name]: e.target.value })
   }
 
+  const [telegramSent, setTelegramSent] = useState(false)
+
   const handleSendCode = async (e) => {
     e.preventDefault()
     if (!phone) {
@@ -33,10 +35,24 @@ function RegisterPage({ setIsAuthenticated }) {
     setLoading(true)
     setError('')
     try {
-      await authAPI.sendCode(phone)
+      const response = await authAPI.sendCode(phone, 'auto')
+      if (response.data.telegram_sent) {
+        setTelegramSent(true)
+      }
       setStep(2)
     } catch (err) {
-      setError(err.response?.data?.error || 'Ошибка отправки кода')
+      const errorData = err.response?.data
+      if (errorData?.sms_available) {
+        try {
+          const smsResponse = await authAPI.sendCode(phone, 'sms')
+          setTelegramSent(false)
+          setStep(2)
+        } catch (smsErr) {
+          setError(smsErr.response?.data?.error || 'Ошибка отправки кода')
+        }
+      } else {
+        setError(errorData?.error || 'Ошибка отправки кода')
+      }
     } finally {
       setLoading(false)
     }
@@ -106,7 +122,7 @@ function RegisterPage({ setIsAuthenticated }) {
               <h1 className="text-2xl font-bold text-[#2D2D2D]">Регистрация</h1>
               <p className="text-sm text-[#858585]">
                 {step === 1 && 'Введите номер телефона для получения кода'}
-                {step === 2 && 'Введите код из Telegram'}
+                {step === 2 && telegramSent ? 'Введите код из Telegram' : 'Введите код из SMS'}
                 {step === 3 && 'Заполните данные для завершения регистрации'}
               </p>
             </div>
@@ -138,7 +154,7 @@ function RegisterPage({ setIsAuthenticated }) {
                   disabled={loading}
                   className="w-full py-4 rounded-xl text-base font-semibold bg-[#0077FE] text-white mt-4 disabled:opacity-50"
                 >
-                  {loading ? 'Отправка...' : 'Получить код в Telegram'}
+                  {loading ? 'Отправка...' : 'Получить код'}
                 </button>
               </form>
             )}
@@ -147,7 +163,7 @@ function RegisterPage({ setIsAuthenticated }) {
               <form onSubmit={handleVerifyCode} className="flex flex-col gap-4">
                 <div className="p-4 bg-[#F4EEE2] rounded-xl">
                   <p className="text-sm text-[#2D2D2D]">
-                    Код отправлен на <strong>{phone}</strong> в Telegram
+                    Код отправлен на <strong>{phone}</strong> {telegramSent ? 'в Telegram' : 'в SMS'}
                   </p>
                 </div>
 
@@ -162,7 +178,7 @@ function RegisterPage({ setIsAuthenticated }) {
                     required
                   />
                   <label className="absolute left-4 top-1/2 -translate-y-1/2 text-[#858585] text-base transition-all duration-200 pointer-events-none peer-focus:top-3 peer-focus:text-xs peer-focus:text-[#0077FE] peer-[:not(:placeholder-shown)]:top-3 peer-[:not(:placeholder-shown)]:text-xs">
-                    Код из Telegram *
+                    Код {telegramSent ? 'из Telegram' : 'из SMS'} *
                   </label>
                 </div>
 
