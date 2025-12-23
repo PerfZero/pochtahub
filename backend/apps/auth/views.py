@@ -12,10 +12,15 @@ import random
 import string
 import json
 import os
+import logging
+import time
+import uuid
+
+logger = logging.getLogger(__name__)
 
 User = get_user_model()
 
-NOTIFICORE_API_KEY = "test_wbtaHxnHd5RlL8akZuCb"
+NOTIFICORE_API_KEY = "live_0pi2ZdK61Yq0HwcLhRfS"
 NOTIFICORE_API_URL_V1 = "https://api.notificore.ru/rest"
 NOTIFICORE_API_URL_V2 = "http://one-api.notificore.ru"
 
@@ -76,7 +81,7 @@ class SendCodeView(APIView):
         if method == 'telegram':
             telegram_sent = send_telegram_message(phone, code)
             if telegram_sent:
-                cache.set(f'verify_code_{phone}', code, 300)
+                cache.set(f'verify_code_{phone}', str(code), 300)
                 return Response({
                     'success': True,
                     'message': 'Код отправлен в Telegram',
@@ -100,59 +105,74 @@ class SendCodeView(APIView):
                 'Accept': 'application/json'
             }
             
+            reference = f'sms_{phone_number}_{int(time.time())}_{random.randint(1000, 9999)}'
+            
             payload = {
                 'destination': 'phone',
                 'body': message_text,
                 'msisdn': str(phone_number),
-                'originator': 'PochtaHub'
+                'originator': 'PochtaHub',
+                'reference': reference
             }
             
             try:
-                try:
-                    response = requests.post(
-                        f'{NOTIFICORE_API_URL_V1}/sms/create',
-                        json=payload,
-                        headers=headers,
-                        timeout=30,
-                        verify=True
-                    )
-                except (requests.exceptions.ConnectionError, requests.exceptions.SSLError) as https_err:
-                    token_response = requests.post(
-                        f'{NOTIFICORE_API_URL_V2}/api/auth/login',
-                        json={'api_key': NOTIFICORE_API_KEY},
-                        timeout=30
-                    )
-                    if token_response.status_code == 200:
-                        token_data = token_response.json()
-                        bearer_token = token_data.get('bearer')
-                        headers_v2 = {
-                            'Authorization': f'Bearer {bearer_token}',
-                            'Content-Type': 'application/json'
-                        }
-                        payload_v2 = {
-                            'destination': 'phone',
-                            'body': message_text,
-                            'msisdn': str(phone_number)
-                        }
-                        response = requests.post(
-                            f'{NOTIFICORE_API_URL_V2}/api/sms/send',
-                            json=payload_v2,
-                            headers=headers_v2,
-                            timeout=30
-                        )
-                    else:
-                        raise https_err
+                logger.info(f'Отправка SMS через Notificore V1 API для {phone}')
+                response = requests.post(
+                    f'{NOTIFICORE_API_URL_V1}/sms/create',
+                    json=payload,
+                    headers=headers,
+                    timeout=30,
+                    verify=True
+                )
+                logger.info(f'Ответ V1 API: статус {response.status_code}, тело: {response.text[:200]}')
+                
+                if response is None:
+                    raise requests.exceptions.RequestException('Не получен ответ от API')
+                
                 response.raise_for_status()
                 result = response.json()
+                logger.info(f'Результат API: {json.dumps(result, ensure_ascii=False)[:500]}')
                 
-                if result and (result.get('result') or not result.get('error')):
-                    cache.set(f'verify_code_{phone}', code, 300)
+                success = False
+                if isinstance(result, dict):
+                    result_data = result.get('result')
+                    if isinstance(result_data, dict):
+                        error_code = result_data.get('error')
+                        if error_code == 0:
+                            success = True
+                        else:
+                            logger.warning(f'API вернул ошибку: {result_data.get("errorDescription")}')
+                    elif result.get('error') == 0:
+                        success = True
+                    elif 'error' in result and result.get('error') != 0:
+                        success = False
+                    elif 'status' in result:
+                        success = result.get('status') in ['success', 'ok', 'sent']
+                    else:
+                        success = response.status_code == 200
+                elif isinstance(result, list) and len(result) > 0:
+                    first_item = result[0]
+                    if isinstance(first_item, dict):
+                        success = first_item.get('status') in ['success', 'ok', 'sent'] or first_item.get('error') == 0
+                
+                if success:
+                    cache_key = f'verify_code_{phone}'
+                    cache.set(cache_key, str(code), 300)
+                    logger.info(f'SMS успешно отправлена для {phone}, код сохранен в кэш: {code} (тип: {type(code).__name__}), ключ: {cache_key}')
                     return Response({'success': True, 'message': 'Код отправлен в SMS'})
                 else:
-                    error_msg = result.get('errorDescription') or result.get('error') or 'Ошибка отправки SMS'
+                    error_msg = 'Ошибка отправки SMS'
+                    if isinstance(result, dict):
+                        error_msg = result.get('errorDescription') or result.get('error') or result.get('message') or error_msg
+                    elif isinstance(result, list) and len(result) > 0:
+                        first_item = result[0]
+                        if isinstance(first_item, dict):
+                            error_msg = first_item.get('errorDescription') or first_item.get('error') or error_msg
+                    
+                    logger.warning(f'Ошибка отправки SMS для {phone}: {error_msg}')
                     telegram_sent = send_telegram_message(phone, code)
                     if telegram_sent:
-                        cache.set(f'verify_code_{phone}', code, 300)
+                        cache.set(f'verify_code_{phone}', str(code), 300)
                         return Response({
                             'success': True, 
                             'message': 'Код отправлен в Telegram',
@@ -166,7 +186,7 @@ class SendCodeView(APIView):
             except requests.exceptions.ConnectionError as conn_err:
                 telegram_sent = send_telegram_message(phone, code)
                 if telegram_sent:
-                    cache.set(f'verify_code_{phone}', code, 300)
+                    cache.set(f'verify_code_{phone}', str(code), 300)
                     return Response({
                         'success': True,
                         'message': 'Код отправлен в Telegram',
@@ -179,7 +199,7 @@ class SendCodeView(APIView):
             except requests.exceptions.Timeout:
                 telegram_sent = send_telegram_message(phone, code)
                 if telegram_sent:
-                    cache.set(f'verify_code_{phone}', code, 300)
+                    cache.set(f'verify_code_{phone}', str(code), 300)
                     return Response({
                         'success': True,
                         'message': 'Код отправлен в Telegram',
@@ -192,7 +212,7 @@ class SendCodeView(APIView):
             except requests.exceptions.RequestException as req_err:
                 telegram_sent = send_telegram_message(phone, code)
                 if telegram_sent:
-                    cache.set(f'verify_code_{phone}', code, 300)
+                    cache.set(f'verify_code_{phone}', str(code), 300)
                     return Response({
                         'success': True,
                         'message': 'Код отправлен в Telegram',
@@ -208,7 +228,7 @@ class SendCodeView(APIView):
         except Exception as e:
             telegram_sent = send_telegram_message(phone, code)
             if telegram_sent:
-                cache.set(f'verify_code_{phone}', code, 300)
+                cache.set(f'verify_code_{phone}', str(code), 300)
                 return Response({
                     'success': True,
                     'message': 'Код отправлен в Telegram',
@@ -234,36 +254,57 @@ class VerifyCodeView(APIView):
         if not phone.startswith('+'):
             phone = '+' + phone
 
-        stored_code = cache.get(f'verify_code_{phone}')
+        cache_key = f'verify_code_{phone}'
+        stored_code = cache.get(cache_key)
+        logger.info(f'Проверка кода для {phone}, ключ кэша: {cache_key}, найден код: {stored_code is not None}')
         
         if not stored_code:
+            logger.warning(f'Код не найден в кэше для {phone}, ключ: {cache_key}')
             return Response({'error': 'Код истёк, запросите новый'}, status=status.HTTP_400_BAD_REQUEST)
         
-        if stored_code != code:
+        stored_code_str = str(stored_code).strip()
+        code_str = str(code).strip()
+        logger.info(f'Сравнение кодов: сохраненный="{stored_code_str}" (тип: {type(stored_code).__name__}), полученный="{code_str}" (тип: {type(code).__name__})')
+        
+        if stored_code_str != code_str:
+            logger.warning(f'Коды не совпадают: сохраненный="{stored_code_str}", полученный="{code_str}"')
             return Response({'error': 'Неверный код'}, status=status.HTTP_400_BAD_REQUEST)
 
+        logger.info(f'Код успешно проверен для {phone}, удаляем из кэша')
         cache.set(f'verified_phone_{phone}', True, 600)
         cache.delete(f'verify_code_{phone}')
         
         try:
+            logger.info(f'Поиск пользователя с телефоном {phone}')
             user = User.objects.get(phone=phone)
-            refresh = RefreshToken.for_user(user)
-            return Response({
-                'success': True,
-                'message': 'Телефон подтверждён',
-                'user': {
-                    'id': user.id,
-                    'username': user.username,
-                    'email': user.email,
-                    'phone': user.phone,
-                },
-                'tokens': {
-                    'refresh': str(refresh),
-                    'access': str(refresh.access_token),
-                }
-            })
+            logger.info(f'Пользователь найден: {user.id}, {user.username}')
         except User.DoesNotExist:
-            return Response({'success': True, 'message': 'Телефон подтверждён', 'user_exists': False})
+            logger.info(f'Пользователь с телефоном {phone} не найден, создаем нового пользователя')
+            phone_clean = phone.replace('+', '').replace(' ', '').replace('-', '')
+            username = f"user_{phone_clean}_{uuid.uuid4().hex[:6]}"
+            password = User.objects.make_random_password(length=12)
+            user = User.objects.create_user(
+                username=username,
+                phone=phone,
+                password=password
+            )
+            logger.info(f'Создан новый пользователь: {user.id}, {user.username}')
+        
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'success': True,
+            'message': 'Телефон подтверждён',
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'phone': user.phone,
+            },
+            'tokens': {
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+            }
+        })
 
 
 class RegisterView(generics.CreateAPIView):

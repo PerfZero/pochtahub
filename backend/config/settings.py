@@ -148,6 +148,13 @@ SWAGGER_SETTINGS = {
     }
 }
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -170,6 +177,11 @@ LOGGING = {
     },
     'loggers': {
         'apps.tariffs': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'apps.auth': {
             'handlers': ['console', 'file'],
             'level': 'INFO',
             'propagate': False,

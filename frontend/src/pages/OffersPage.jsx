@@ -88,6 +88,7 @@ function OffersPage() {
   const [weight, setWeight] = useState('')
   const [estimatedValue, setEstimatedValue] = useState('')
   const [selectedSize, setSelectedSize] = useState(null)
+  const [deliveryName, setDeliveryName] = useState(wizardData.deliveryName || '')
   
   const assistantMessageInitial = 'Привет! Я виртуальный ассистент Саша. Я помогу оформить доставку без лишних действий. Хотите, чтобы получатель сам выбрал доставку и указал точный адрес?'
   const assistantMessageSecond = 'Я помогу быстро отправить или получить посылку. Представленный расчёт ниже, сейчас ориентировочный. Хотите сделать его точнее?'
@@ -322,6 +323,7 @@ function OffersPage() {
       setWizardData(currentWizardData)
       setFromCity(currentWizardData.fromCity || '')
       setToCity(currentWizardData.toCity || '')
+      setDeliveryName(currentWizardData.deliveryName || '')
     } else if (location.search) {
       const urlData = getUrlWizardData()
       if (urlData.fromCity || urlData.toCity) {
@@ -329,6 +331,7 @@ function OffersPage() {
         setWizardData(urlData)
         setFromCity(urlData.fromCity || '')
         setToCity(urlData.toCity || '')
+        setDeliveryName(urlData.deliveryName || '')
       }
     }
     
@@ -410,6 +413,7 @@ function OffersPage() {
       ...wizardData,
       fromCity: wizardData.fromCity || fromCity,
       toCity: wizardData.toCity || toCity,
+      deliveryName: deliveryName,
       selectedOffer: {
         company_id: offer.company_id,
         company_name: offer.company_name,
@@ -991,6 +995,16 @@ function OffersPage() {
             <p className="text-base text-center text-[#2D2D2D] mb-6">
             Выберите наиболее подходящий вариант доставки 👇
             </p>
+            
+            <div className="mb-6">
+              <input
+                type="text"
+                value={deliveryName}
+                onChange={(e) => setDeliveryName(e.target.value)}
+                placeholder="Название доставки"
+                className="w-full px-4 py-3 border border-[#C8C7CC] rounded-xl text-base text-[#2D2D2D] focus:outline-none focus:border-[#0077FE]"
+              />
+            </div>
 
             <div className="flex items-center gap-4 mb-6 flex-wrap">
               <label className="flex items-center gap-3 cursor-pointer bg-white border border-[#C8C7CC] rounded-full px-4 py-2 transition-shadow">
@@ -1133,6 +1147,11 @@ function OffersPage() {
                                 ? `Доставка за ${offer.delivery_time} ${offer.delivery_time === 1 ? 'дн.' : 'дн.'}`
                                 : 'Срок доставки уточняется'}
                             </p>
+                            {(deliveryName || offer.company_name) && (
+                              <p className="text-sm text-[#2D2D2D] mt-1 font-medium">
+                                {deliveryName || offer.company_name}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </div>
