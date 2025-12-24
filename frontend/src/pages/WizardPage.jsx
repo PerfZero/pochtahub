@@ -44,12 +44,14 @@ function WizardPage() {
   const [telegramSent, setTelegramSent] = useState(false)
   const [paymentPayer, setPaymentPayer] = useState(null)
   const [currentStep, setCurrentStep] = useState(() => {
-    // Проверяем, есть ли selectedOffer в location.state
+    if (location.state?.currentStep) {
+      return location.state.currentStep
+    }
+    
     if (location.state?.selectedOffer || location.state?.wizardData?.selectedOffer) {
       return 'email'
     }
     
-    // Проверяем selectedOffer в URL
     try {
       const urlParams = new URLSearchParams(location.search)
       const encoded = urlParams.get('data')
@@ -67,7 +69,6 @@ function WizardPage() {
         }
       }
     } catch (err) {
-      // Игнорируем ошибки при декодировании URL
     }
     
     if (inviteRecipient && initialSelectedRole === 'sender') {
@@ -91,6 +92,7 @@ function WizardPage() {
   const [pickupSenderName, setPickupSenderName] = useState('')
   const [pickupSenderNameFocused, setPickupSenderNameFocused] = useState(false)
   const [selectedOffer, setSelectedOffer] = useState(location.state?.selectedOffer || null)
+  const [returnToPayment, setReturnToPayment] = useState(false)
 
   useEffect(() => {
     if (toCity) {
@@ -128,15 +130,13 @@ function WizardPage() {
     const state = location.state
     const data = state?.wizardData || wizardDataFromUrl
     
-    // КРИТИЧНО: сначала проверяем selectedOffer ДО восстановления данных, чтобы установить правильный шаг
     const offer = state?.selectedOffer || data?.selectedOffer || (state?.wizardData?.selectedOffer) || (wizardDataFromUrl?.selectedOffer)
     
-    let shouldSetEmailStep = false
     if (offer) {
-      // Если выбрали предложение на offers, сохраняем его и СРАЗУ переходим на email
-      console.log('Найден selectedOffer, переходим на email:', offer)
       setSelectedOffer(offer)
-      shouldSetEmailStep = true
+      if (!location.state?.currentStep) {
+        setCurrentStep('email')
+      }
     }
     
     if (data) {
@@ -165,12 +165,7 @@ function WizardPage() {
       if (data.pickupAddress) setPickupAddress(data.pickupAddress)
       if (data.pickupSenderName) setPickupSenderName(data.pickupSenderName)
       if (data.packageDataCompleted) setPackageDataCompleted(data.packageDataCompleted)
-    }
-    
-    // Устанавливаем шаг email в самом конце, после восстановления всех данных
-    if (shouldSetEmailStep) {
-      setPackageDataCompleted(true)
-      setCurrentStep('email')
+      if (data.returnToPayment) setReturnToPayment(data.returnToPayment)
     }
   }, [location.state, location.search])
 
@@ -346,9 +341,8 @@ function WizardPage() {
       if (isRecipientPays) {
         setCurrentStep('orderComplete')
       } else {
-        // Если отправитель оплачивает, переходим на offers
         if (selectedRole === 'sender') {
-          handleNavigateToOffers()
+          setCurrentStep('recipientAddress')
         } else {
           setCurrentStep('recipientAddress')
         }
@@ -362,7 +356,46 @@ function WizardPage() {
         setCurrentStep('package')
       }
     } else if (currentStep === 'recipientAddress' && recipientAddress && recipientFIO) {
-      handleNavigateToOffers()
+      if (returnToPayment && selectedOffer) {
+        const wizardData = {
+          fromCity,
+          toCity,
+          selectedRole,
+          length,
+          width,
+          height,
+          weight,
+          selectedSize,
+          packageOption,
+          senderPhone,
+          senderFIO,
+          senderAddress: deliveryMethod === 'courier' ? senderAddress : fromCity,
+          deliveryAddress,
+          recipientPhone,
+          recipientAddress,
+          recipientFIO,
+          userPhone: contactPhone || userPhone,
+          email,
+          deliveryMethod,
+          paymentPayer,
+          photoFile,
+        }
+        
+        navigate('/payment', {
+          state: {
+            wizardData,
+            company: selectedOffer.company_id,
+            companyName: selectedOffer.company_name,
+            companyCode: selectedOffer.company_code,
+            price: selectedOffer.price,
+            tariffCode: selectedOffer.tariff_code,
+            tariffName: selectedOffer.tariff_name,
+            deliveryTime: selectedOffer.delivery_time,
+          }
+        })
+      } else {
+        handleNavigateToOffers()
+      }
     } else if (currentStep === 'senderAddress' && senderAddress && senderFIO) {
       if (selectedRole === 'recipient') {
         handleNavigateToOffers()

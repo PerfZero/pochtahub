@@ -42,6 +42,32 @@ function PaymentPage() {
     const senderPhone = wizardData.senderPhone || wizardData.userPhone
     const recipientName = wizardData.recipientFIO || wizardData.recipientName
     const recipientPhone = wizardData.recipientPhone
+    const recipientAddress = wizardData.deliveryAddress || wizardData.recipientAddress
+    const selectedRole = wizardData.selectedRole || 'sender'
+    
+    if (selectedRole === 'sender' && (!recipientAddress || !recipientName)) {
+      const updatedWizardData = {
+        ...wizardData,
+        selectedOffer: {
+          company_id: offer.company_id,
+          company_name: offer.company_name,
+          company_code: offer.company_code,
+          price: offer.price,
+          tariff_code: offer.tariff_code,
+          tariff_name: offer.tariff_name,
+          delivery_time: offer.delivery_time,
+        },
+        returnToPayment: true,
+      }
+      
+      navigate('/wizard', {
+        state: {
+          wizardData: updatedWizardData,
+          currentStep: 'recipientAddress',
+        }
+      })
+      return
+    }
     
     if (!senderName || !senderPhone || !recipientName || !recipientPhone) {
       console.log('Проверка полей:', { senderName, senderPhone, recipientName, recipientPhone, wizardData })

@@ -108,7 +108,7 @@ function OffersPage() {
       id: 'smartphone',
       name: 'Как коробка от смартфона',
       dimensions: '17х12х9 см',
-      weight: 'до 1 кг.',
+      weight: 'до 1 кг',
       icon: iconPhone
     },
     {
