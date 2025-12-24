@@ -41,10 +41,35 @@ function WizardPage() {
   const [codeSent, setCodeSent] = useState(false)
   const [codeLoading, setCodeLoading] = useState(false)
   const [codeError, setCodeError] = useState('')
-  const [telegramAvailable, setTelegramAvailable] = useState(false)
   const [telegramSent, setTelegramSent] = useState(false)
   const [paymentPayer, setPaymentPayer] = useState(null)
   const [currentStep, setCurrentStep] = useState(() => {
+    // Проверяем, есть ли selectedOffer в location.state
+    if (location.state?.selectedOffer || location.state?.wizardData?.selectedOffer) {
+      return 'email'
+    }
+    
+    // Проверяем selectedOffer в URL
+    try {
+      const urlParams = new URLSearchParams(location.search)
+      const encoded = urlParams.get('data')
+      if (encoded) {
+        const decodedBase64 = decodeURIComponent(encoded)
+        const binaryString = atob(decodedBase64)
+        const bytes = new Uint8Array(binaryString.length)
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i)
+        }
+        const decoded = new TextDecoder('utf-8').decode(bytes)
+        const wizardDataFromUrl = JSON.parse(decoded)
+        if (wizardDataFromUrl?.selectedOffer) {
+          return 'email'
+        }
+      }
+    } catch (err) {
+      // Игнорируем ошибки при декодировании URL
+    }
+    
     if (inviteRecipient && initialSelectedRole === 'sender') {
       return 'recipientPhone'
     }
@@ -62,6 +87,10 @@ function WizardPage() {
   const [agreePersonalData, setAgreePersonalData] = useState(false)
   const [agreeMarketing, setAgreeMarketing] = useState(false)
   const [loadingOffers, setLoadingOffers] = useState(false)
+  const [pickupAddress, setPickupAddress] = useState('')
+  const [pickupSenderName, setPickupSenderName] = useState('')
+  const [pickupSenderNameFocused, setPickupSenderNameFocused] = useState(false)
+  const [selectedOffer, setSelectedOffer] = useState(location.state?.selectedOffer || null)
 
   useEffect(() => {
     if (toCity) {
@@ -72,6 +101,78 @@ function WizardPage() {
       setSenderAddress(fromCity)
     }
   }, [toCity, fromCity])
+
+  // Восстановление данных из location.state или URL при возврате с offers
+  useEffect(() => {
+    // Сначала проверяем URL
+    const urlParams = new URLSearchParams(location.search)
+    const encoded = urlParams.get('data')
+    let wizardDataFromUrl = null
+    
+    if (encoded) {
+      try {
+        const decodedBase64 = decodeURIComponent(encoded)
+        const binaryString = atob(decodedBase64)
+        const bytes = new Uint8Array(binaryString.length)
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i)
+        }
+        const decoded = new TextDecoder('utf-8').decode(bytes)
+        wizardDataFromUrl = JSON.parse(decoded)
+      } catch (err) {
+        console.error('Ошибка декодирования данных из URL:', err)
+      }
+    }
+    
+    // Используем данные из state или URL
+    const state = location.state
+    const data = state?.wizardData || wizardDataFromUrl
+    
+    // КРИТИЧНО: сначала проверяем selectedOffer ДО восстановления данных, чтобы установить правильный шаг
+    const offer = state?.selectedOffer || data?.selectedOffer || (state?.wizardData?.selectedOffer) || (wizardDataFromUrl?.selectedOffer)
+    
+    let shouldSetEmailStep = false
+    if (offer) {
+      // Если выбрали предложение на offers, сохраняем его и СРАЗУ переходим на email
+      console.log('Найден selectedOffer, переходим на email:', offer)
+      setSelectedOffer(offer)
+      shouldSetEmailStep = true
+    }
+    
+    if (data) {
+      // Восстанавливаем все данные формы только если нет selectedOffer
+      if (data.fromCity) setFromCity(data.fromCity)
+      if (data.toCity) setToCity(data.toCity)
+      if (data.selectedRole) setSelectedRole(data.selectedRole)
+      if (data.packageOption) setPackageOption(data.packageOption)
+      if (data.length) setLength(data.length)
+      if (data.width) setWidth(data.width)
+      if (data.height) setHeight(data.height)
+      if (data.weight) setWeight(data.weight)
+      if (data.selectedSize) setSelectedSize(data.selectedSize)
+      if (data.senderPhone) setSenderPhone(data.senderPhone)
+      if (data.senderFIO) setSenderFIO(data.senderFIO)
+      if (data.senderAddress) setSenderAddress(data.senderAddress)
+      if (data.deliveryAddress) setDeliveryAddress(data.deliveryAddress)
+      if (data.userPhone) setUserPhone(data.userPhone)
+      if (data.contactPhone) setContactPhone(data.contactPhone)
+      if (data.recipientPhone) setRecipientPhone(data.recipientPhone)
+      if (data.recipientAddress) setRecipientAddress(data.recipientAddress)
+      if (data.recipientFIO) setRecipientFIO(data.recipientFIO)
+      if (data.email) setEmail(data.email)
+      if (data.deliveryMethod) setDeliveryMethod(data.deliveryMethod)
+      if (data.paymentPayer) setPaymentPayer(data.paymentPayer)
+      if (data.pickupAddress) setPickupAddress(data.pickupAddress)
+      if (data.pickupSenderName) setPickupSenderName(data.pickupSenderName)
+      if (data.packageDataCompleted) setPackageDataCompleted(data.packageDataCompleted)
+    }
+    
+    // Устанавливаем шаг email в самом конце, после восстановления всех данных
+    if (shouldSetEmailStep) {
+      setPackageDataCompleted(true)
+      setCurrentStep('email')
+    }
+  }, [location.state, location.search])
 
   const sizeOptions = [
     {
@@ -114,7 +215,11 @@ function WizardPage() {
     } else if (currentStep === 'recipientAddress') {
       setCurrentStep('payment')
     } else if (currentStep === 'senderAddress') {
-      setCurrentStep('payment')
+      if (selectedRole === 'recipient') {
+        setCurrentStep('senderPhone')
+      } else {
+        setCurrentStep('payment')
+      }
     } else if (currentStep === 'payment') {
       if (selectedRole === 'sender') {
         setCurrentStep('recipientPhone')
@@ -131,7 +236,6 @@ function WizardPage() {
           setCodeSent(false)
           setSmsCode('')
           setCodeError('')
-          setTelegramAvailable(false)
           setTelegramSent(false)
         } else {
           setCurrentStep('contactPhone')
@@ -139,30 +243,43 @@ function WizardPage() {
       } else {
         setCurrentStep('senderPhone')
       }
-    } else if (currentStep === 'contactPhone' && codeSent) {
-      setCodeSent(false)
-      setSmsCode('')
-      setCodeError('')
-      setTelegramAvailable(false)
-      setTelegramSent(false)
+    } else if (currentStep === 'pickupAddress' && pickupAddress && pickupSenderName) {
+      setSenderAddress(pickupAddress)
+      setSenderFIO(pickupSenderName)
+      if (selectedRole === 'sender') {
+        setCurrentStep('recipientPhone')
+      } else {
+        setCurrentStep('package')
+      }
     } else if (currentStep === 'contactPhone') {
       setCurrentStep('package')
     } else if (currentStep === 'userPhone' && codeSent) {
       setCodeSent(false)
       setSmsCode('')
       setCodeError('')
-      setTelegramAvailable(false)
       setTelegramSent(false)
     } else if (currentStep === 'userPhone') {
       setCurrentStep('deliveryAddress')
     } else if (currentStep === 'deliveryAddress') {
-      setCurrentStep('senderFIO')
+      if (selectedRole === 'recipient') {
+        setCurrentStep('package')
+      } else {
+        setCurrentStep('senderFIO')
+      }
     } else if (currentStep === 'senderPhone') {
-      setCurrentStep('package')
-      setPackageDataCompleted(false)
-      setSenderPhone('')
+      if (selectedRole === 'recipient') {
+        setCurrentStep('userPhone')
+        setCodeSent(false)
+        setSmsCode('')
+        setCodeError('')
+        setTelegramSent(false)
+      } else {
+        setCurrentStep('package')
+        setPackageDataCompleted(false)
+        setSenderPhone('')
+      }
     } else if (packageDataCompleted && selectedRole === 'recipient') {
-      setCurrentStep('senderPhone')
+      setCurrentStep('deliveryAddress')
     } else if (selectedRole) {
       setSelectedRole(null)
       setPackageOption(null)
@@ -178,7 +295,7 @@ function WizardPage() {
       if (packageOption === 'photo' && photoPreview) {
         setPackageDataCompleted(true)
         if (selectedRole === 'recipient') {
-          setCurrentStep('senderPhone')
+          setCurrentStep('deliveryAddress')
         } else if (selectedRole === 'sender') {
           setCurrentStep('contactPhone')
         } else {
@@ -187,7 +304,7 @@ function WizardPage() {
       } else if (packageOption === 'manual' && length && width && height && weight) {
         setPackageDataCompleted(true)
         if (selectedRole === 'recipient') {
-          setCurrentStep('senderPhone')
+          setCurrentStep('deliveryAddress')
         } else if (selectedRole === 'sender') {
           setCurrentStep('contactPhone')
         } else {
@@ -196,7 +313,7 @@ function WizardPage() {
       } else if (packageOption === 'unknown' && selectedSize) {
         setPackageDataCompleted(true)
         if (selectedRole === 'recipient') {
-          setCurrentStep('senderPhone')
+          setCurrentStep('deliveryAddress')
         } else if (selectedRole === 'sender') {
           setCurrentStep('contactPhone')
         } else {
@@ -208,15 +325,14 @@ function WizardPage() {
       }
     } else if (currentStep === 'contactPhone' && contactPhone && !codeSent) {
       setUserPhone(contactPhone)
-      handleSendCode()
     } else if (currentStep === 'senderPhone' && senderPhone) {
-      setCurrentStep('senderFIO')
-    } else if (currentStep === 'senderFIO' && senderFIO) {
       if (selectedRole === 'recipient') {
-        setCurrentStep('deliveryAddress')
+        setCurrentStep('senderAddress')
       } else {
-        setCurrentStep('deliveryMethod')
+        setCurrentStep('senderFIO')
       }
+    } else if (currentStep === 'senderFIO' && senderFIO) {
+      setCurrentStep('deliveryMethod')
     } else if (currentStep === 'deliveryMethod' && deliveryMethod) {
       setCurrentStep('recipientPhone')
     } else if (currentStep === 'recipientPhone' && recipientPhone) {
@@ -224,19 +340,77 @@ function WizardPage() {
     } else if (currentStep === 'deliveryAddress' && deliveryAddress) {
       setCurrentStep('userPhone')
     } else if (currentStep === 'userPhone' && userPhone && !codeSent) {
-      handleSendCode()
+      handleSendCode('sms')
     } else if (currentStep === 'payment' && paymentPayer) {
-      if (selectedRole === 'recipient') {
-        setCurrentStep('senderAddress')
+      const isRecipientPays = (selectedRole === 'sender' && paymentPayer === 'recipient') || (selectedRole === 'recipient' && paymentPayer === 'sender')
+      if (isRecipientPays) {
+        setCurrentStep('orderComplete')
       } else {
-        setCurrentStep('recipientAddress')
+        // Если отправитель оплачивает, переходим на offers
+        if (selectedRole === 'sender') {
+          handleNavigateToOffers()
+        } else {
+          setCurrentStep('recipientAddress')
+        }
       }
-    } else if (currentStep === 'senderAddress' && senderAddress && senderFIO) {
-      setCurrentStep('email')
+    } else if (currentStep === 'pickupAddress' && pickupAddress && pickupSenderName) {
+      setSenderAddress(pickupAddress)
+      setSenderFIO(pickupSenderName)
+      if (selectedRole === 'sender') {
+        setCurrentStep('recipientPhone')
+      } else {
+        setCurrentStep('package')
+      }
     } else if (currentStep === 'recipientAddress' && recipientAddress && recipientFIO) {
-      setCurrentStep('email')
-    } else if (currentStep === 'email' && email && agreePersonalData) {
       handleNavigateToOffers()
+    } else if (currentStep === 'senderAddress' && senderAddress && senderFIO) {
+      if (selectedRole === 'recipient') {
+        handleNavigateToOffers()
+      } else {
+        setCurrentStep('email')
+      }
+    } else if (currentStep === 'email' && email && agreePersonalData) {
+      // Если выбрано предложение, переходим на страницу оплаты
+      if (selectedOffer) {
+        const wizardData = {
+          fromCity,
+          toCity,
+          selectedRole,
+          length,
+          width,
+          height,
+          weight,
+          selectedSize,
+          packageOption,
+          senderPhone,
+          senderFIO,
+          senderAddress: deliveryMethod === 'courier' ? senderAddress : fromCity,
+          deliveryAddress,
+          recipientPhone,
+          recipientAddress,
+          recipientFIO,
+          userPhone: contactPhone || userPhone,
+          email,
+          deliveryMethod,
+          paymentPayer,
+          photoFile,
+        }
+        
+        navigate('/payment', {
+          state: {
+            wizardData,
+            company: selectedOffer.company_id,
+            companyName: selectedOffer.company_name,
+            companyCode: selectedOffer.company_code,
+            price: selectedOffer.price,
+            tariffCode: selectedOffer.tariff_code,
+            tariffName: selectedOffer.tariff_name,
+            deliveryTime: selectedOffer.delivery_time,
+          }
+        })
+      } else {
+        handleNavigateToOffers()
+      }
     }
   }
 
@@ -246,7 +420,7 @@ function WizardPage() {
     setCurrentStep('package')
   }
 
-  const handleSendCode = async (method = 'sms') => {
+  const handleSendCode = async (method = 'telegram') => {
     const phoneToUse = currentStep === 'contactPhone' ? contactPhone : userPhone
     if (!phoneToUse) {
       setCodeError('Введите номер телефона')
@@ -254,7 +428,6 @@ function WizardPage() {
     }
     setCodeLoading(true)
     setCodeError('')
-    setTelegramAvailable(false)
     setTelegramSent(false)
     try {
       const response = await authAPI.sendCode(phoneToUse, method)
@@ -271,17 +444,14 @@ function WizardPage() {
       }
     } catch (err) {
       const errorData = err.response?.data
-      if (errorData?.telegram_available) {
-        setTelegramAvailable(true)
-      }
       setCodeError(errorData?.error || err.message || 'Ошибка отправки кода')
     } finally {
       setCodeLoading(false)
     }
   }
   
-  const handleSendTelegramCode = async () => {
-    await handleSendCode('telegram')
+  const handleSendSmsCode = async () => {
+    await handleSendCode('sms')
   }
 
   const handleVerifyCode = async (code = null) => {
@@ -293,11 +463,26 @@ function WizardPage() {
     setCodeLoading(true)
     setCodeError('')
     try {
-      await authAPI.verifyCode(userPhone, codeToVerify)
-      if (selectedRole === 'sender') {
-        setCurrentStep('senderFIO')
+      const phoneToUse = currentStep === 'contactPhone' ? contactPhone : userPhone
+      const response = await authAPI.verifyCode(phoneToUse, codeToVerify)
+      
+      if (currentStep === 'contactPhone') {
+        setUserPhone(contactPhone)
+        setCodeSent(false)
+        setSmsCode('')
+        setCodeError('')
+        setTelegramSent(false)
+        setCurrentStep('pickupAddress')
       } else {
-        setCurrentStep('payment')
+        setCodeSent(false)
+        setSmsCode('')
+        setCodeError('')
+        setTelegramSent(false)
+        if (selectedRole === 'sender') {
+          setCurrentStep('senderFIO')
+        } else {
+          setCurrentStep('senderPhone')
+        }
       }
     } catch (err) {
       setCodeError(err.response?.data?.error || err.message || 'Неверный код')
@@ -310,9 +495,7 @@ function WizardPage() {
     setCodeSent(false)
     setSmsCode('')
     setCodeError('')
-    setTelegramAvailable(false)
     setTelegramSent(false)
-    handleSendCode()
   }
 
   const handleCalculate = () => {
@@ -420,9 +603,18 @@ function WizardPage() {
       deliveryMethod,
       paymentPayer,
       photoFile,
+      returnToPayment: currentStep === 'recipientPhone' && selectedRole === 'sender',
     }
     
-    navigate('/offers', { state: { wizardData } })
+    // Сохраняем данные в URL для надежности
+    try {
+      const jsonString = JSON.stringify(wizardData)
+      const encoded = btoa(unescape(encodeURIComponent(jsonString)))
+      navigate(`/offers?data=${encodeURIComponent(encoded)}`, { state: { wizardData } })
+    } catch (err) {
+      console.error('Ошибка кодирования данных:', err)
+      navigate('/offers', { state: { wizardData } })
+    }
   }
 
   return (
@@ -470,13 +662,14 @@ function WizardPage() {
                        currentStep === 'payment' ? '95%' :
                        currentStep === 'recipientPhone' ? '90%' :
                        currentStep === 'deliveryMethod' ? '85%' :
-                       currentStep === 'userPhone' ? '90%' : 
-                       currentStep === 'deliveryAddress' ? '90%' :
+                       currentStep === 'userPhone' ? (selectedRole === 'recipient' ? '70%' : '90%') : 
+                       currentStep === 'deliveryAddress' ? (selectedRole === 'recipient' ? '60%' : '90%') :
                        currentStep === 'senderFIO' ? '80%' :
                        currentStep === 'contactPhone' && codeSent ? '75%' :
                        currentStep === 'contactPhone' ? '70%' :
-                       currentStep === 'senderPhone' ? '70%' :
-                       packageDataCompleted && selectedRole === 'recipient' ? '60%' : 
+                       currentStep === 'pickupAddress' ? '80%' :
+                       currentStep === 'senderPhone' ? (selectedRole === 'recipient' ? '80%' : '70%') :
+                       packageDataCompleted && selectedRole === 'recipient' ? '50%' : 
                        selectedRole ? '50%' : '35%' 
               }}></div>
             </div>
@@ -485,7 +678,7 @@ function WizardPage() {
                 ? 'Далее только транспортные компании...'
                 : currentStep === 'payment' || currentStep === 'recipientAddress' || currentStep === 'senderAddress'
                   ? 'Уже подобрали транспортные компании...' 
-                  : currentStep === 'userPhone' || currentStep === 'deliveryAddress' || currentStep === 'senderFIO' || currentStep === 'senderPhone' || currentStep === 'recipientPhone' || currentStep === 'deliveryMethod' || currentStep === 'contactPhone'
+                  : currentStep === 'userPhone' || currentStep === 'deliveryAddress' || currentStep === 'senderFIO' || currentStep === 'senderPhone' || currentStep === 'recipientPhone' || currentStep === 'deliveryMethod' || currentStep === 'contactPhone' || currentStep === 'pickupAddress' || currentStep === 'orderComplete'
                     ? 'Уже подбираем транспортные компании...' 
                     : packageDataCompleted && selectedRole === 'recipient' 
                       ? 'Уже подбираем транспортные компании...' 
@@ -831,36 +1024,22 @@ function WizardPage() {
                   {codeError && (
                     <div className="mb-4">
                       <p className="text-sm text-red-500 text-center mb-2">{codeError}</p>
-                      {telegramAvailable && (
-                        <p className="text-sm text-[#0077FE] text-center">
-                          SMS не пришла?{' '}
-                          <button
-                            onClick={() => handleSendTelegramCode()}
-                            disabled={codeLoading}
-                            className="underline font-semibold hover:no-underline disabled:opacity-50"
-                          >
-                            Получить код в Telegram
-                          </button>
-                        </p>
-                      )}
                     </div>
                   )}
                   <button 
-                    onClick={handleContinue}
+                    onClick={() => handleSendCode('telegram')}
                     disabled={codeLoading || !contactPhone}
-                    className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold disabled:opacity-50"
+                    className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold hover:bg-[#0066CC] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {codeLoading ? 'Отправка...' : 'Продолжить'}
+                    {codeLoading ? 'Отправка...' : 'Получить код в Telegram'}
                   </button>
-                  <div className="mt-4 text-center">
-                    <button
-                      onClick={() => handleSendTelegramCode()}
-                      disabled={codeLoading || !contactPhone}
-                      className="text-sm text-[#0077FE] hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Получить код в Telegram
-                    </button>
-                  </div>
+                  <button 
+                    onClick={handleSendSmsCode}
+                    disabled={codeLoading || !contactPhone}
+                    className="w-full bg-[#F5F5F5] text-[#2D2D2D] px-6 py-4 rounded-xl text-base font-semibold hover:bg-[#E5E5E5] transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-3"
+                  >
+                    {codeLoading ? 'Отправка...' : 'Отправить SMS'}
+                  </button>
                 </div>
               )}
 
@@ -891,23 +1070,16 @@ function WizardPage() {
                   {codeError && (
                     <div className="mb-4">
                       <p className="text-sm text-red-500 text-center mb-2">{codeError}</p>
-                      {telegramAvailable && (
-                        <p className="text-sm text-[#0077FE] text-center">
-                          SMS не пришла?{' '}
-                          <button
-                            onClick={() => handleSendTelegramCode()}
-                            disabled={codeLoading}
-                            className="underline font-semibold hover:no-underline disabled:opacity-50"
-                          >
-                            Получить код в Telegram
-                          </button>
-                        </p>
-                      )}
                     </div>
                   )}
                   {telegramSent && (
                     <p className="text-sm text-green-600 mb-4 text-center">
                       Код отправлен в Telegram
+                    </p>
+                  )}
+                  {!telegramSent && codeSent && (
+                    <p className="text-sm text-[#858585] mb-4 text-center">
+                      Код отправлен в SMS
                     </p>
                   )}
                   <div className="flex flex-col gap-3">
@@ -917,7 +1089,6 @@ function WizardPage() {
                         setCodeSent(false)
                         setSmsCode('')
                         setCodeError('')
-                        setTelegramAvailable(false)
                         setTelegramSent(false)
                       }}
                       className="text-sm text-[#0077FE] hover:underline"
@@ -933,6 +1104,62 @@ function WizardPage() {
                       Получить новый код
                     </button>
                   </div>
+                </div>
+              )}
+
+              {currentStep === 'pickupAddress' && (
+                <div className="mb-8">
+                  <h1 className="text-3xl font-bold text-[#2D2D2D] mb-2 text-center">
+                    Где забрать посылку?
+                  </h1>
+                  <p className="text-base text-[#2D2D2D] mb-8 text-center">
+                    Осталось указать адрес, откуда забрать посылку, и имя отправителя — чтобы мы могли оформить забор.
+                  </p>
+                  
+                  <div className="mb-6">
+                    <AddressInput
+                      value={pickupAddress}
+                      onChange={(e) => setPickupAddress(e.target.value)}
+                      onCityChange={(e) => {
+                        if (fromCity) {
+                          setFromCity(e.target.value)
+                        }
+                      }}
+                      label="Адрес забора"
+                      required
+                    />
+                  </div>
+
+                  <div className="mb-6">
+                    <div className="relative">
+                      <div className={`relative border rounded-xl ${
+                        pickupSenderNameFocused ? 'border-[#0077FE]' : 'border-[#C8C7CC]'
+                      }`}>
+                        <input
+                          type="text"
+                          value={pickupSenderName}
+                          onChange={(e) => setPickupSenderName(e.target.value)}
+                          onFocus={() => setPickupSenderNameFocused(true)}
+                          onBlur={() => setPickupSenderNameFocused(false)}
+                          placeholder=" "
+                          className="w-full px-4 pt-6 pb-2 border-0 bg-transparent rounded-xl text-base text-[#2D2D2D] focus:outline-none"
+                        />
+                        <label className={`absolute left-4 transition-all duration-200 pointer-events-none ${
+                          pickupSenderName || pickupSenderNameFocused ? 'top-2 text-xs' : 'top-1/2 -translate-y-1/2 text-base'
+                        } ${pickupSenderNameFocused ? 'text-[#0077FE]' : 'text-[#858585]'}`}>
+                          Имя отправителя *
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={handleContinue}
+                    disabled={!pickupAddress || !pickupSenderName}
+                    className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold hover:bg-[#0066CC] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Продолжить
+                  </button>
                 </div>
               )}
 
@@ -1118,34 +1345,22 @@ function WizardPage() {
                   {codeError && (
                     <div className="mb-4">
                       <p className="text-sm text-red-500 text-center mb-2">{codeError}</p>
-                      {telegramAvailable && (
-                        <p className="text-sm text-[#0077FE] text-center">
-                          SMS не пришла?{' '}
-                          <button
-                            onClick={() => handleSendTelegramCode()}
-                            disabled={codeLoading}
-                            className="underline font-semibold hover:no-underline disabled:opacity-50"
-                          >
-                            Получить код в Telegram
-                          </button>
-                        </p>
-                      )}
                     </div>
                   )}
-                  <button 
-                    onClick={handleContinue}
-                    disabled={codeLoading || !userPhone}
-                    className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold disabled:opacity-50"
-                  >
-                    {codeLoading ? 'Отправка...' : 'Продолжить'}
-                  </button>
-                  <div className="mt-4 text-center">
+                  <div className="flex flex-col gap-3">
                     <button
-                      onClick={handleSendTelegramCode}
+                      onClick={() => handleSendCode('telegram')}
                       disabled={codeLoading || !userPhone}
-                      className="text-sm text-[#0077FE] hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold disabled:opacity-50"
                     >
-                      Получить код в Telegram
+                      {codeLoading ? 'Отправка...' : 'Получить код в Telegram'}
+                    </button>
+                    <button
+                      onClick={() => handleSendCode('sms')}
+                      disabled={codeLoading || !userPhone}
+                      className="w-full bg-white border border-[#0077FE] text-[#0077FE] px-6 py-4 rounded-xl text-base font-semibold disabled:opacity-50"
+                    >
+                      {codeLoading ? 'Отправка...' : 'Отправить SMS'}
                     </button>
                   </div>
                 </div>
@@ -1178,18 +1393,6 @@ function WizardPage() {
                   {codeError && (
                     <div className="mb-4">
                       <p className="text-sm text-red-500 text-center mb-2">{codeError}</p>
-                      {telegramAvailable && (
-                        <p className="text-sm text-[#0077FE] text-center">
-                          SMS не пришла?{' '}
-                          <button
-                            onClick={() => handleSendTelegramCode()}
-                            disabled={codeLoading}
-                            className="underline font-semibold hover:no-underline disabled:opacity-50"
-                          >
-                            Получить код в Telegram
-                          </button>
-                        </p>
-                      )}
                     </div>
                   )}
                   {telegramSent && (
@@ -1204,7 +1407,6 @@ function WizardPage() {
                         setCodeSent(false)
                         setSmsCode('')
                         setCodeError('')
-                        setTelegramAvailable(false)
                         setTelegramSent(false)
                       }}
                       className="text-sm text-[#0077FE] hover:underline"
@@ -1315,6 +1517,26 @@ function WizardPage() {
                   >
                     Продолжить
                   </button>
+                </div>
+              )}
+
+              {currentStep === 'orderComplete' && (
+                <div className="mb-8">
+                  <div className="text-center mb-8">
+                    <div className="text-6xl mb-4">👍</div>
+                    <h1 className="text-3xl font-bold text-[#2D2D2D] mb-4">
+                      Готово 👍 Отправление создано
+                    </h1>
+                    <p className="text-base text-[#2D2D2D] mb-8">
+                      Получатель выберет и оплатит доставку. Мы сообщим Вам, когда назначим курьера.
+                    </p>
+                    <button
+                      onClick={() => navigate('/cabinet')}
+                      className="bg-[#0077FE] text-white px-8 py-4 rounded-xl text-base font-semibold hover:bg-[#0066CC] transition-colors"
+                    >
+                      Понятно
+                    </button>
+                  </div>
                 </div>
               )}
 

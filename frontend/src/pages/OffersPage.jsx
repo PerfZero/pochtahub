@@ -414,6 +414,7 @@ function OffersPage() {
       fromCity: wizardData.fromCity || fromCity,
       toCity: wizardData.toCity || toCity,
       deliveryName: deliveryName,
+      packageDataCompleted: true,
       selectedOffer: {
         company_id: offer.company_id,
         company_name: offer.company_name,
@@ -422,11 +423,23 @@ function OffersPage() {
         tariff_code: offer.tariff_code,
         tariff_name: offer.tariff_name,
         delivery_time: offer.delivery_time,
-      }
+      },
+      returnToPayment: wizardData.returnToPayment || false,
     }
-    navigate('/wizard', {
-      state: updatedWizardData
-    })
+    
+    // Сохраняем данные в URL для надежности
+    try {
+      const jsonString = JSON.stringify(updatedWizardData)
+      const encoded = btoa(unescape(encodeURIComponent(jsonString)))
+      navigate(`/wizard?data=${encodeURIComponent(encoded)}`, {
+        state: { wizardData: updatedWizardData, selectedOffer: updatedWizardData.selectedOffer }
+      })
+    } catch (err) {
+      console.error('Ошибка кодирования данных:', err)
+      navigate('/wizard', {
+        state: { wizardData: updatedWizardData, selectedOffer: updatedWizardData.selectedOffer }
+      })
+    }
   }
 
   const handleCalculate = useCallback(async () => {
