@@ -103,7 +103,7 @@ class SendCodeView(APIView):
             phone_clean = phone.replace('+', '').replace(' ', '').replace('-', '').replace('(', '').replace(')', '')
             phone_number = int(phone_clean)
             
-            message_text = f'Ваш код подтверждения: {code}'
+            message_text = f'Ваш код подтверждения: {code}\npochtahab.ru'
             
             headers = {
                 'X-API-KEY': NOTIFICORE_API_KEY,

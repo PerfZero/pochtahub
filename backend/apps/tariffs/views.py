@@ -306,6 +306,154 @@ class DeliveryPointsView(generics.GenericAPIView):
             return Response({'error': f'Ошибка получения ПВЗ: {str(e)}'}, status=500)
 
 
+class CdekWidgetServiceView(generics.GenericAPIView):
+    """
+    Service endpoint для виджета СДЭК 3.0
+    Проксирует запросы к API СДЭК с авторизацией
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        import requests as http_requests
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # Виджет СДЭК 3.0 отправляет данные в определённом формате
+        action = request.data.get('action')
+        logger.info(f'CDEK Widget request: action={action}, data={request.data}')
+        
+        try:
+            company = TransportCompany.objects.filter(
+                api_type='cdek', 
+                is_active=True,
+                api_account__isnull=False,
+                api_secure_password__isnull=False
+            ).first()
+            
+            if not company:
+                return Response({'error': 'CDEK компания не настроена'}, status=400)
+            
+            adapter = CDEKAdapter(
+                account=company.api_account,
+                secure_password=company.api_secure_password,
+                test_mode=False
+            )
+            
+            token = adapter._get_token()
+            if not token:
+                return Response({'error': 'Не удалось получить токен СДЭК'}, status=500)
+            
+            headers = {
+                'Authorization': f'Bearer {token}',
+                'Content-Type': 'application/json'
+            }
+            
+            base_url = adapter.api_url
+            
+            if action == 'offices' or action == 'getOffices':
+                # Получение списка ПВЗ
+                city_code = request.data.get('city_code') or request.data.get('cityCode')
+                
+                params = {'size': 500}
+                if city_code:
+                    params['city_code'] = city_code
+                
+                response = http_requests.get(
+                    f'{base_url}/deliverypoints',
+                    headers=headers,
+                    params=params,
+                    timeout=30
+                )
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    # Форматируем ответ для виджета - он ожидает массив офисов
+                    # с определёнными полями
+                    offices = []
+                    for point in data if isinstance(data, list) else []:
+                        office = {
+                            'code': point.get('code', ''),
+                            'name': point.get('name', ''),
+                            'city_code': point.get('location', {}).get('city_code', 0),
+                            'city': point.get('location', {}).get('city', ''),
+                            'address': point.get('location', {}).get('address', ''),
+                            'address_full': point.get('location', {}).get('address_full', ''),
+                            'postal_code': point.get('location', {}).get('postal_code', ''),
+                            'latitude': point.get('location', {}).get('latitude', 0),
+                            'longitude': point.get('location', {}).get('longitude', 0),
+                            'work_time': point.get('work_time', ''),
+                            'phone': point.get('phones', [{}])[0].get('number', '') if point.get('phones') else '',
+                            'type': point.get('type', 'PVZ'),
+                            'owner_code': point.get('owner_code', 'cdek'),
+                        }
+                        offices.append(office)
+                    logger.info(f'CDEK offices: returning {len(offices)} offices')
+                    return Response(offices)
+                else:
+                    logger.error(f'CDEK offices error: {response.status_code} - {response.text}')
+                    return Response([], status=200)  # Возвращаем пустой массив
+                    
+            elif action == 'calculate' or action == 'calculateDelivery':
+                # Расчёт стоимости доставки
+                calc_data = {
+                    'type': 1,
+                    'currency': 1,
+                    'lang': 'rus',
+                    'from_location': request.data.get('from_location') or request.data.get('fromLocation', {}),
+                    'to_location': request.data.get('to_location') or request.data.get('toLocation', {}),
+                    'packages': request.data.get('packages', []),
+                }
+                
+                tariff_code = request.data.get('tariff_code') or request.data.get('tariffCode')
+                if tariff_code:
+                    calc_data['tariff_code'] = tariff_code
+                
+                response = http_requests.post(
+                    f'{base_url}/calculator/tarifflist',
+                    headers=headers,
+                    json=calc_data,
+                    timeout=30
+                )
+                
+                if response.status_code == 200:
+                    return Response(response.json())
+                else:
+                    logger.error(f'CDEK calculate error: {response.text}')
+                    return Response({'tariff_codes': []}, status=200)
+                    
+            elif action == 'cities' or action == 'getCities':
+                # Поиск городов
+                city = request.data.get('city', '') or request.data.get('name', '')
+                
+                params = {'size': 50}
+                if city:
+                    params['city'] = city
+                
+                response = http_requests.get(
+                    f'{base_url}/location/cities',
+                    headers=headers,
+                    params=params,
+                    timeout=30
+                )
+                
+                if response.status_code == 200:
+                    return Response(response.json())
+                else:
+                    logger.error(f'CDEK cities error: {response.text}')
+                    return Response([], status=200)
+            
+            else:
+                logger.warning(f'Unknown CDEK widget action: {action}')
+                return Response({'error': f'Unknown action: {action}'}, status=400)
+                
+        except Exception as e:
+            logger.error(f'CDEK widget service error: {str(e)}', exc_info=True)
+            return Response({'error': str(e)}, status=500)
+
+    def get(self, request, *args, **kwargs):
+        return Response({'status': 'ok', 'service': 'cdek-widget'})
+
+
 class GetTariffsView(generics.GenericAPIView):
     authentication_classes = [SessionAuthentication, OptionalJWTAuthentication]
     permission_classes = [permissions.AllowAny]

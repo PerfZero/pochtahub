@@ -67,7 +67,7 @@ function OffersPage() {
   const [loading, setLoading] = useState(true)
   const [isRecalculating, setIsRecalculating] = useState(false)
   const [error, setError] = useState('')
-  const [filterCourierPickup, setFilterCourierPickup] = useState(false)
+  const [filterCourierPickup, setFilterCourierPickup] = useState(true)
   const [filterCourierDelivery, setFilterCourierDelivery] = useState(false)
   const [sortBy, setSortBy] = useState('price')
   const [shareSuccess, setShareSuccess] = useState(false)
@@ -1008,16 +1008,6 @@ function OffersPage() {
             <p className="text-base text-center text-[#2D2D2D] mb-6">
             Выберите наиболее подходящий вариант доставки 👇
             </p>
-            
-            <div className="mb-6">
-              <input
-                type="text"
-                value={deliveryName}
-                onChange={(e) => setDeliveryName(e.target.value)}
-                placeholder="Название доставки"
-                className="w-full px-4 py-3 border border-[#C8C7CC] rounded-xl text-base text-[#2D2D2D] focus:outline-none focus:border-[#0077FE]"
-              />
-            </div>
 
             <div className="flex items-center gap-4 mb-6 flex-wrap">
               <label className="flex items-center gap-3 cursor-pointer bg-white border border-[#C8C7CC] rounded-full px-4 py-2 transition-shadow">

@@ -4,7 +4,7 @@ import axios from 'axios'
 const DADATA_API_URL = 'https://suggestions.dadata.ru/suggestions/api/4_1/rs/suggest/address'
 const DADATA_TOKEN = import.meta.env.VITE_DADATA_TOKEN || ''
 
-function AddressInput({ value = '', onChange, onCityChange, label = 'Адрес', required = false }) {
+function AddressInput({ value = '', onChange, onCityChange, label = 'Адрес', required = false, city = null }) {
   const [options, setOptions] = useState([])
   const [loading, setLoading] = useState(false)
   const [inputValue, setInputValue] = useState(value)
@@ -15,6 +15,20 @@ function AddressInput({ value = '', onChange, onCityChange, label = 'Адрес'
 
   const hasValue = inputValue && inputValue.length > 0
   const isFloating = isFocused || hasValue
+
+  const removeCityFromAddress = useCallback((address, cityName) => {
+    if (!cityName) return address
+    const cityPatterns = [
+      new RegExp(`^г\\.?\\s*${cityName}[,\\s]`, 'i'),
+      new RegExp(`^${cityName}[,\\s]`, 'i'),
+      new RegExp(`^г\\.?\\s*${cityName.replace(/[а-яё]/gi, '[а-яё]')}[,\\s]`, 'i'),
+    ]
+    let result = address
+    for (const pattern of cityPatterns) {
+      result = result.replace(pattern, '').trim()
+    }
+    return result || address
+  }, [])
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -34,12 +48,14 @@ function AddressInput({ value = '', onChange, onCityChange, label = 'Адрес'
 
     setLoading(true)
     try {
+      const cleanCity = city ? city.replace(/^г\.?\s*/i, '').trim() : null
+      
       const response = await axios.post(
         DADATA_API_URL,
         { 
           query, 
           count: 10,
-          locations: [],
+          ...(cleanCity ? { locations: [{ city: cleanCity }] } : {}),
           restrict_value: false
         },
         {
@@ -50,11 +66,16 @@ function AddressInput({ value = '', onChange, onCityChange, label = 'Адрес'
         }
       )
 
-      const suggestions = response.data.suggestions.map((item) => ({
-        value: item.value,
-        label: item.value,
-        city: item.data.city || item.data.settlement || '',
-      }))
+      const suggestions = response.data.suggestions.map((item) => {
+        const fullAddress = item.value
+        const addressWithoutCity = city ? removeCityFromAddress(fullAddress, city) : fullAddress
+        return {
+          value: addressWithoutCity,
+          fullValue: fullAddress,
+          label: addressWithoutCity,
+          city: item.data.city || item.data.settlement || '',
+        }
+      })
 
       setOptions(suggestions)
       setIsOpen(suggestions.length > 0)
@@ -63,7 +84,7 @@ function AddressInput({ value = '', onChange, onCityChange, label = 'Адрес'
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [city, removeCityFromAddress])
 
   useEffect(() => {
     setInputValue(value)
@@ -84,7 +105,7 @@ function AddressInput({ value = '', onChange, onCityChange, label = 'Адрес'
   const handleSelect = (option) => {
     setInputValue(option.value)
     onChange({ target: { value: option.value } })
-    if (onCityChange && option.city) {
+    if (onCityChange && option.city && !city) {
       onCityChange({ target: { value: option.city } })
     }
     setIsOpen(false)
@@ -159,10 +180,13 @@ function AddressInput({ value = '', onChange, onCityChange, label = 'Адрес'
       {isOpen && inputValue && inputValue.length >= 3 && options.length === 0 && !loading && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#C8C7CC] rounded-xl shadow-lg z-50">
           <div
-            onClick={() => handleSelect({ value: inputValue, label: inputValue, city: '' })}
+            onClick={() => {
+              const addressWithoutCity = city ? removeCityFromAddress(inputValue, city) : inputValue
+              handleSelect({ value: addressWithoutCity, label: addressWithoutCity, city: '' })
+            }}
             className="px-4 py-3 text-sm text-[#0077FE] cursor-pointer hover:bg-[#F4EEE2] rounded-xl"
           >
-            Использовать "{inputValue}"
+            Использовать "{city ? removeCityFromAddress(inputValue, city) : inputValue}"
           </div>
         </div>
       )}

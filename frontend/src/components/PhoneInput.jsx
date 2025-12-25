@@ -6,12 +6,47 @@ function PhoneInput({ value, onChange, label = 'Телефон', required = fals
   const [isFocused, setIsFocused] = useState(false)
   const hasValue = value && value.length > 0
 
+  const handleAccept = (val, mask) => {
+    if (!mask) {
+      onChange({ target: { value: val } })
+      return
+    }
+    
+    const unmasked = mask.unmaskedValue || ''
+    let processedValue = val
+    
+    if (unmasked.startsWith('8')) {
+      const digits = unmasked.substring(1)
+      if (digits.length > 0) {
+        const formatted = digits.length >= 10 
+          ? `+7 (${digits.substring(0, 3)}) ${digits.substring(3, 6)}-${digits.substring(6, 8)}-${digits.substring(8, 10)}`
+          : `+7 (${digits}`
+        processedValue = formatted
+        if (maskRef.current) {
+          setTimeout(() => {
+            maskRef.current.value = processedValue
+            maskRef.current.updateValue()
+          }, 10)
+        }
+      }
+    }
+    
+    onChange({ target: { value: processedValue } })
+  }
+
   return (
     <div className="relative w-full">
       <IMaskInput
-        mask="+7 (000) 000-00-00"
+        mask={[
+          {
+            mask: '+7 (000) 000-00-00'
+          },
+          {
+            mask: '8 (000) 000-00-00'
+          }
+        ]}
         value={value}
-        onAccept={(val) => onChange({ target: { value: val } })}
+        onAccept={(val, mask) => handleAccept(val, mask)}
         inputRef={maskRef}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}

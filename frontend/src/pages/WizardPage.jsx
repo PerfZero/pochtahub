@@ -6,11 +6,15 @@ import NumberInput from '../components/NumberInput'
 import PhoneInput from '../components/PhoneInput'
 import AddressInput from '../components/AddressInput'
 import CodeInput from '../components/CodeInput'
+import CdekMapWidget from '../components/CdekMapWidget'
 import { authAPI, tariffsAPI } from '../api'
 import iconPhone from '../assets/images/icon-phone.svg'
 import iconIron from '../assets/images/icon-iron.svg'
 import iconShoes from '../assets/images/icon-shoes.svg'
 import iconMicrowave from '../assets/images/icon-microwave.svg'
+
+// Тарифы СДЭК, требующие указания ПВЗ получателя
+const PVZ_REQUIRED_TARIFFS = [136, 138, 234, 236]
 
 function WizardPage() {
   const location = useLocation()
@@ -48,7 +52,14 @@ function WizardPage() {
       return location.state.currentStep
     }
     
-    if (location.state?.selectedOffer || location.state?.wizardData?.selectedOffer) {
+    // Проверяем, выбран ли оффер СДЭК с тарифом, требующим ПВЗ
+    const offer = location.state?.selectedOffer || location.state?.wizardData?.selectedOffer
+    if (offer) {
+      const isCdek = offer.company_code === 'cdek' || offer.company_name?.toLowerCase().includes('сдэк')
+      const needsPvz = isCdek && PVZ_REQUIRED_TARIFFS.includes(offer.tariff_code)
+      if (needsPvz) {
+        return 'selectPvz'
+      }
       return 'email'
     }
     
@@ -65,6 +76,12 @@ function WizardPage() {
         const decoded = new TextDecoder('utf-8').decode(bytes)
         const wizardDataFromUrl = JSON.parse(decoded)
         if (wizardDataFromUrl?.selectedOffer) {
+          const urlOffer = wizardDataFromUrl.selectedOffer
+          const isCdek = urlOffer.company_code === 'cdek' || urlOffer.company_name?.toLowerCase().includes('сдэк')
+          const needsPvz = isCdek && PVZ_REQUIRED_TARIFFS.includes(urlOffer.tariff_code)
+          if (needsPvz) {
+            return 'selectPvz'
+          }
           return 'email'
         }
       }
@@ -93,6 +110,8 @@ function WizardPage() {
   const [pickupSenderNameFocused, setPickupSenderNameFocused] = useState(false)
   const [selectedOffer, setSelectedOffer] = useState(location.state?.selectedOffer || null)
   const [returnToPayment, setReturnToPayment] = useState(false)
+  const [recipientDeliveryPointCode, setRecipientDeliveryPointCode] = useState('')
+  const [recipientDeliveryPointAddress, setRecipientDeliveryPointAddress] = useState('')
 
   useEffect(() => {
     if (toCity) {
@@ -135,7 +154,15 @@ function WizardPage() {
     if (offer) {
       setSelectedOffer(offer)
       if (!location.state?.currentStep) {
-        setCurrentStep('email')
+        // Проверяем нужен ли выбор ПВЗ для этого тарифа
+        const isCdek = offer.company_code === 'cdek' || offer.company_name?.toLowerCase().includes('сдэк')
+        const needsPvz = isCdek && PVZ_REQUIRED_TARIFFS.includes(offer.tariff_code)
+        console.log('Проверка ПВЗ:', { offer, isCdek, needsPvz, tariff_code: offer.tariff_code })
+        if (needsPvz) {
+          setCurrentStep('selectPvz')
+        } else {
+          setCurrentStep('email')
+        }
       }
     }
     
@@ -166,6 +193,8 @@ function WizardPage() {
       if (data.pickupSenderName) setPickupSenderName(data.pickupSenderName)
       if (data.packageDataCompleted) setPackageDataCompleted(data.packageDataCompleted)
       if (data.returnToPayment) setReturnToPayment(data.returnToPayment)
+      if (data.recipientDeliveryPointCode) setRecipientDeliveryPointCode(data.recipientDeliveryPointCode)
+      if (data.recipientDeliveryPointAddress) setRecipientDeliveryPointAddress(data.recipientDeliveryPointAddress)
     }
   }, [location.state, location.search])
 
@@ -201,7 +230,40 @@ function WizardPage() {
   ]
 
   const handleBack = () => {
-    if (currentStep === 'email') {
+    if (currentStep === 'selectPvz') {
+      // Возврат на страницу офферов
+      navigate('/offers', { state: { wizardData: {
+        fromCity,
+        toCity,
+        selectedRole,
+        length,
+        width,
+        height,
+        weight,
+        selectedSize,
+        packageOption,
+        senderPhone,
+        senderFIO,
+        senderAddress,
+        deliveryAddress,
+        recipientPhone,
+        recipientAddress,
+        recipientFIO,
+        userPhone: contactPhone || userPhone,
+        email,
+        deliveryMethod,
+        paymentPayer,
+      }}})
+    } else if (currentStep === 'email') {
+      // Проверяем нужен ли ПВЗ для текущего оффера
+      if (selectedOffer) {
+        const isCdek = selectedOffer.company_code === 'cdek' || selectedOffer.company_name?.toLowerCase().includes('сдэк')
+        const needsPvz = isCdek && PVZ_REQUIRED_TARIFFS.includes(selectedOffer.tariff_code)
+        if (needsPvz) {
+          setCurrentStep('selectPvz')
+          return
+        }
+      }
       if (selectedRole === 'recipient') {
         setCurrentStep('senderAddress')
       } else {
@@ -286,6 +348,15 @@ function WizardPage() {
   }
 
   const handleContinue = () => {
+    if (currentStep === 'selectPvz') {
+      if (recipientDeliveryPointCode) {
+        setCurrentStep('email')
+      } else {
+        alert('Пожалуйста, выберите пункт выдачи на карте')
+      }
+      return
+    }
+    
     if (currentStep === 'package') {
       if (packageOption === 'photo' && photoPreview) {
         setPackageDataCompleted(true)
@@ -374,6 +445,8 @@ function WizardPage() {
           recipientPhone,
           recipientAddress,
           recipientFIO,
+          recipientDeliveryPointCode,
+          recipientDeliveryPointAddress,
           userPhone: contactPhone || userPhone,
           email,
           deliveryMethod,
@@ -422,6 +495,8 @@ function WizardPage() {
           recipientPhone,
           recipientAddress,
           recipientFIO,
+          recipientDeliveryPointCode,
+          recipientDeliveryPointAddress,
           userPhone: contactPhone || userPhone,
           email,
           deliveryMethod,
@@ -578,6 +653,8 @@ function WizardPage() {
         recipientPhone,
         recipientAddress,
         recipientFIO,
+        recipientDeliveryPointCode,
+        recipientDeliveryPointAddress,
         userPhone: contactPhone || userPhone,
         email,
         deliveryMethod,
@@ -631,6 +708,8 @@ function WizardPage() {
       recipientPhone,
       recipientAddress,
       recipientFIO,
+      recipientDeliveryPointCode,
+      recipientDeliveryPointAddress,
       userPhone: contactPhone || userPhone,
       email,
       deliveryMethod,
@@ -1160,6 +1239,7 @@ function WizardPage() {
                       }}
                       label="Адрес забора"
                       required
+                      city={fromCity}
                     />
                   </div>
 
@@ -1349,6 +1429,7 @@ function WizardPage() {
                       value={deliveryAddress || toCity}
                       onChange={(e) => setDeliveryAddress(e.target.value)}
                       label="Адрес"
+                      city={toCity}
                     />
                   </div>
                   <button 
@@ -1520,6 +1601,7 @@ function WizardPage() {
                         setToCity(e.target.value)
                       }}
                       label="Адрес"
+                      city={toCity}
                     />
                   </div>
                   <div className="mb-6">
@@ -1586,6 +1668,7 @@ function WizardPage() {
                         setFromCity(e.target.value)
                       }}
                       label="Адрес"
+                      city={fromCity}
                     />
                   </div>
                   <div className="mb-6">
@@ -1613,6 +1696,41 @@ function WizardPage() {
                   <button 
                     onClick={handleContinue}
                     className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold"
+                  >
+                    Продолжить
+                  </button>
+                </div>
+              )}
+
+              {currentStep === 'selectPvz' && (
+                <div className="mb-8">
+                  <h1 className="text-3xl font-bold text-[#2D2D2D] mb-2 text-center">
+                    Выберите пункт выдачи
+                  </h1>
+                  <p className="text-base text-[#2D2D2D] mb-6 text-center">
+                    Выберите удобный ПВЗ СДЭК в городе {toCity || 'получателя'}
+                  </p>
+                  
+                  <CdekMapWidget
+                    city={toCity || recipientAddress}
+                    cityFrom={fromCity || senderAddress}
+                    tariffCode={selectedOffer?.tariff_code}
+                    transportCompanyId={selectedOffer?.company_id || 2}
+                    weight={parseFloat(weight) || 1}
+                    length={parseFloat(length) || 20}
+                    width={parseFloat(width) || 20}
+                    height={parseFloat(height) || 20}
+                    onSelect={(point) => {
+                      setRecipientDeliveryPointCode(point.code)
+                      setRecipientDeliveryPointAddress(point.address)
+                    }}
+                    selectedCode={recipientDeliveryPointCode}
+                  />
+                  
+                  <button 
+                    onClick={handleContinue}
+                    disabled={!recipientDeliveryPointCode}
+                    className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed mt-6"
                   >
                     Продолжить
                   </button>

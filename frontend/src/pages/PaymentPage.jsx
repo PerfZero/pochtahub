@@ -175,6 +175,19 @@ function PaymentPage() {
                   {wizardData.deliveryAddress || wizardData.recipientAddress || wizardData.toCity || ''}
                 </span>
               </div>
+              {wizardData.recipientDeliveryPointCode && (
+                <div className="flex justify-between items-start py-3 border-t border-dashed border-[#E5E5E5]">
+                  <span className="text-base text-[#858585]">Пункт выдачи</span>
+                  <div className="text-right">
+                    <span className="text-base font-semibold text-[#2D2D2D] block">
+                      {wizardData.recipientDeliveryPointAddress || wizardData.recipientDeliveryPointCode}
+                    </span>
+                    <span className="text-xs text-[#858585]">
+                      Код: {wizardData.recipientDeliveryPointCode}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="mb-8">
