@@ -68,10 +68,18 @@ function OffersPage() {
   const [isRecalculating, setIsRecalculating] = useState(false)
   const [error, setError] = useState('')
   const [filterCourierPickup, setFilterCourierPickup] = useState(() => {
-    return wizardData.filterCourierPickup !== undefined ? wizardData.filterCourierPickup : true
+    const fromWizardData = wizardData.filterCourierPickup !== undefined ? wizardData.filterCourierPickup : null
+    const fromStorage = localStorage.getItem('filterCourierPickup')
+    if (fromWizardData !== null) return fromWizardData
+    if (fromStorage !== null) return fromStorage === 'true'
+    return true
   })
   const [filterCourierDelivery, setFilterCourierDelivery] = useState(() => {
-    return wizardData.filterCourierDelivery !== undefined ? wizardData.filterCourierDelivery : false
+    const fromWizardData = wizardData.filterCourierDelivery !== undefined ? wizardData.filterCourierDelivery : null
+    const fromStorage = localStorage.getItem('filterCourierDelivery')
+    if (fromWizardData !== null) return fromWizardData
+    if (fromStorage !== null) return fromStorage === 'true'
+    return false
   })
   const [sortBy, setSortBy] = useState('price')
   const [shareSuccess, setShareSuccess] = useState(false)
@@ -367,10 +375,14 @@ function OffersPage() {
       setToCity(currentWizardData.toCity || '')
       setDeliveryName(currentWizardData.deliveryName || '')
       if (currentWizardData.filterCourierPickup !== undefined) {
-        setFilterCourierPickup(currentWizardData.filterCourierPickup)
+        const value = currentWizardData.filterCourierPickup
+        setFilterCourierPickup(value)
+        localStorage.setItem('filterCourierPickup', String(value))
       }
       if (currentWizardData.filterCourierDelivery !== undefined) {
-        setFilterCourierDelivery(currentWizardData.filterCourierDelivery)
+        const value = currentWizardData.filterCourierDelivery
+        setFilterCourierDelivery(value)
+        localStorage.setItem('filterCourierDelivery', String(value))
       }
     } else if (location.search) {
       const urlData = getUrlWizardData()
@@ -381,10 +393,14 @@ function OffersPage() {
         setToCity(urlData.toCity || '')
         setDeliveryName(urlData.deliveryName || '')
         if (urlData.filterCourierPickup !== undefined) {
-          setFilterCourierPickup(urlData.filterCourierPickup)
+          const value = urlData.filterCourierPickup
+          setFilterCourierPickup(value)
+          localStorage.setItem('filterCourierPickup', String(value))
         }
         if (urlData.filterCourierDelivery !== undefined) {
-          setFilterCourierDelivery(urlData.filterCourierDelivery)
+          const value = urlData.filterCourierDelivery
+          setFilterCourierDelivery(value)
+          localStorage.setItem('filterCourierDelivery', String(value))
         }
       }
     }
@@ -1323,6 +1339,7 @@ function OffersPage() {
                       onChange={(e) => {
                         const newValue = e.target.checked
                         setFilterCourierPickup(newValue)
+                        localStorage.setItem('filterCourierPickup', String(newValue))
                         setWizardData(prev => ({
                           ...prev,
                           filterCourierPickup: newValue
@@ -1348,6 +1365,7 @@ function OffersPage() {
                       onChange={(e) => {
                         const newValue = e.target.checked
                         setFilterCourierDelivery(newValue)
+                        localStorage.setItem('filterCourierDelivery', String(newValue))
                         setWizardData(prev => ({
                           ...prev,
                           filterCourierDelivery: newValue
