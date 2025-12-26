@@ -112,11 +112,13 @@ function SenderWizard() {
       setCurrentStep('recipientPhone')
     } else if (currentStep === 'recipientPhone' && recipientPhone) {
       if (location.state?.returnToOffers) {
-        // Возврат на OffersPage
+        const existingWizardData = location.state?.wizardData || {}
         const updatedWizardData = {
           fromCity,
           toCity,
           recipientPhone,
+          filterCourierPickup: existingWizardData.filterCourierPickup,
+          filterCourierDelivery: existingWizardData.filterCourierDelivery
         }
         try {
           const jsonString = JSON.stringify(updatedWizardData)
@@ -184,6 +186,7 @@ function SenderWizard() {
         }
       }
 
+      const existingWizardData = location.state?.wizardData || {}
       const wizardDataForOffers = {
         fromCity,
         toCity,
@@ -206,6 +209,8 @@ function SenderWizard() {
         deliveryMethod,
         paymentPayer,
         photoFile,
+        filterCourierPickup: existingWizardData.filterCourierPickup,
+        filterCourierDelivery: existingWizardData.filterCourierDelivery
       }
       
       navigate('/offers', { state: { wizardData: wizardDataForOffers } })

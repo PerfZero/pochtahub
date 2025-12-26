@@ -59,12 +59,15 @@ function AssistantWizard() {
     }
 
     if (nextStep === 'navigate_to_offers') {
+      const existingWizardData = location.state?.wizardData || {}
       const updatedWizardData = {
         fromCity,
         toCity,
         recipientPhone,
         selectedRole: 'sender',
         inviteRecipient: true,
+        filterCourierPickup: existingWizardData.filterCourierPickup,
+        filterCourierDelivery: existingWizardData.filterCourierDelivery
       }
       try {
         const jsonString = JSON.stringify(updatedWizardData)
@@ -98,12 +101,14 @@ function AssistantWizard() {
 
   const handleCalculate = () => {
     if (!fromCity || !toCity) return
-    // Переход на offers для расчета
+    const existingWizardData = location.state?.wizardData || {}
     const wizardDataForOffers = {
       fromCity,
       toCity,
       selectedRole: 'sender',
       inviteRecipient: true,
+      filterCourierPickup: existingWizardData.filterCourierPickup,
+      filterCourierDelivery: existingWizardData.filterCourierDelivery
     }
     navigate('/offers', { state: { wizardData: wizardDataForOffers } })
   }

@@ -150,7 +150,17 @@ function WizardPage() {
 
   const handleCalculate = () => {
     if (!fromCity || !toCity) return
-    navigate('/offers', { state: { wizardData: { fromCity, toCity } } })
+    const existingWizardData = location.state?.wizardData || {}
+    navigate('/offers', { 
+      state: { 
+        wizardData: { 
+          fromCity, 
+          toCity,
+          filterCourierPickup: existingWizardData.filterCourierPickup,
+          filterCourierDelivery: existingWizardData.filterCourierDelivery
+        } 
+      } 
+    })
   }
 
   const handleRoleSelect = (role) => {
@@ -359,6 +369,7 @@ function WizardPage() {
     }
 
       if (selectedRole === 'recipient') {
+        const existingWizardData = location.state?.wizardData || {}
         const wizardData = {
         fromCity: fromCity.trim(),
         toCity: toCity.trim(),
@@ -381,7 +392,9 @@ function WizardPage() {
         pickupSenderName: senderFIO,
         paymentPayer: 'me',
         selectedRole: 'recipient',
-        photoUrl
+        photoUrl,
+        filterCourierPickup: existingWizardData.filterCourierPickup,
+        filterCourierDelivery: existingWizardData.filterCourierDelivery
       }
       
       navigate('/offers', {
@@ -567,12 +580,15 @@ function WizardPage() {
     
     if (selectedRole === 'sender') {
       if (inviteRecipient && returnToOffers) {
+        const existingWizardData = location.state?.wizardData || {}
         const wizardData = {
           fromCity: fromCity.trim(),
           toCity: toCity.trim(),
           recipientPhone,
           selectedRole: 'sender',
-          inviteRecipient: true
+          inviteRecipient: true,
+          filterCourierPickup: existingWizardData.filterCourierPickup,
+          filterCourierDelivery: existingWizardData.filterCourierDelivery
         }
         navigate('/offers', {
           state: { wizardData, recipientNotified: true }
@@ -719,6 +735,7 @@ function WizardPage() {
       return
     }
 
+    const existingWizardData = location.state?.wizardData || {}
     const wizardData = {
       fromCity: fromCity.trim(),
       toCity: toCity.trim(),
@@ -739,7 +756,9 @@ function WizardPage() {
       pickupSenderName,
       paymentPayer,
       selectedRole: 'sender',
-      photoUrl
+      photoUrl,
+      filterCourierPickup: existingWizardData.filterCourierPickup,
+      filterCourierDelivery: existingWizardData.filterCourierDelivery
     }
     
     navigate('/offers', {
@@ -824,6 +843,7 @@ function WizardPage() {
     } else if (currentStep === 'contactPhone' && inviteRecipient) {
       navigate('/wizard?step=pickupAddress', { state: { ...location.state, inviteRecipient: true } })
     } else if (currentStep === 'pickupAddress' && inviteRecipient) {
+      const existingWizardData = location.state?.wizardData || {}
       navigate('/offers', {
         state: {
           wizardData: {
@@ -832,12 +852,15 @@ function WizardPage() {
             recipientPhone,
             selectedRole: 'sender',
             inviteRecipient: true,
-            photoUrl
+            photoUrl,
+            filterCourierPickup: existingWizardData.filterCourierPickup,
+            filterCourierDelivery: existingWizardData.filterCourierDelivery
           },
           recipientNotified: true
         }
       })
     } else if (currentStep === 'selectPvz') {
+      const existingWizardData = location.state?.wizardData || {}
       navigate('/offers', {
         state: {
           wizardData: {
@@ -856,11 +879,14 @@ function WizardPage() {
             recipientFIO,
             pickupSenderName,
             selectedOffer,
-            photoUrl
+            photoUrl,
+            filterCourierPickup: existingWizardData.filterCourierPickup,
+            filterCourierDelivery: existingWizardData.filterCourierDelivery
           }
         }
       })
     } else if (currentStep === 'email') {
+      const existingWizardData = location.state?.wizardData || {}
       navigate('/offers', {
         state: {
           wizardData: {
@@ -878,7 +904,9 @@ function WizardPage() {
             contactPhone,
             recipientFIO,
             pickupSenderName,
-            photoUrl
+            photoUrl,
+            filterCourierPickup: existingWizardData.filterCourierPickup,
+            filterCourierDelivery: existingWizardData.filterCourierDelivery
           }
         }
       })

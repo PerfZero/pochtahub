@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import CityInput from '../components/CityInput'
 import CityForm from '../components/CityForm'
 import PhoneInput from '../components/PhoneInput'
@@ -17,6 +17,8 @@ import aboutPic from '../assets/images/about_pic.png'
 import qrCode from '../assets/images/qr-code.svg'
 
 function CalculatePage() {
+  const location = useLocation()
+  const navigate = useNavigate()
   const [fromCity, setFromCity] = useState('')
   const [toCity, setToCity] = useState('')
   const [showLoginPopup, setShowLoginPopup] = useState(false)
@@ -27,7 +29,6 @@ function CalculatePage() {
   const [codeError, setCodeError] = useState('')
   const [verifyLoading, setVerifyLoading] = useState(false)
   const [telegramSent, setTelegramSent] = useState(false)
-  const navigate = useNavigate()
   const isAuthenticated = !!localStorage.getItem('access_token')
   
   const handleSendCode = async (method = 'telegram') => {
@@ -103,6 +104,7 @@ function CalculatePage() {
       return
     }
     
+    const existingWizardData = location?.state?.wizardData || {}
     const wizardData = {
       fromCity,
       toCity,
@@ -111,7 +113,9 @@ function CalculatePage() {
       width: '16',
       height: '2',
       senderAddress: fromCity,
-      deliveryAddress: toCity
+      deliveryAddress: toCity,
+      filterCourierPickup: existingWizardData.filterCourierPickup,
+      filterCourierDelivery: existingWizardData.filterCourierDelivery
     }
     
     navigate('/offers', {
