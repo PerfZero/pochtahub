@@ -107,6 +107,7 @@ function PaymentPage() {
         recipient_address: wizardData.deliveryAddress || wizardData.recipientAddress || wizardData.toCity,
         recipient_city: wizardData.toCity,
         recipient_delivery_point_code: wizardData.recipientDeliveryPointCode || null,
+        recipient_delivery_point_address: wizardData.recipientDeliveryPointAddress || null,
         weight: parseFloat(parseFloat(wizardData.weight).toFixed(2)),
         length: wizardData.length ? parseFloat(wizardData.length) : null,
         width: wizardData.width ? parseFloat(wizardData.width) : null,

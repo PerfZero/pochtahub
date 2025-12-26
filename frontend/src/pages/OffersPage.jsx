@@ -67,13 +67,7 @@ function OffersPage() {
   const [loading, setLoading] = useState(true)
   const [isRecalculating, setIsRecalculating] = useState(false)
   const [error, setError] = useState('')
-  const [filterCourierPickup, setFilterCourierPickup] = useState(() => {
-    const fromWizardData = wizardData.filterCourierPickup !== undefined ? wizardData.filterCourierPickup : null
-    const fromStorage = localStorage.getItem('filterCourierPickup')
-    if (fromWizardData !== null) return fromWizardData
-    if (fromStorage !== null) return fromStorage === 'true'
-    return true
-  })
+  const [filterCourierPickup, setFilterCourierPickup] = useState(true)
   const [filterCourierDelivery, setFilterCourierDelivery] = useState(() => {
     const fromWizardData = wizardData.filterCourierDelivery !== undefined ? wizardData.filterCourierDelivery : null
     const fromStorage = localStorage.getItem('filterCourierDelivery')
@@ -374,24 +368,20 @@ function OffersPage() {
       setFromCity(currentWizardData.fromCity || '')
       setToCity(currentWizardData.toCity || '')
       setDeliveryName(currentWizardData.deliveryName || '')
-      if (currentWizardData.filterCourierPickup !== undefined) {
-        const value = currentWizardData.filterCourierPickup
-        setFilterCourierPickup(value)
-        localStorage.setItem('filterCourierPickup', String(value))
-      } else {
-        const saved = localStorage.getItem('filterCourierPickup')
-        if (saved !== null) {
-          setFilterCourierPickup(saved === 'true')
-        }
-      }
+      setFilterCourierPickup(true)
       if (currentWizardData.filterCourierDelivery !== undefined) {
         const value = currentWizardData.filterCourierDelivery
+        console.log('📥 Инициализация filterCourierDelivery из wizardData:', value)
         setFilterCourierDelivery(value)
         localStorage.setItem('filterCourierDelivery', String(value))
       } else {
         const saved = localStorage.getItem('filterCourierDelivery')
         if (saved !== null) {
-          setFilterCourierDelivery(saved === 'true')
+          const value = saved === 'true'
+          console.log('📥 Инициализация filterCourierDelivery из localStorage:', value)
+          setFilterCourierDelivery(value)
+        } else {
+          console.log('📥 Инициализация filterCourierDelivery: значение по умолчанию false')
         }
       }
     } else if (location.search) {
@@ -402,24 +392,20 @@ function OffersPage() {
         setFromCity(urlData.fromCity || '')
         setToCity(urlData.toCity || '')
         setDeliveryName(urlData.deliveryName || '')
-        if (urlData.filterCourierPickup !== undefined) {
-          const value = urlData.filterCourierPickup
-          setFilterCourierPickup(value)
-          localStorage.setItem('filterCourierPickup', String(value))
-        } else {
-          const saved = localStorage.getItem('filterCourierPickup')
-          if (saved !== null) {
-            setFilterCourierPickup(saved === 'true')
-          }
-        }
+        setFilterCourierPickup(true)
         if (urlData.filterCourierDelivery !== undefined) {
           const value = urlData.filterCourierDelivery
+          console.log('📥 Инициализация filterCourierDelivery из URL:', value)
           setFilterCourierDelivery(value)
           localStorage.setItem('filterCourierDelivery', String(value))
         } else {
           const saved = localStorage.getItem('filterCourierDelivery')
           if (saved !== null) {
-            setFilterCourierDelivery(saved === 'true')
+            const value = saved === 'true'
+            console.log('📥 Инициализация filterCourierDelivery из localStorage (URL):', value)
+            setFilterCourierDelivery(value)
+          } else {
+            console.log('📥 Инициализация filterCourierDelivery: значение по умолчанию false (URL)')
           }
         }
       }
@@ -560,6 +546,29 @@ function OffersPage() {
     }
   }
 
+  const needsPvzSelection = (offer, filterCourierDelivery = false) => {
+    if (!offer) {
+      return false
+    }
+    
+    if (filterCourierDelivery) {
+      return false
+    }
+    
+    const isCDEK = offer.company_name === 'CDEK' || offer.company_code === 'cdek'
+    if (!isCDEK) {
+      return false
+    }
+    
+    const tariffCode = offer.tariff_code
+    if (!tariffCode) {
+      return false
+    }
+    
+    const PVZ_TARIFFS = [136, 138, 62, 63, 233, 234, 235, 236, 237, 238, 239, 240]
+    return PVZ_TARIFFS.includes(tariffCode)
+  }
+
   const handleSelectOffer = (offer) => {
     const updatedWizardData = {
       ...wizardData,
@@ -577,6 +586,7 @@ function OffersPage() {
         delivery_time: offer.delivery_time,
       },
       returnToPayment: wizardData.returnToPayment || false,
+      filterCourierDelivery: filterCourierDelivery,
     }
     
     const isAssistantFlow = wizardData.inviteRecipient && wizardData.recipientPhone
@@ -600,23 +610,13 @@ function OffersPage() {
       selectedOffer: selectedOfferData
     }
     
-    const needsPvzSelection = (offer) => {
-      const isCDEK = offer.company_name === 'CDEK' || offer.company_code === 'cdek'
-      if (!isCDEK) return false
-      
-      const tariffCode = offer.tariff_code
-      if (!tariffCode) return false
-      
-      const PVZ_TARIFFS = [136, 62, 63, 233, 234, 235, 236, 237, 238, 239, 240]
-      return PVZ_TARIFFS.includes(tariffCode)
-    }
-    
     if (isAssistantFlow) {
       navigateState.inviteRecipient = true
       navigateState.selectedRole = 'sender'
       navigate('/wizard?step=pickupAddress', { state: navigateState })
     } else if (hasCompletedFlow) {
-      if (needsPvzSelection(offer)) {
+      const needsPvz = needsPvzSelection(selectedOfferData, filterCourierDelivery)
+      if (needsPvz) {
         navigate('/wizard?step=selectPvz', { state: navigateState })
       } else {
         navigate('/wizard?step=email', { state: navigateState })
@@ -1221,14 +1221,8 @@ function OffersPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        navigate('/wizard', {
-                          state: {
-                            fromCity: wizardData.fromCity || fromCity,
-                            toCity: wizardData.toCity || toCity,
-                            inviteRecipient: true,
-                            selectedRole: 'sender'
-                          }
-                        })
+                        setAssistantStep('second')
+                        setTypedText('')
                       }}
                       className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[8px] rounded-br-[8px] md:rounded-bl-[8px] md:rounded-br-[12px] px-2 md:px-3 py-2 text-sm md:text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
                     >
@@ -1237,8 +1231,19 @@ function OffersPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        setAssistantStep('second')
-                        setTypedText('')
+                        const updatedWizardData = {
+                          ...wizardData,
+                          fromCity: wizardData.fromCity || fromCity,
+                          toCity: wizardData.toCity || toCity,
+                          selectedRole: 'sender'
+                        }
+                        navigate('/wizard?step=package', {
+                          state: {
+                            wizardData: updatedWizardData,
+                            fromCity: wizardData.fromCity || fromCity,
+                            toCity: wizardData.toCity || toCity
+                          }
+                        })
                       }}
                       className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[8px] rounded-br-[8px] md:rounded-bl-[12px] md:rounded-br-[8px] md:rounded-tr-[8px] px-2 md:px-3 py-2 text-sm md:text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
                     >
@@ -1350,29 +1355,21 @@ function OffersPage() {
 
             <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4 mb-4 md:mb-6">
               <div className="grid grid-cols-2 gap-3 md:flex md:gap-4">
-                <label className="flex items-center justify-between md:justify-start gap-3 cursor-pointer bg-white border border-[#C8C7CC] rounded-full px-4 py-2 transition-shadow">
-                  <span className="text-xs md:text-sm text-[#2D2D2D]">Курьер забирает</span>
+                <label className="flex items-center justify-between md:justify-start gap-3 cursor-not-allowed bg-white border border-[#C8C7CC] rounded-full px-4 py-2 transition-shadow opacity-30  select-none" style={{ cursor: 'not-allowed' }}>
+                  <span className="text-xs md:text-sm text-[#2D2D2D] flex items-center gap-1">
+                    
+                    Курьер забирает
+                  </span>
                   <div className="relative">
                     <input
                       type="checkbox"
-                      checked={filterCourierPickup}
-                      onChange={(e) => {
-                        const newValue = e.target.checked
-                        setFilterCourierPickup(newValue)
-                        localStorage.setItem('filterCourierPickup', String(newValue))
-                        setWizardData(prev => ({
-                          ...prev,
-                          filterCourierPickup: newValue
-                        }))
-                      }}
+                      checked={true}
+                      disabled={true}
+                      readOnly={true}
                       className="sr-only"
                     />
-                    <div className={`w-11 h-6 rounded-full transition-colors duration-200 ${
-                      filterCourierPickup ? 'bg-[#0077FE]' : 'bg-[#E5E5E5]'
-                    }`}>
-                      <div className={`w-5 h-5 bg-white rounded-full transition-transform duration-200 mt-0.5 translate-y-0.5 ${
-                        filterCourierPickup ? 'translate-x-5' : 'translate-x-0.5'
-                      }`}></div>
+                    <div className="w-11 h-6 rounded-full transition-colors duration-200 bg-[#0077FE]">
+                      <div className="w-5 h-5 bg-white rounded-full transition-transform duration-200 mt-0.5 translate-y-0.5 translate-x-5"></div>
                     </div>
                   </div>
                 </label>
@@ -1384,12 +1381,20 @@ function OffersPage() {
                       checked={filterCourierDelivery}
                       onChange={(e) => {
                         const newValue = e.target.checked
+                        console.log('🔄 Изменение "Курьер привезет":', {
+                          староеЗначение: filterCourierDelivery,
+                          новоеЗначение: newValue
+                        })
                         setFilterCourierDelivery(newValue)
                         localStorage.setItem('filterCourierDelivery', String(newValue))
-                        setWizardData(prev => ({
-                          ...prev,
-                          filterCourierDelivery: newValue
-                        }))
+                        setWizardData(prev => {
+                          const updated = {
+                            ...prev,
+                            filterCourierDelivery: newValue
+                          }
+                          console.log('📦 Обновленный wizardData:', updated)
+                          return updated
+                        })
                       }}
                       className="sr-only"
                     />

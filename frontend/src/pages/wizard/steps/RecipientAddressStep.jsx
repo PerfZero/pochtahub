@@ -11,6 +11,11 @@ function RecipientAddressStep({
   toCity,
   onContinue
 }) {
+  const trimmedAddress = recipientAddress?.trim() || ''
+  const hasHouseNumber = /\d/.test(trimmedAddress)
+  const isAddressValid = trimmedAddress && hasHouseNumber
+  const isDisabled = !isAddressValid || !recipientFIO
+
   return (
     <div className="mb-8">
       <h1 className="text-xl md:text-3xl font-bold text-[#2D2D2D] mb-2 text-center px-2">
@@ -23,6 +28,9 @@ function RecipientAddressStep({
           label="Адрес"
           city={toCity}
         />
+        {trimmedAddress && !hasHouseNumber && (
+          <p className="text-red-500 text-sm mt-2">Укажите номер дома в адресе</p>
+        )}
       </div>
       <div className="mb-6">
         <div className="relative">
@@ -48,7 +56,8 @@ function RecipientAddressStep({
       </div>
       <button 
         onClick={onContinue}
-        className="w-full bg-[#0077FE] text-white px-6 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold"
+        disabled={isDisabled}
+        className="w-full bg-[#0077FE] text-white px-6 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold hover:bg-[#0066CC] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Продолжить
       </button>

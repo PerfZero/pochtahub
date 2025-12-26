@@ -4,8 +4,13 @@ function DeliveryAddressStep({
   deliveryAddress,
   onDeliveryAddressChange,
   toCity,
-  onContinue
+  onContinue,
+  error
 }) {
+  const trimmedAddress = deliveryAddress.trim()
+  const hasHouseNumber = /\d/.test(trimmedAddress)
+  const isDisabled = !trimmedAddress || !hasHouseNumber
+  
   return (
     <div className="mb-8">
       <h1 className="text-xl md:text-3xl font-bold text-[#2D2D2D] mb-2 text-center px-2">
@@ -18,10 +23,14 @@ function DeliveryAddressStep({
           label="Адрес"
           city={toCity}
         />
+        {error && (
+          <p className="text-red-500 text-sm mt-2">{error}</p>
+        )}
       </div>
       <button 
         onClick={onContinue}
-        className="w-full bg-[#0077FE] text-white px-6 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold"
+        disabled={isDisabled}
+        className="w-full bg-[#0077FE] text-white px-6 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Продолжить
       </button>

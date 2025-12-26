@@ -34,6 +34,7 @@ function SelectPvzStep({
         height={parseFloat(height) || 20}
         onSelect={onSelect}
         selectedCode={recipientDeliveryPointCode}
+        recipientAddress={recipientAddress}
       />
       
       <button 

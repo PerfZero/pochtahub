@@ -30,6 +30,7 @@ class Order(models.Model):
     recipient_address = models.TextField(verbose_name='Адрес получателя')
     recipient_city = models.CharField(max_length=100, verbose_name='Город получателя')
     recipient_delivery_point_code = models.CharField(max_length=50, blank=True, null=True, verbose_name='Код ПВЗ получателя')
+    recipient_delivery_point_address = models.TextField(blank=True, null=True, verbose_name='Адрес ПВЗ получателя')
 
     weight = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Вес (кг)')
     length = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='Длина (см)')

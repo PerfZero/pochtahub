@@ -1,9 +1,132 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import axios from 'axios'
 import { tariffsAPI } from '../api'
+import AddressInput from './AddressInput'
 
-// Сворачиваемый список ПВЗ
-function ListAccordion({ options, selectedPoint, onSelect }) {
+const DADATA_API_URL = 'https://suggestions.dadata.ru/suggestions/api/4_1/rs/suggest/address'
+const DADATA_TOKEN = import.meta.env.VITE_DADATA_TOKEN || ''
+
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 6371
+  const dLat = (lat2 - lat1) * Math.PI / 180
+  const dLon = (lon2 - lon1) * Math.PI / 180
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+  return R * c
+}
+
+function ListAccordion({ options, selectedPoint, onSelect, recipientAddress, city }) {
   const [isOpen, setIsOpen] = useState(false)
+  const [searchAddress, setSearchAddress] = useState(recipientAddress || '')
+  const [recipientCoords, setRecipientCoords] = useState(null)
+  const [filteredOptions, setFilteredOptions] = useState(options)
+
+  const geocodeAddress = async (address, cityName = null) => {
+    if (!address || !DADATA_TOKEN) return null
+
+    try {
+      const cleanCity = cityName ? cityName.replace(/^г\.?\s*/i, '').trim() : null
+      
+      const response = await axios.post(
+        DADATA_API_URL,
+        { 
+          query: address,
+          count: 1,
+          ...(cleanCity ? { locations: [{ city: cleanCity }] } : {}),
+          restrict_value: cleanCity ? true : false
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Token ${DADATA_TOKEN}`,
+          },
+        }
+      )
+
+      const suggestion = response.data.suggestions?.[0]
+      if (suggestion?.data?.geo_lat && suggestion?.data?.geo_lon) {
+        if (cleanCity) {
+          const itemCity = (suggestion.data.city || suggestion.data.settlement || '').replace(/^г\.?\s*/i, '').trim().toLowerCase()
+          if (itemCity !== cleanCity.toLowerCase()) {
+            return null
+          }
+        }
+        return {
+          lat: parseFloat(suggestion.data.geo_lat),
+          lng: parseFloat(suggestion.data.geo_lon),
+          address: suggestion.value
+        }
+      }
+    } catch (error) {
+      console.error('Ошибка геокодирования адреса:', error)
+    }
+    return null
+  }
+
+  useEffect(() => {
+    if (recipientAddress) {
+      setSearchAddress(recipientAddress)
+      geocodeAddress(recipientAddress, city).then(coords => {
+        if (coords) {
+          setRecipientCoords(coords)
+        }
+      })
+    }
+  }, [recipientAddress, city])
+
+  useEffect(() => {
+    if (searchAddress && searchAddress.length >= 5) {
+      const timeoutId = setTimeout(() => {
+        geocodeAddress(searchAddress, city).then(coords => {
+          if (coords) {
+            setRecipientCoords(coords)
+          }
+        })
+      }, 1000)
+      return () => clearTimeout(timeoutId)
+    } else if (!searchAddress) {
+      setRecipientCoords(null)
+    }
+  }, [searchAddress, city])
+
+  useEffect(() => {
+    if (recipientCoords) {
+      const optionsWithDistance = options.map(option => {
+        if (option.lat && option.lng) {
+          const distance = calculateDistance(
+            recipientCoords.lat,
+            recipientCoords.lng,
+            option.lat,
+            option.lng
+          )
+          return { ...option, distance }
+        }
+        return { ...option, distance: null }
+      }).filter(option => option.lat && option.lng)
+        .sort((a, b) => {
+          if (a.distance === null && b.distance === null) return 0
+          if (a.distance === null) return 1
+          if (b.distance === null) return -1
+          return a.distance - b.distance
+        })
+      
+      setFilteredOptions(optionsWithDistance)
+    } else {
+      setFilteredOptions(options)
+    }
+  }, [recipientCoords, options])
+
+  const handleAddressChange = (e) => {
+    const value = e.target.value
+    setSearchAddress(value)
+    if (!value) {
+      setRecipientCoords(null)
+      setFilteredOptions(options)
+    }
+  }
 
   return (
     <div className="mb-4">
@@ -25,50 +148,70 @@ function ListAccordion({ options, selectedPoint, onSelect }) {
       </button>
       
       {isOpen && (
-        <div className="mt-2 max-h-[250px] overflow-auto border border-[#E5E5E5] rounded-xl">
-          {options.slice(0, 30).map((option, idx) => (
-            <div
-              key={option.code || idx}
-              onClick={() => onSelect(option)}
-              className={`px-4 py-3 cursor-pointer hover:bg-[#F0F7FF] border-b border-[#F5F5F5] last:border-b-0 transition-colors ${
-                selectedPoint?.code === option.code ? 'bg-[#F0F7FF]' : ''
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                  selectedPoint?.code === option.code ? 'bg-[#0077FE]' : 'bg-[#F5F5F5]'
-                }`}>
-                  <svg 
-                    width="14" 
-                    height="14" 
-                    viewBox="0 0 24 24" 
-                    fill="none" 
-                    stroke={selectedPoint?.code === option.code ? 'white' : '#858585'} 
-                    strokeWidth="2"
-                  >
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                    <circle cx="12" cy="10" r="3"/>
-                  </svg>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-medium ${
-                    selectedPoint?.code === option.code ? 'text-[#0077FE]' : 'text-[#2D2D2D]'
+        <div className="mt-2 border border-[#E5E5E5] rounded-xl p-4">
+          <div className="mb-3">
+            <AddressInput
+              value={searchAddress}
+              onChange={handleAddressChange}
+              label="Адрес получателя"
+              city={city}
+            />
+          </div>
+          <div className="max-h-[250px] overflow-auto">
+            {filteredOptions.slice(0, 30).map((option, idx) => (
+              <div
+                key={option.code || idx}
+                onClick={() => onSelect(option)}
+                className={`px-4 py-3 cursor-pointer hover:bg-[#F0F7FF] border-b border-[#F5F5F5] last:border-b-0 transition-colors ${
+                  selectedPoint?.code === option.code ? 'bg-[#F0F7FF]' : ''
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                    selectedPoint?.code === option.code ? 'bg-[#0077FE]' : 'bg-[#F5F5F5]'
                   }`}>
-                    {option.name || option.code}
-                  </p>
-                  <p className="text-xs text-[#858585] mt-0.5 line-clamp-1">
-                    {option.address}
-                  </p>
+                    <svg 
+                      width="14" 
+                      height="14" 
+                      viewBox="0 0 24 24" 
+                      fill="none" 
+                      stroke={selectedPoint?.code === option.code ? 'white' : '#858585'} 
+                      strokeWidth="2"
+                    >
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                      <circle cx="12" cy="10" r="3"/>
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className={`text-sm font-medium ${
+                        selectedPoint?.code === option.code ? 'text-[#0077FE]' : 'text-[#2D2D2D]'
+                      }`}>
+                        {option.name || option.code}
+                      </p>
+                      {option.distance !== null && (
+                        <span className="text-xs text-[#0077FE] font-medium">
+                          {option.distance < 1 
+                            ? `${Math.round(option.distance * 1000)} м`
+                            : `${option.distance.toFixed(1)} км`
+                          }
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-[#858585] mt-0.5 line-clamp-1">
+                      {option.address}
+                    </p>
+                  </div>
+                  {selectedPoint?.code === option.code && (
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="flex-shrink-0">
+                      <circle cx="10" cy="10" r="10" fill="#0077FE"/>
+                      <path d="M14 7L8.5 12.5L6 10" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
                 </div>
-                {selectedPoint?.code === option.code && (
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="flex-shrink-0">
-                    <circle cx="10" cy="10" r="10" fill="#0077FE"/>
-                    <path d="M14 7L8.5 12.5L6 10" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                )}
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -81,16 +224,24 @@ function CdekMapWidget({
   onSelect, 
   selectedCode = null,
   tariffCode = 136,
-  transportCompanyId = 2
+  transportCompanyId = 2,
+  recipientAddress = null
 }) {
   const mapContainerRef = useRef(null)
   const mapRef = useRef(null)
+  const clustererRef = useRef(null)
+  const placemarksRef = useRef(new Map())
+  const onSelectRef = useRef(onSelect)
   const [options, setOptions] = useState([])
   const [loading, setLoading] = useState(true)
   const [mapLoading, setMapLoading] = useState(true)
   const [error, setError] = useState(null)
   const [selectedPoint, setSelectedPoint] = useState(null)
   const [mapReady, setMapReady] = useState(false)
+
+  useEffect(() => {
+    onSelectRef.current = onSelect
+  }, [onSelect])
 
   // Загрузка API Яндекс Карт
   useEffect(() => {
@@ -177,6 +328,7 @@ function CdekMapWidget({
             fullData: point
           }
         })
+        .filter(point => point.lat && point.lng)
 
       setOptions(formattedOptions)
       
@@ -233,10 +385,11 @@ function CdekMapWidget({
       geoObjectHideIconOnBalloonOpen: false
     })
 
+    clustererRef.current = clusterer
+    placemarksRef.current.clear()
+
     // Добавляем метки
     const placemarks = pointsWithCoords.map((point) => {
-      const isSelected = selectedPoint?.code === point.code
-
       const placemark = new ymaps.Placemark(
         [point.lat, point.lng],
         {
@@ -258,13 +411,25 @@ function CdekMapWidget({
           pointData: point
         },
         {
-          preset: isSelected ? 'islands#blueDotIcon' : 'islands#blueCircleDotIcon',
+          preset: 'islands#blueCircleDotIcon',
           iconColor: '#0077FE'
         }
       )
 
+      placemarksRef.current.set(point.code, placemark)
+
       placemark.events.add('click', () => {
-        // Показываем балун при клике
+        setSelectedPoint(point)
+        if (onSelectRef.current) {
+          onSelectRef.current({
+            id: point.value,
+            code: point.code,
+            name: point.name,
+            address: point.fullAddress,
+            workTime: point.workTime,
+            phone: point.phone
+          })
+        }
       })
 
       return placemark
@@ -284,8 +449,8 @@ function CdekMapWidget({
       const point = options.find(p => p.code === code)
       if (point) {
         setSelectedPoint(point)
-        if (onSelect) {
-          onSelect({
+        if (onSelectRef.current) {
+          onSelectRef.current({
             id: point.value,
             code: point.code,
             name: point.name,
@@ -301,7 +466,19 @@ function CdekMapWidget({
     return () => {
       delete window.selectCdekPoint
     }
-  }, [mapReady, options, selectedPoint, onSelect])
+  }, [mapReady, options])
+
+  // Обновление иконок меток при изменении выбранной точки
+  useEffect(() => {
+    if (!placemarksRef.current || placemarksRef.current.size === 0) return
+
+    placemarksRef.current.forEach((placemark, pointCode) => {
+      const isSelected = selectedPoint?.code === pointCode
+      placemark.options.set({
+        preset: isSelected ? 'islands#blueDotIcon' : 'islands#blueCircleDotIcon'
+      })
+    })
+  }, [selectedPoint])
 
   // Восстанавливаем выбранный ПВЗ
   useEffect(() => {
@@ -316,13 +493,12 @@ function CdekMapWidget({
   const handleListSelect = (option) => {
     setSelectedPoint(option)
     
-    // Центрируем карту на выбранной точке
     if (mapRef.current && option.lat && option.lng) {
-      mapRef.current.setCenter([option.lat, option.lng], 15, { duration: 300 })
+      mapRef.current.setCenter([option.lat, option.lng], 16, { duration: 300 })
     }
     
-    if (onSelect) {
-      onSelect({
+    if (onSelectRef.current) {
+      onSelectRef.current({
         id: option.value,
         code: option.code,
         name: option.name,
@@ -390,7 +566,9 @@ function CdekMapWidget({
         <ListAccordion 
           options={options} 
           selectedPoint={selectedPoint} 
-          onSelect={handleListSelect} 
+          onSelect={handleListSelect}
+          recipientAddress={recipientAddress}
+          city={city}
         />
       )}
 

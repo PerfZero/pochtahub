@@ -3,6 +3,11 @@ import AddressInput from '../../../components/AddressInput'
 
 function PickupAddressStep({ pickupAddress, onPickupAddressChange, pickupSenderName, onPickupSenderNameChange, fromCity, onContinue }) {
   const [pickupSenderNameFocused, setPickupSenderNameFocused] = useState(false)
+  
+  const trimmedAddress = pickupAddress?.trim() || ''
+  const hasHouseNumber = /\d/.test(trimmedAddress)
+  const isAddressValid = trimmedAddress && hasHouseNumber
+  const isDisabled = !isAddressValid || !pickupSenderName
 
   return (
     <div className="mb-8">
@@ -21,6 +26,9 @@ function PickupAddressStep({ pickupAddress, onPickupAddressChange, pickupSenderN
           required
           city={fromCity}
         />
+        {trimmedAddress && !hasHouseNumber && (
+          <p className="text-red-500 text-sm mt-2">Укажите номер дома в адресе</p>
+        )}
       </div>
 
       <div className="mb-6">
@@ -48,7 +56,7 @@ function PickupAddressStep({ pickupAddress, onPickupAddressChange, pickupSenderN
 
       <button 
         onClick={onContinue}
-        disabled={!pickupAddress || !pickupSenderName}
+        disabled={isDisabled}
         className="w-full bg-[#0077FE] text-white px-6 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold hover:bg-[#0066CC] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Продолжить

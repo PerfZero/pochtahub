@@ -106,10 +106,14 @@ function SenderWizard() {
           setUserPhone(contactPhone)
         }
       })
-    } else if (currentStep === 'pickupAddress' && pickupAddress && pickupSenderName) {
-      setSenderAddress(pickupAddress)
-      setSenderFIO(pickupSenderName)
-      setCurrentStep('recipientPhone')
+    } else if (currentStep === 'pickupAddress') {
+      const trimmedAddress = pickupAddress?.trim() || ''
+      const hasHouseNumber = /\d/.test(trimmedAddress)
+      if (trimmedAddress && hasHouseNumber && pickupSenderName) {
+        setSenderAddress(pickupAddress)
+        setSenderFIO(pickupSenderName)
+        setCurrentStep('recipientPhone')
+      }
     } else if (currentStep === 'recipientPhone' && recipientPhone) {
       if (location.state?.returnToOffers) {
         const existingWizardData = location.state?.wizardData || {}

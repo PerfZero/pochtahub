@@ -27,7 +27,7 @@ class OrderSerializer(serializers.ModelSerializer):
             'id', 'status', 'sender_name', 'sender_phone', 'sender_address', 'sender_city',
             'sender_company', 'sender_tin', 'sender_contragent_type',
             'recipient_name', 'recipient_phone', 'recipient_address', 'recipient_city',
-            'weight', 'length', 'width', 'height', 'package_image', 'transport_company_id', 'transport_company_name',
+            'recipient_delivery_point_code', 'recipient_delivery_point_address', 'weight', 'length', 'width', 'height', 'package_image', 'transport_company_id', 'transport_company_name',
             'price', 'external_order_uuid', 'external_order_number', 'created_at', 'updated_at', 'events'
         )
         read_only_fields = ('id', 'created_at', 'updated_at', 'events')
@@ -57,7 +57,7 @@ class OrderCreateSerializer(serializers.ModelSerializer):
             'id', 'sender_name', 'sender_phone', 'sender_address', 'sender_city',
             'sender_company', 'sender_tin', 'sender_contragent_type',
             'recipient_name', 'recipient_phone', 'recipient_address', 'recipient_city',
-            'recipient_delivery_point_code', 'weight', 'length', 'width', 'height', 'package_image',
+            'recipient_delivery_point_code', 'recipient_delivery_point_address', 'weight', 'length', 'width', 'height', 'package_image',
             'transport_company_id', 'transport_company_name',
             'tariff_code', 'tariff_name', 'price', 'status', 'created_at', 'selected_role'
         )

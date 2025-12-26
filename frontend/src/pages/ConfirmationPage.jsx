@@ -232,6 +232,17 @@ function ConfirmationPage() {
                 <p className="text-base font-medium text-[#2D2D2D]">{order.recipient_name}</p>
                 <p className="text-sm text-[#2D2D2D]">{order.recipient_phone}</p>
                 <p className="text-sm text-[#858585]">{order.recipient_address}, {order.recipient_city}</p>
+                {order.recipient_delivery_point_code && (
+                  <div className="flex flex-col gap-1 mt-2 pt-2 border-t border-[#E5E5E5]">
+                    <p className="text-sm font-medium text-[#2D2D2D]">Пункт выдачи</p>
+                    {order.recipient_delivery_point_address ? (
+                      <p className="text-sm text-[#858585]">{order.recipient_delivery_point_address}</p>
+                    ) : (
+                      <p className="text-sm text-[#858585]">{order.recipient_city}</p>
+                    )}
+                    <p className="text-xs text-[#858585]">Код: {order.recipient_delivery_point_code}</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -132,6 +132,7 @@ function WizardPage() {
   
   // Delivery address data (for recipient flow)
   const [deliveryAddress, setDeliveryAddress] = useState('')
+  const [deliveryAddressError, setDeliveryAddressError] = useState('')
   
   // Delivery point data
   const [recipientDeliveryPointCode, setRecipientDeliveryPointCode] = useState(null)
@@ -245,7 +246,21 @@ function WizardPage() {
       }
 
   const handleDeliveryAddressContinue = () => {
-      if (selectedRole === 'recipient') {
+    const trimmedAddress = deliveryAddress.trim()
+    
+    if (!trimmedAddress) {
+      setDeliveryAddressError('Укажите адрес доставки')
+      return
+    }
+    
+    const hasHouseNumber = /\d/.test(trimmedAddress)
+    if (!hasHouseNumber) {
+      setDeliveryAddressError('Укажите номер дома в адресе')
+      return
+    }
+    
+    setDeliveryAddressError('')
+    if (selectedRole === 'recipient') {
       navigate('/wizard?step=recipientUserPhone')
     }
   }
@@ -608,30 +623,81 @@ function WizardPage() {
   const handlePaymentContinue = () => {
     if (paymentPayer === 'recipient') {
       const inviteRecipient = location.state?.inviteRecipient || location.state?.wizardData?.inviteRecipient || false
+      const existingWizardData = location.state?.wizardData || {}
+      const filterCourierDelivery = existingWizardData.filterCourierDelivery || false
+      
+      console.log('📊 handlePaymentContinue:', {
+        paymentPayer,
+        inviteRecipient,
+        filterCourierDelivery,
+        selectedOffer: selectedOffer ? {
+          company_name: selectedOffer.company_name,
+          tariff_code: selectedOffer.tariff_code
+        } : null
+      })
+      
       if (inviteRecipient) {
+        console.log('🚀 Переход на orderComplete (inviteRecipient)')
         navigate('/wizard?step=orderComplete', { state: { ...location.state, inviteRecipient: true } })
       } else {
-        if (selectedOffer && needsPvzSelection(selectedOffer)) {
+        const needsPvz = selectedOffer && needsPvzSelection(selectedOffer, filterCourierDelivery)
+        console.log('📊 needsPvz result:', needsPvz)
+        if (needsPvz) {
+          console.log('🚀 Переход на selectPvz')
           navigate('/wizard?step=selectPvz')
         } else {
+          console.log('🚀 Переход на orderComplete')
           navigate('/wizard?step=orderComplete')
         }
       }
     } else if (paymentPayer === 'me') {
+      console.log('🚀 Переход на recipientAddress')
       navigate('/wizard?step=recipientAddress')
     }
   }
 
-  const needsPvzSelection = (offer) => {
-    if (!offer) return false
+  const needsPvzSelection = (offer, filterCourierDelivery = false) => {
+    console.log('🔍 WizardPage needsPvzSelection check:', {
+      offer: offer ? {
+        company_name: offer.company_name,
+        company_code: offer.company_code,
+        tariff_code: offer.tariff_code
+      } : null,
+      filterCourierDelivery
+    })
+    
+    if (!offer) {
+      console.log('❌ ПВЗ не нужен: нет оффера')
+      return false
+    }
+    
+    if (filterCourierDelivery) {
+      console.log('❌ ПВЗ не нужен: filterCourierDelivery = true')
+      return false
+    }
+    
     const isCDEK = offer.company_name === 'CDEK' || offer.company_code === 'cdek'
-    if (!isCDEK) return false
+    if (!isCDEK) {
+      console.log('❌ ПВЗ не нужен: не CDEK')
+      return false
+    }
     
     const tariffCode = offer.tariff_code
-    if (!tariffCode) return false
+    if (!tariffCode) {
+      console.log('❌ ПВЗ не нужен: нет tariff_code')
+      return false
+    }
     
-    const PVZ_TARIFFS = [136, 62, 63, 233, 234, 235, 236, 237, 238, 239, 240]
-    return PVZ_TARIFFS.includes(tariffCode)
+    const PVZ_TARIFFS = [136, 138, 62, 63, 233, 234, 235, 236, 237, 238, 239, 240]
+    const needsPvz = PVZ_TARIFFS.includes(tariffCode)
+    
+    if (needsPvz) {
+      console.log('✅ ПВЗ нужен: тариф', tariffCode, 'в списке ПВЗ тарифов')
+    } else {
+      console.log('❌ ПВЗ не нужен: тариф', tariffCode, 'не в списке ПВЗ тарифов')
+    }
+    
+    return needsPvz
   }
 
   const handleSelectPvzContinue = () => {
@@ -707,6 +773,7 @@ function WizardPage() {
         contactPhone,
         recipientFIO,
         pickupSenderName,
+        senderFIO: pickupSenderName,
         senderName: pickupSenderName,
         senderPhone: contactPhone,
         recipientName: recipientFIO,
@@ -741,7 +808,25 @@ function WizardPage() {
       return
     }
 
+    const trimmedAddress = recipientAddress?.trim() || ''
+    const hasHouseNumber = /\d/.test(trimmedAddress)
+    
+    if (!trimmedAddress || !hasHouseNumber || !recipientFIO) {
+      return
+    }
+
     const existingWizardData = location.state?.wizardData || {}
+    const savedDelivery = localStorage.getItem('filterCourierDelivery')
+    const filterCourierDelivery = existingWizardData.filterCourierDelivery !== undefined 
+      ? existingWizardData.filterCourierDelivery 
+      : (savedDelivery !== null ? savedDelivery === 'true' : false)
+    
+    console.log('📊 handleRecipientAddressContinue:', {
+      existingWizardDataFilterCourierDelivery: existingWizardData.filterCourierDelivery,
+      savedDelivery,
+      filterCourierDelivery
+    })
+    
     const wizardData = {
       fromCity: fromCity.trim(),
       toCity: toCity.trim(),
@@ -764,9 +849,10 @@ function WizardPage() {
       selectedRole: 'sender',
       photoUrl,
       filterCourierPickup: existingWizardData.filterCourierPickup,
-      filterCourierDelivery: existingWizardData.filterCourierDelivery
+      filterCourierDelivery: filterCourierDelivery
     }
     
+    console.log('🚀 Переход на /offers с wizardData:', wizardData)
     navigate('/offers', {
       state: { wizardData }
     })
@@ -1041,9 +1127,15 @@ function WizardPage() {
       ) : currentStep === 'deliveryAddress' && selectedRole === 'recipient' ? (
         <DeliveryAddressStep
           deliveryAddress={deliveryAddress}
-          onDeliveryAddressChange={(e) => setDeliveryAddress(e.target.value)}
+          onDeliveryAddressChange={(e) => {
+            setDeliveryAddress(e.target.value)
+            if (deliveryAddressError) {
+              setDeliveryAddressError('')
+            }
+          }}
           toCity={toCity}
           onContinue={handleDeliveryAddressContinue}
+          error={deliveryAddressError}
         />
       ) : currentStep === 'recipientUserPhone' && selectedRole === 'recipient' ? (
         <ContactPhoneStep
@@ -1100,7 +1192,7 @@ function WizardPage() {
           toCity={toCity}
           onContinue={handleRecipientAddressContinue}
         />
-      ) : currentStep === 'selectPvz' && selectedOffer && needsPvzSelection(selectedOffer) ? (
+      ) : currentStep === 'selectPvz' && selectedOffer && needsPvzSelection(selectedOffer, location.state?.wizardData?.filterCourierDelivery || false) ? (
         <SelectPvzStep
           toCity={toCity}
           fromCity={fromCity}
@@ -1135,10 +1227,11 @@ function WizardPage() {
       ) : currentStep === 'orderComplete' && selectedRole === 'sender' ? (
         (() => {
           const inviteRecipient = location.state?.inviteRecipient || location.state?.wizardData?.inviteRecipient || false
+          const filterCourierDelivery = location.state?.wizardData?.filterCourierDelivery || false
           if (inviteRecipient) {
             return <OrderCompleteStep />
           }
-          if (selectedOffer && needsPvzSelection(selectedOffer)) {
+          if (selectedOffer && needsPvzSelection(selectedOffer, filterCourierDelivery)) {
             return (
               <SelectPvzStep
                 toCity={toCity}
