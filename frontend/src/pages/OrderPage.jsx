@@ -109,7 +109,7 @@ function OrderPage() {
         recipient_address: recipientAddress,
         recipient_city: recipientCity,
         recipient_delivery_point_code: recipientDeliveryPointCode || null,
-        weight: parseFloat(weight),
+        weight: parseFloat(parseFloat(weight).toFixed(2)),
         transport_company_id: currentCompany.company_id,
         transport_company_name: currentCompany.company_name,
         price: currentCompany.price,
