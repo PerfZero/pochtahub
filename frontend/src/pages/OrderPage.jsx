@@ -19,6 +19,8 @@ function OrderPage() {
   const [toAddress, setToAddress] = useState(orderData.toAddress || '')
   const [fromCity, setFromCity] = useState(orderData.fromCity || '')
   const [toCity, setToCity] = useState(orderData.toCity || '')
+  const [courierPickup, setCourierPickup] = useState(orderData.courier_pickup !== undefined ? orderData.courier_pickup : true)
+  const [courierDelivery, setCourierDelivery] = useState(orderData.courier_delivery !== undefined ? orderData.courier_delivery : false)
   
   useEffect(() => {
     if (location.state?.orderData) {
@@ -41,6 +43,18 @@ function OrderPage() {
       if (data.toCity) {
         setToCity(data.toCity)
       }
+      if (data.courier_pickup !== undefined) {
+        setCourierPickup(data.courier_pickup)
+      }
+      if (data.courier_delivery !== undefined) {
+        setCourierDelivery(data.courier_delivery)
+      }
+    }
+    if (location.state?.courier_pickup !== undefined) {
+      setCourierPickup(location.state.courier_pickup)
+    }
+    if (location.state?.courier_delivery !== undefined) {
+      setCourierDelivery(location.state.courier_delivery)
     }
   }, [location.state])
   
@@ -57,6 +71,7 @@ function OrderPage() {
   const [recipientAddress, setRecipientAddress] = useState(toAddress)
   const [recipientCity, setRecipientCity] = useState(toCity)
   const [recipientDeliveryPointCode, setRecipientDeliveryPointCode] = useState('')
+  const [senderDeliveryPointCode, setSenderDeliveryPointCode] = useState('')
   
   const [loading, setLoading] = useState(false)
   const [checkingAuth, setCheckingAuth] = useState(true)
@@ -104,6 +119,7 @@ function OrderPage() {
         sender_company: senderCompany || null,
         sender_tin: senderTin || null,
         sender_contragent_type: senderContragentType || null,
+        sender_delivery_point_code: senderDeliveryPointCode || null,
         recipient_name: recipientName,
         recipient_phone: recipientPhone,
         recipient_address: recipientAddress,
@@ -224,6 +240,19 @@ function OrderPage() {
                   required
                 />
 
+                {!courierPickup && ((location.state?.orderData?.company || company)?.company_code === 'cdek' || (location.state?.orderData?.company || company)?.company_name?.toLowerCase().includes('cdek')) && (
+                  <DeliveryPointInput
+                    city={senderCity}
+                    transportCompanyId={(location.state?.orderData?.company || company)?.company_id}
+                    value={senderDeliveryPointCode}
+                    onChange={(e) => {
+                      const value = e?.target?.value || e?.value || '';
+                      setSenderDeliveryPointCode(value);
+                    }}
+                    label="ПВЗ (Пункт выдачи)"
+                  />
+                )}
+
                 <div className="relative">
                   <select
                     value={senderContragentType}
@@ -316,7 +345,7 @@ function OrderPage() {
                   required
                 />
 
-                {((location.state?.orderData?.company || company)?.company_code === 'cdek' || (location.state?.orderData?.company || company)?.company_name?.toLowerCase().includes('cdek')) && (
+                {!courierDelivery && ((location.state?.orderData?.company || company)?.company_code === 'cdek' || (location.state?.orderData?.company || company)?.company_name?.toLowerCase().includes('cdek')) && (
                   <DeliveryPointInput
                     city={recipientCity}
                     transportCompanyId={(location.state?.orderData?.company || company)?.company_id}
