@@ -77,7 +77,16 @@ function OffersPage() {
   })
   const [sortBy, setSortBy] = useState('price')
   const [shareSuccess, setShareSuccess] = useState(false)
-  const [showAssistant, setShowAssistant] = useState(true)
+  const [showAssistant, setShowAssistant] = useState(() => {
+    const hasInviteRecipient = !!(wizardData.inviteRecipient || location.state?.inviteRecipient)
+    const isFromUrlCheck = !location.state?.wizardData && location.search.includes('data=')
+    const skippedAssistant = wizardData.selectedRole === 'sender' && 
+                             !wizardData.inviteRecipient && 
+                             !location.state?.inviteRecipient && 
+                             location.state?.wizardData &&
+                             !isFromUrlCheck
+    return !skippedAssistant
+  })
   const [typedText, setTypedText] = useState('')
   const [assistantStep, setAssistantStep] = useState('initial')
   const [isThinking, setIsThinking] = useState(true)
@@ -464,6 +473,16 @@ function OffersPage() {
 
     loadOffers()
   }, [location.search, location.state])
+  
+  useEffect(() => {
+    const isFromUrlCheck = !location.state?.wizardData && location.search.includes('data=')
+    const skippedAssistant = wizardData.selectedRole === 'sender' && 
+                             !wizardData.inviteRecipient && 
+                             !location.state?.inviteRecipient && 
+                             location.state?.wizardData &&
+                             !isFromUrlCheck
+    setShowAssistant(!skippedAssistant)
+  }, [wizardData, location.state, location.search])
   
   // Обновляем recipientNotified при возврате с WizardPage
   useEffect(() => {
