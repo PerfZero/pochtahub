@@ -378,11 +378,21 @@ function OffersPage() {
         const value = currentWizardData.filterCourierPickup
         setFilterCourierPickup(value)
         localStorage.setItem('filterCourierPickup', String(value))
+      } else {
+        const saved = localStorage.getItem('filterCourierPickup')
+        if (saved !== null) {
+          setFilterCourierPickup(saved === 'true')
+        }
       }
       if (currentWizardData.filterCourierDelivery !== undefined) {
         const value = currentWizardData.filterCourierDelivery
         setFilterCourierDelivery(value)
         localStorage.setItem('filterCourierDelivery', String(value))
+      } else {
+        const saved = localStorage.getItem('filterCourierDelivery')
+        if (saved !== null) {
+          setFilterCourierDelivery(saved === 'true')
+        }
       }
     } else if (location.search) {
       const urlData = getUrlWizardData()
@@ -396,11 +406,21 @@ function OffersPage() {
           const value = urlData.filterCourierPickup
           setFilterCourierPickup(value)
           localStorage.setItem('filterCourierPickup', String(value))
+        } else {
+          const saved = localStorage.getItem('filterCourierPickup')
+          if (saved !== null) {
+            setFilterCourierPickup(saved === 'true')
+          }
         }
         if (urlData.filterCourierDelivery !== undefined) {
           const value = urlData.filterCourierDelivery
           setFilterCourierDelivery(value)
           localStorage.setItem('filterCourierDelivery', String(value))
+        } else {
+          const saved = localStorage.getItem('filterCourierDelivery')
+          if (saved !== null) {
+            setFilterCourierDelivery(saved === 'true')
+          }
         }
       }
     }

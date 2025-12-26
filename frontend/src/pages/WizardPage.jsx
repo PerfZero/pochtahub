@@ -370,6 +370,8 @@ function WizardPage() {
 
       if (selectedRole === 'recipient') {
         const existingWizardData = location.state?.wizardData || {}
+        const savedPickup = localStorage.getItem('filterCourierPickup')
+        const savedDelivery = localStorage.getItem('filterCourierDelivery')
         const wizardData = {
         fromCity: fromCity.trim(),
         toCity: toCity.trim(),
@@ -393,8 +395,12 @@ function WizardPage() {
         paymentPayer: 'me',
         selectedRole: 'recipient',
         photoUrl,
-        filterCourierPickup: existingWizardData.filterCourierPickup,
-        filterCourierDelivery: existingWizardData.filterCourierDelivery
+        filterCourierPickup: existingWizardData.filterCourierPickup !== undefined 
+          ? existingWizardData.filterCourierPickup 
+          : (savedPickup !== null ? savedPickup === 'true' : true),
+        filterCourierDelivery: existingWizardData.filterCourierDelivery !== undefined 
+          ? existingWizardData.filterCourierDelivery 
+          : (savedDelivery !== null ? savedDelivery === 'true' : false)
       }
       
       navigate('/offers', {
