@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django import forms
+from django.utils.html import format_html
 from .models import Order, OrderEvent
 from apps.tariffs.models import TransportCompany
 from apps.tariffs.cdek_adapter import CDEKAdapter
@@ -119,7 +120,16 @@ class OrderAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'status', 'price', 'transport_company_name', 'tariff_name', 'external_order_number', 'created_at')
     list_filter = ('status', 'created_at', 'transport_company_name')
     search_fields = ('id', 'user__username', 'sender_name', 'recipient_name', 'external_order_uuid', 'external_order_number')
-    readonly_fields = ('created_at', 'updated_at')
+    readonly_fields = ('created_at', 'updated_at', 'package_image_preview')
+    
+    def package_image_preview(self, obj):
+        if obj.package_image:
+            return format_html(
+                '<img src="{}" style="max-width: 300px; max-height: 300px;" />',
+                obj.package_image.url
+            )
+        return 'Изображение не загружено'
+    package_image_preview.short_description = 'Фото посылки'
     inlines = [OrderEventInline]
     actions = ['cancel_cdek_order']
     
@@ -221,7 +231,7 @@ class OrderAdmin(admin.ModelAdmin):
             'fields': ('recipient_name', 'recipient_phone', 'recipient_address', 'recipient_city')
         }),
         ('Параметры груза', {
-            'fields': ('weight', 'length', 'width', 'height')
+            'fields': ('weight', 'length', 'width', 'height', 'package_image', 'package_image_preview')
         }),
         ('Даты', {
             'fields': ('created_at', 'updated_at')

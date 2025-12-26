@@ -36,14 +36,18 @@ function ConfirmationPage() {
   }
 
   const handlePayment = async () => {
+    console.log('[PAYMENT FRONTEND] Начало оплаты для заказа:', orderId)
     setPaying(true)
     try {
-      await paymentAPI.createPayment(orderId)
+      console.log('[PAYMENT FRONTEND] Отправка запроса на оплату...')
+      const response = await paymentAPI.createPayment(orderId)
+      console.log('[PAYMENT FRONTEND] Ответ от сервера:', response)
       await loadOrder()
       alert('Оплата успешно обработана!')
     } catch (error) {
-      console.error('Ошибка оплаты:', error)
-      alert('Ошибка при оплате')
+      console.error('[PAYMENT FRONTEND] Ошибка оплаты:', error)
+      console.error('[PAYMENT FRONTEND] Детали ошибки:', error.response?.data)
+      alert(`Ошибка при оплате: ${error.response?.data?.error || error.message}`)
     } finally {
       setPaying(false)
     }
@@ -212,7 +216,7 @@ function ConfirmationPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-8">
+          <div className="grid grid-cols-2 gap-8 mb-6">
             <div className="bg-[#F9F9F9] rounded-xl p-6">
               <h3 className="text-sm font-semibold text-[#858585] uppercase tracking-wide mb-4">Отправитель</h3>
               <div className="flex flex-col gap-2">
@@ -231,6 +235,23 @@ function ConfirmationPage() {
               </div>
             </div>
           </div>
+
+          {order.package_image && (
+            <div className="mt-6 pt-6 border-t border-[#C8C7CC]">
+              <h3 className="text-sm font-semibold text-[#858585] uppercase tracking-wide mb-4">Фото посылки</h3>
+              <div className="flex justify-center">
+                <img
+                  src={order.package_image}
+                  alt="Фото посылки"
+                  className="max-w-full h-auto rounded-lg max-h-96 border border-[#C8C7CC] shadow-sm"
+                  onError={(e) => {
+                    console.error('Ошибка загрузки изображения:', order.package_image)
+                    e.target.style.display = 'none'
+                  }}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="bg-white border border-[#C8C7CC] rounded-2xl p-6 mb-6">

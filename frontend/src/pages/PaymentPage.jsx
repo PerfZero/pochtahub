@@ -9,6 +9,10 @@ function PaymentPage() {
   const orderData = location.state || {}
   
   const wizardData = orderData.wizardData || {}
+  console.log('PaymentPage wizardData:', {
+    ...wizardData,
+    photoUrl: wizardData.photoUrl || 'НЕТ URL'
+  })
   const offer = {
     company_id: orderData.company,
     company_name: orderData.companyName || 'CDEK',
@@ -35,6 +39,19 @@ function PaymentPage() {
   const getCompanyInitial = (name) => {
     if (!name) return 'C'
     return name.charAt(0).toUpperCase()
+  }
+
+  const getFullAddress = (address, city) => {
+    if (!address && !city) return ''
+    if (!address) return city
+    if (!city) return address
+    const cityPatterns = [
+      new RegExp(`^г\\.?\\s*${city}[,\\s]`, 'i'),
+      new RegExp(`^${city}[,\\s]`, 'i'),
+    ]
+    const containsCity = cityPatterns.some(pattern => pattern.test(address))
+    if (containsCity) return address
+    return `${city}, ${address}`
   }
 
   const handlePayment = async () => {
@@ -94,12 +111,19 @@ function PaymentPage() {
         length: wizardData.length ? parseFloat(wizardData.length) : null,
         width: wizardData.width ? parseFloat(wizardData.width) : null,
         height: wizardData.height ? parseFloat(wizardData.height) : null,
+        package_image: wizardData.photoUrl || null,
         transport_company_id: offer.company_id,
         transport_company_name: offer.company_name,
         price: offer.price,
         tariff_code: offer.tariff_code,
         tariff_name: offer.tariff_name,
+        selected_role: selectedRole,
       }
+      
+      console.log('Создание заказа с данными:', {
+        ...orderData,
+        package_image: orderData.package_image ? 'URL присутствует' : 'URL отсутствует'
+      })
       
       const response = await ordersAPI.createOrder(orderData)
       const orderId = response.data?.id || response.data?.pk
@@ -154,7 +178,10 @@ function PaymentPage() {
               <div className="flex justify-between items-center py-3 border-b border-dashed border-[#E5E5E5]">
                 <span className="text-base text-[#858585]">Откуда</span>
                 <span className="text-base font-semibold text-[#2D2D2D] text-right">
-                  {wizardData.senderAddress || wizardData.fromCity || ''}
+                  {getFullAddress(
+                    wizardData.senderAddress || '',
+                    wizardData.fromCity || ''
+                  )}
                 </span>
               </div>
               <div className="flex justify-between items-center py-3 border-b border-dashed border-[#E5E5E5]">
@@ -172,7 +199,10 @@ function PaymentPage() {
               <div className="flex justify-between items-center py-3">
                 <span className="text-base text-[#858585]">Куда</span>
                 <span className="text-base font-semibold text-[#2D2D2D] text-right">
-                  {wizardData.deliveryAddress || wizardData.recipientAddress || wizardData.toCity || ''}
+                  {getFullAddress(
+                    wizardData.deliveryAddress || wizardData.recipientAddress || '',
+                    wizardData.toCity || ''
+                  )}
                 </span>
               </div>
               {wizardData.recipientDeliveryPointCode && (

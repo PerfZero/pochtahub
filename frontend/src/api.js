@@ -44,6 +44,11 @@ export const ordersAPI = {
   updateStatusFromCdek: (id) => api.post(`/orders/${id}/update-status/`),
   getOrderTracking: (id) => api.get(`/orders/${id}/tracking/`),
   getOrderDocuments: (id) => api.get(`/orders/${id}/documents/`),
+  uploadPackageImage: (formData) => api.post('/orders/upload-image/', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  }),
 }
 
 export const paymentAPI = {

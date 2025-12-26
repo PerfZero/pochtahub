@@ -1,552 +1,435 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useLocation, Link } from 'react-router-dom'
-import logoSvg from '../assets/whitelogo.svg'
-import CityInput from '../components/CityInput'
-import NumberInput from '../components/NumberInput'
-import PhoneInput from '../components/PhoneInput'
-import AddressInput from '../components/AddressInput'
-import CodeInput from '../components/CodeInput'
-import CdekMapWidget from '../components/CdekMapWidget'
-import { authAPI, tariffsAPI } from '../api'
-import iconPhone from '../assets/images/icon-phone.svg'
-import iconIron from '../assets/images/icon-iron.svg'
-import iconShoes from '../assets/images/icon-shoes.svg'
-import iconMicrowave from '../assets/images/icon-microwave.svg'
-
-// Тарифы СДЭК, требующие указания ПВЗ получателя
-const PVZ_REQUIRED_TARIFFS = [136, 138, 234, 236]
+import { useNavigate, useLocation } from 'react-router-dom'
+import WizardLayout from '../components/wizard/WizardLayout'
+import RoleSelectStep from './wizard/steps/RoleSelectStep'
+import PackageStep from './wizard/steps/PackageStep'
+import ContactPhoneStep from './wizard/steps/ContactPhoneStep'
+import PickupAddressStep from './wizard/steps/PickupAddressStep'
+import RecipientPhoneStep from './wizard/steps/RecipientPhoneStep'
+import PaymentStep from './wizard/steps/PaymentStep'
+import RecipientAddressStep from './wizard/steps/RecipientAddressStep'
+import RecipientFIOStep from './wizard/steps/RecipientFIOStep'
+import DeliveryAddressStep from './wizard/steps/DeliveryAddressStep'
+import SenderPhoneStep from './wizard/steps/SenderPhoneStep'
+import SenderAddressStep from './wizard/steps/SenderAddressStep'
+import SelectPvzStep from './wizard/steps/SelectPvzStep'
+import OrderCompleteStep from './wizard/steps/OrderCompleteStep'
+import EmailStep from './wizard/steps/EmailStep'
+import { authAPI, ordersAPI, tariffsAPI } from '../api'
 
 function WizardPage() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { fromCity: initialFromCity, toCity: initialToCity, inviteRecipient, selectedRole: initialSelectedRole } = location.state || {}
-  const [fromCity, setFromCity] = useState(initialFromCity || '')
-  const [toCity, setToCity] = useState(initialToCity || '')
-  const [selectedRole, setSelectedRole] = useState(initialSelectedRole || null)
+  
+  const urlParams = new URLSearchParams(location.search)
+  const stepFromUrl = urlParams.get('step')
+  
+  const validSteps = ['role', 'package', 'contactPhone', 'pickupAddress', 'recipientPhone', 'payment', 'recipientAddress', 'recipientFIO', 'deliveryAddress', 'recipientUserPhone', 'senderPhone', 'senderAddress', 'selectPvz', 'email', 'orderComplete']
+  const initialStep = stepFromUrl && validSteps.includes(stepFromUrl) ? stepFromUrl : 'role'
+  
+  const [fromCity, setFromCity] = useState(location.state?.fromCity || location.state?.wizardData?.fromCity || '')
+  const [toCity, setToCity] = useState(location.state?.toCity || location.state?.wizardData?.toCity || '')
+  const [selectedRole, setSelectedRole] = useState(location.state?.wizardData?.selectedRole || null)
+  const [currentStep, setCurrentStep] = useState(initialStep)
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search)
+    const stepFromUrl = urlParams.get('step')
+    if (stepFromUrl && validSteps.includes(stepFromUrl) && stepFromUrl !== currentStep) {
+      setCurrentStep(stepFromUrl)
+    } else if (!stepFromUrl && currentStep !== 'role') {
+      navigate(`/wizard?step=${currentStep}`, { replace: true })
+    }
+  }, [location.search, currentStep])
+  
+  useEffect(() => {
+    const wizardData = location.state?.wizardData
+    if (location.state?.fromCity) {
+      setFromCity(location.state.fromCity)
+    }
+    if (location.state?.toCity) {
+      setToCity(location.state.toCity)
+    }
+    if (wizardData) {
+      if (wizardData.fromCity) setFromCity(wizardData.fromCity)
+      if (wizardData.toCity) setToCity(wizardData.toCity)
+      if (wizardData.pickupAddress) setPickupAddress(wizardData.pickupAddress)
+      if (wizardData.pickupSenderName) setPickupSenderName(wizardData.pickupSenderName)
+      if (wizardData.recipientPhone) setRecipientPhone(wizardData.recipientPhone)
+      if (wizardData.contactPhone) setContactPhone(wizardData.contactPhone)
+      if (wizardData.recipientAddress) setRecipientAddress(wizardData.recipientAddress)
+      if (wizardData.recipientFIO) setRecipientFIO(wizardData.recipientFIO)
+      if (wizardData.deliveryAddress) setDeliveryAddress(wizardData.deliveryAddress)
+      if (wizardData.recipientUserPhone) setRecipientUserPhone(wizardData.recipientUserPhone)
+      if (wizardData.senderPhone) setSenderPhone(wizardData.senderPhone)
+      if (wizardData.senderAddress) setSenderAddress(wizardData.senderAddress)
+      if (wizardData.senderFIO) setSenderFIO(wizardData.senderFIO)
+      if (wizardData.recipientDeliveryPointCode) setRecipientDeliveryPointCode(wizardData.recipientDeliveryPointCode)
+      if (wizardData.recipientDeliveryPointAddress) setRecipientDeliveryPointAddress(wizardData.recipientDeliveryPointAddress)
+      if (wizardData.weight) setWeight(wizardData.weight)
+      if (wizardData.length) setLength(wizardData.length)
+      if (wizardData.width) setWidth(wizardData.width)
+      if (wizardData.height) setHeight(wizardData.height)
+      if (wizardData.selectedRole) setSelectedRole(wizardData.selectedRole)
+      if (wizardData.photoUrl) setPhotoUrl(wizardData.photoUrl)
+    }
+    if (location.state?.selectedOffer || wizardData?.selectedOffer) {
+      setSelectedOffer(location.state?.selectedOffer || wizardData?.selectedOffer)
+    }
+  }, [location.state])
+  
+  // Package data
   const [packageOption, setPackageOption] = useState(null)
+  const [photoPreview, setPhotoPreview] = useState(null)
+  const [photoFile, setPhotoFile] = useState(null)
+  const [photoUrl, setPhotoUrl] = useState(null)
+  const [photoError, setPhotoError] = useState('')
+  const [photoAnalyzing, setPhotoAnalyzing] = useState(false)
+  const [photoAnalysis, setPhotoAnalysis] = useState(null)
   const [length, setLength] = useState('')
   const [width, setWidth] = useState('')
   const [height, setHeight] = useState('')
   const [weight, setWeight] = useState('')
   const [estimatedValue, setEstimatedValue] = useState('')
-  const [photoFile, setPhotoFile] = useState(null)
-  const [photoPreview, setPhotoPreview] = useState(null)
-  const [photoError, setPhotoError] = useState('')
   const [selectedSize, setSelectedSize] = useState(null)
-  const [packageDataCompleted, setPackageDataCompleted] = useState(() => {
-    return inviteRecipient && initialSelectedRole === 'sender'
-  })
-  const [senderPhone, setSenderPhone] = useState('')
-  const [senderFIO, setSenderFIO] = useState('')
-  const [senderAddress, setSenderAddress] = useState(initialFromCity || '')
-  const [deliveryAddress, setDeliveryAddress] = useState(initialToCity || '')
-  const [userPhone, setUserPhone] = useState('')
+  
+  // Contact phone data
+  const [contactPhone, setContactPhone] = useState('')
   const [smsCode, setSmsCode] = useState('')
   const [codeSent, setCodeSent] = useState(false)
   const [codeLoading, setCodeLoading] = useState(false)
   const [codeError, setCodeError] = useState('')
   const [telegramSent, setTelegramSent] = useState(false)
-  const [paymentPayer, setPaymentPayer] = useState(null)
-  const [currentStep, setCurrentStep] = useState(() => {
-    if (location.state?.currentStep) {
-      return location.state.currentStep
-    }
-    
-    // Проверяем, выбран ли оффер СДЭК с тарифом, требующим ПВЗ
-    const offer = location.state?.selectedOffer || location.state?.wizardData?.selectedOffer
-    if (offer) {
-      const isCdek = offer.company_code === 'cdek' || offer.company_name?.toLowerCase().includes('сдэк')
-      const needsPvz = isCdek && PVZ_REQUIRED_TARIFFS.includes(offer.tariff_code)
-      if (needsPvz) {
-        return 'selectPvz'
-      }
-      return 'email'
-    }
-    
-    try {
-      const urlParams = new URLSearchParams(location.search)
-      const encoded = urlParams.get('data')
-      if (encoded) {
-        const decodedBase64 = decodeURIComponent(encoded)
-        const binaryString = atob(decodedBase64)
-        const bytes = new Uint8Array(binaryString.length)
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i)
-        }
-        const decoded = new TextDecoder('utf-8').decode(bytes)
-        const wizardDataFromUrl = JSON.parse(decoded)
-        if (wizardDataFromUrl?.selectedOffer) {
-          const urlOffer = wizardDataFromUrl.selectedOffer
-          const isCdek = urlOffer.company_code === 'cdek' || urlOffer.company_name?.toLowerCase().includes('сдэк')
-          const needsPvz = isCdek && PVZ_REQUIRED_TARIFFS.includes(urlOffer.tariff_code)
-          if (needsPvz) {
-            return 'selectPvz'
-          }
-          return 'email'
-        }
-      }
-    } catch (err) {
-    }
-    
-    if (inviteRecipient && initialSelectedRole === 'sender') {
-      return 'recipientPhone'
-    }
-    return 'package'
-  })
-  const [fioFocused, setFioFocused] = useState(false)
-  const [contactPhone, setContactPhone] = useState('')
-  const [deliveryMethod, setDeliveryMethod] = useState(null)
+  
+  // Pickup address data
+  const [pickupAddress, setPickupAddress] = useState('')
+  const [pickupSenderName, setPickupSenderName] = useState('')
+  const [pickupSenderNameFocused, setPickupSenderNameFocused] = useState(false)
+  
+  // Recipient phone data
   const [recipientPhone, setRecipientPhone] = useState('')
-  const [recipientAddress, setRecipientAddress] = useState(initialToCity || '')
+  
+  // Recipient user phone data (for recipient flow)
+  const [recipientUserPhone, setRecipientUserPhone] = useState('')
+  const [recipientUserSmsCode, setRecipientUserSmsCode] = useState('')
+  const [recipientUserCodeSent, setRecipientUserCodeSent] = useState(false)
+  const [recipientUserCodeLoading, setRecipientUserCodeLoading] = useState(false)
+  const [recipientUserCodeError, setRecipientUserCodeError] = useState('')
+  const [recipientUserTelegramSent, setRecipientUserTelegramSent] = useState(false)
+  
+  // Sender phone data (for recipient flow)
+  const [senderPhone, setSenderPhone] = useState('')
+  
+  // Sender address data (for recipient flow)
+  const [senderAddress, setSenderAddress] = useState('')
+  const [senderFIO, setSenderFIO] = useState('')
+  const [senderFioFocused, setSenderFioFocused] = useState(false)
+  
+  // Recipient address data
+  const [recipientAddress, setRecipientAddress] = useState('')
   const [recipientFIO, setRecipientFIO] = useState('')
   const [recipientFioFocused, setRecipientFioFocused] = useState(false)
+  
+  // Delivery address data (for recipient flow)
+  const [deliveryAddress, setDeliveryAddress] = useState('')
+  
+  // Delivery point data
+  const [recipientDeliveryPointCode, setRecipientDeliveryPointCode] = useState(null)
+  const [recipientDeliveryPointAddress, setRecipientDeliveryPointAddress] = useState('')
+  
+  // Payment data
+  const [paymentPayer, setPaymentPayer] = useState(null)
+  
+  // Email data
   const [email, setEmail] = useState('')
   const [emailFocused, setEmailFocused] = useState(false)
   const [agreePersonalData, setAgreePersonalData] = useState(false)
   const [agreeMarketing, setAgreeMarketing] = useState(false)
-  const [loadingOffers, setLoadingOffers] = useState(false)
-  const [pickupAddress, setPickupAddress] = useState('')
-  const [pickupSenderName, setPickupSenderName] = useState('')
-  const [pickupSenderNameFocused, setPickupSenderNameFocused] = useState(false)
-  const [selectedOffer, setSelectedOffer] = useState(location.state?.selectedOffer || null)
-  const [returnToPayment, setReturnToPayment] = useState(false)
-  const [recipientDeliveryPointCode, setRecipientDeliveryPointCode] = useState('')
-  const [recipientDeliveryPointAddress, setRecipientDeliveryPointAddress] = useState('')
+  
+  const [selectedOffer, setSelectedOffer] = useState(null)
 
-  useEffect(() => {
-    if (toCity) {
-      setDeliveryAddress(toCity)
-      setRecipientAddress(toCity)
-    }
-    if (fromCity) {
-      setSenderAddress(fromCity)
-    }
-  }, [toCity, fromCity])
-
-  // Восстановление данных из location.state или URL при возврате с offers
-  useEffect(() => {
-    // Сначала проверяем URL
-    const urlParams = new URLSearchParams(location.search)
-    const encoded = urlParams.get('data')
-    let wizardDataFromUrl = null
-    
-    if (encoded) {
-      try {
-        const decodedBase64 = decodeURIComponent(encoded)
-        const binaryString = atob(decodedBase64)
-        const bytes = new Uint8Array(binaryString.length)
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i)
-        }
-        const decoded = new TextDecoder('utf-8').decode(bytes)
-        wizardDataFromUrl = JSON.parse(decoded)
-      } catch (err) {
-        console.error('Ошибка декодирования данных из URL:', err)
-      }
-    }
-    
-    // Используем данные из state или URL
-    const state = location.state
-    const data = state?.wizardData || wizardDataFromUrl
-    
-    const offer = state?.selectedOffer || data?.selectedOffer || (state?.wizardData?.selectedOffer) || (wizardDataFromUrl?.selectedOffer)
-    
-    if (offer) {
-      setSelectedOffer(offer)
-      if (!location.state?.currentStep) {
-        // Проверяем нужен ли выбор ПВЗ для этого тарифа
-        const isCdek = offer.company_code === 'cdek' || offer.company_name?.toLowerCase().includes('сдэк')
-        const needsPvz = isCdek && PVZ_REQUIRED_TARIFFS.includes(offer.tariff_code)
-        console.log('Проверка ПВЗ:', { offer, isCdek, needsPvz, tariff_code: offer.tariff_code })
-        if (needsPvz) {
-          setCurrentStep('selectPvz')
-        } else {
-          setCurrentStep('email')
-        }
-      }
-    }
-    
-    if (data) {
-      // Восстанавливаем все данные формы только если нет selectedOffer
-      if (data.fromCity) setFromCity(data.fromCity)
-      if (data.toCity) setToCity(data.toCity)
-      if (data.selectedRole) setSelectedRole(data.selectedRole)
-      if (data.packageOption) setPackageOption(data.packageOption)
-      if (data.length) setLength(data.length)
-      if (data.width) setWidth(data.width)
-      if (data.height) setHeight(data.height)
-      if (data.weight) setWeight(data.weight)
-      if (data.selectedSize) setSelectedSize(data.selectedSize)
-      if (data.senderPhone) setSenderPhone(data.senderPhone)
-      if (data.senderFIO) setSenderFIO(data.senderFIO)
-      if (data.senderAddress) setSenderAddress(data.senderAddress)
-      if (data.deliveryAddress) setDeliveryAddress(data.deliveryAddress)
-      if (data.userPhone) setUserPhone(data.userPhone)
-      if (data.contactPhone) setContactPhone(data.contactPhone)
-      if (data.recipientPhone) setRecipientPhone(data.recipientPhone)
-      if (data.recipientAddress) setRecipientAddress(data.recipientAddress)
-      if (data.recipientFIO) setRecipientFIO(data.recipientFIO)
-      if (data.email) setEmail(data.email)
-      if (data.deliveryMethod) setDeliveryMethod(data.deliveryMethod)
-      if (data.paymentPayer) setPaymentPayer(data.paymentPayer)
-      if (data.pickupAddress) setPickupAddress(data.pickupAddress)
-      if (data.pickupSenderName) setPickupSenderName(data.pickupSenderName)
-      if (data.packageDataCompleted) setPackageDataCompleted(data.packageDataCompleted)
-      if (data.returnToPayment) setReturnToPayment(data.returnToPayment)
-      if (data.recipientDeliveryPointCode) setRecipientDeliveryPointCode(data.recipientDeliveryPointCode)
-      if (data.recipientDeliveryPointAddress) setRecipientDeliveryPointAddress(data.recipientDeliveryPointAddress)
-    }
-  }, [location.state, location.search])
-
-  const sizeOptions = [
-    {
-      id: 'smartphone',
-      name: 'Как коробка от смартфона',
-      dimensions: '17х12х9 см',
-      weight: 'до 1 кг',
-      icon: iconPhone
-    },
-    {
-      id: 'iron',
-      name: 'Как коробка от утюга',
-      dimensions: '21х20х11 см',
-      weight: 'до 3 кг',
-      icon: iconIron
-    },
-    {
-      id: 'shoes',
-      name: 'Как коробка от обуви',
-      dimensions: '33х25х15 см',
-      weight: 'до 7 кг',
-      icon: iconShoes
-    },
-    {
-      id: 'microwave',
-      name: 'Как коробка от микроволновки',
-      dimensions: '42х35х30 см',
-      weight: 'до 15кг',
-      icon: iconMicrowave
-    }
-  ]
-
-  const handleBack = () => {
-    if (currentStep === 'selectPvz') {
-      // Возврат на страницу офферов
-      navigate('/offers', { state: { wizardData: {
-        fromCity,
-        toCity,
-        selectedRole,
-        length,
-        width,
-        height,
-        weight,
-        selectedSize,
-        packageOption,
-        senderPhone,
-        senderFIO,
-        senderAddress,
-        deliveryAddress,
-        recipientPhone,
-        recipientAddress,
-        recipientFIO,
-        userPhone: contactPhone || userPhone,
-        email,
-        deliveryMethod,
-        paymentPayer,
-      }}})
-    } else if (currentStep === 'email') {
-      // Проверяем нужен ли ПВЗ для текущего оффера
-      if (selectedOffer) {
-        const isCdek = selectedOffer.company_code === 'cdek' || selectedOffer.company_name?.toLowerCase().includes('сдэк')
-        const needsPvz = isCdek && PVZ_REQUIRED_TARIFFS.includes(selectedOffer.tariff_code)
-        if (needsPvz) {
-          setCurrentStep('selectPvz')
-          return
-        }
-      }
-      if (selectedRole === 'recipient') {
-        setCurrentStep('senderAddress')
-      } else {
-        setCurrentStep('recipientAddress')
-      }
-    } else if (currentStep === 'recipientAddress') {
-      setCurrentStep('payment')
-    } else if (currentStep === 'senderAddress') {
-      if (selectedRole === 'recipient') {
-        setCurrentStep('senderPhone')
-      } else {
-        setCurrentStep('payment')
-      }
-    } else if (currentStep === 'payment') {
-      if (selectedRole === 'sender') {
-        setCurrentStep('recipientPhone')
-      } else {
-        setCurrentStep('userPhone')
-      }
-    } else if (currentStep === 'recipientPhone') {
-      setCurrentStep('deliveryMethod')
-    } else if (currentStep === 'deliveryMethod') {
-      setCurrentStep('senderFIO')
-    } else if (currentStep === 'senderFIO') {
-      if (selectedRole === 'sender') {
-        if (codeSent) {
-          setCodeSent(false)
-          setSmsCode('')
-          setCodeError('')
-          setTelegramSent(false)
-        } else {
-          setCurrentStep('contactPhone')
-        }
-      } else {
-        setCurrentStep('senderPhone')
-      }
-    } else if (currentStep === 'pickupAddress' && pickupAddress && pickupSenderName) {
-      setSenderAddress(pickupAddress)
-      setSenderFIO(pickupSenderName)
-      if (selectedRole === 'sender') {
-        setCurrentStep('recipientPhone')
-      } else {
-        setCurrentStep('package')
-      }
-    } else if (currentStep === 'contactPhone') {
-      setCurrentStep('package')
-    } else if (currentStep === 'userPhone' && codeSent) {
-      setCodeSent(false)
-      setSmsCode('')
-      setCodeError('')
-      setTelegramSent(false)
-    } else if (currentStep === 'userPhone') {
-      setCurrentStep('deliveryAddress')
-    } else if (currentStep === 'deliveryAddress') {
-      if (selectedRole === 'recipient') {
-        setCurrentStep('package')
-      } else {
-        setCurrentStep('senderFIO')
-      }
-    } else if (currentStep === 'senderPhone') {
-      if (selectedRole === 'recipient') {
-        setCurrentStep('userPhone')
-        setCodeSent(false)
-        setSmsCode('')
-        setCodeError('')
-        setTelegramSent(false)
-      } else {
-        setCurrentStep('package')
-        setPackageDataCompleted(false)
-        setSenderPhone('')
-      }
-    } else if (packageDataCompleted && selectedRole === 'recipient') {
-      setCurrentStep('deliveryAddress')
-    } else if (selectedRole) {
-      setSelectedRole(null)
-      setPackageOption(null)
-      setPackageDataCompleted(false)
-      setCurrentStep('package')
-    } else {
-      navigate('/calculate')
-    }
+  const handleCalculate = () => {
+    if (!fromCity || !toCity) return
+    navigate('/offers', { state: { wizardData: { fromCity, toCity } } })
   }
-
-  const handleContinue = () => {
-    if (currentStep === 'selectPvz') {
-      if (recipientDeliveryPointCode) {
-        setCurrentStep('email')
-      } else {
-        alert('Пожалуйста, выберите пункт выдачи на карте')
-      }
-      return
-    }
-    
-    if (currentStep === 'package') {
-      if (packageOption === 'photo' && photoPreview) {
-        setPackageDataCompleted(true)
-        if (selectedRole === 'recipient') {
-          setCurrentStep('deliveryAddress')
-        } else if (selectedRole === 'sender') {
-          setCurrentStep('contactPhone')
-        } else {
-          setCurrentStep('contactPhone')
-        }
-      } else if (packageOption === 'manual' && length && width && height && weight) {
-        setPackageDataCompleted(true)
-        if (selectedRole === 'recipient') {
-          setCurrentStep('deliveryAddress')
-        } else if (selectedRole === 'sender') {
-          setCurrentStep('contactPhone')
-        } else {
-          setCurrentStep('contactPhone')
-        }
-      } else if (packageOption === 'unknown' && selectedSize) {
-        setPackageDataCompleted(true)
-        if (selectedRole === 'recipient') {
-          setCurrentStep('deliveryAddress')
-        } else if (selectedRole === 'sender') {
-          setCurrentStep('contactPhone')
-        } else {
-          setCurrentStep('contactPhone')
-        }
-      } else {
-        console.log('Package data not complete:', { packageOption, photoPreview, length, width, height, weight, selectedSize, selectedRole })
-        alert('Заполните все необходимые поля')
-      }
-    } else if (currentStep === 'contactPhone' && contactPhone && !codeSent) {
-      setUserPhone(contactPhone)
-    } else if (currentStep === 'senderPhone' && senderPhone) {
-      if (selectedRole === 'recipient') {
-        setCurrentStep('senderAddress')
-      } else {
-        setCurrentStep('senderFIO')
-      }
-    } else if (currentStep === 'senderFIO' && senderFIO) {
-      setCurrentStep('deliveryMethod')
-    } else if (currentStep === 'deliveryMethod' && deliveryMethod) {
-      setCurrentStep('recipientPhone')
-    } else if (currentStep === 'recipientPhone' && recipientPhone) {
-      setCurrentStep('payment')
-    } else if (currentStep === 'deliveryAddress' && deliveryAddress) {
-      setCurrentStep('userPhone')
-    } else if (currentStep === 'userPhone' && userPhone && !codeSent) {
-      handleSendCode('sms')
-    } else if (currentStep === 'payment' && paymentPayer) {
-      const isRecipientPays = (selectedRole === 'sender' && paymentPayer === 'recipient') || (selectedRole === 'recipient' && paymentPayer === 'sender')
-      if (isRecipientPays) {
-        setCurrentStep('orderComplete')
-      } else {
-        if (selectedRole === 'sender') {
-          setCurrentStep('recipientAddress')
-        } else {
-          setCurrentStep('recipientAddress')
-        }
-      }
-    } else if (currentStep === 'pickupAddress' && pickupAddress && pickupSenderName) {
-      setSenderAddress(pickupAddress)
-      setSenderFIO(pickupSenderName)
-      if (selectedRole === 'sender') {
-        setCurrentStep('recipientPhone')
-      } else {
-        setCurrentStep('package')
-      }
-    } else if (currentStep === 'recipientAddress' && recipientAddress && recipientFIO) {
-      if (returnToPayment && selectedOffer) {
-        const wizardData = {
-          fromCity,
-          toCity,
-          selectedRole,
-          length,
-          width,
-          height,
-          weight,
-          selectedSize,
-          packageOption,
-          senderPhone,
-          senderFIO,
-          senderAddress: deliveryMethod === 'courier' ? senderAddress : fromCity,
-          deliveryAddress,
-          recipientPhone,
-          recipientAddress,
-          recipientFIO,
-          recipientDeliveryPointCode,
-          recipientDeliveryPointAddress,
-          userPhone: contactPhone || userPhone,
-          email,
-          deliveryMethod,
-          paymentPayer,
-          photoFile,
-        }
-        
-        navigate('/payment', {
-          state: {
-            wizardData,
-            company: selectedOffer.company_id,
-            companyName: selectedOffer.company_name,
-            companyCode: selectedOffer.company_code,
-            price: selectedOffer.price,
-            tariffCode: selectedOffer.tariff_code,
-            tariffName: selectedOffer.tariff_name,
-            deliveryTime: selectedOffer.delivery_time,
-          }
-        })
-      } else {
-        handleNavigateToOffers()
-      }
-    } else if (currentStep === 'senderAddress' && senderAddress && senderFIO) {
-      if (selectedRole === 'recipient') {
-        handleNavigateToOffers()
-      } else {
-        setCurrentStep('email')
-      }
-    } else if (currentStep === 'email' && email && agreePersonalData) {
-      // Если выбрано предложение, переходим на страницу оплаты
-      if (selectedOffer) {
-        const wizardData = {
-          fromCity,
-          toCity,
-          selectedRole,
-          length,
-          width,
-          height,
-          weight,
-          selectedSize,
-          packageOption,
-          senderPhone,
-          senderFIO,
-          senderAddress: deliveryMethod === 'courier' ? senderAddress : fromCity,
-          deliveryAddress,
-          recipientPhone,
-          recipientAddress,
-          recipientFIO,
-          recipientDeliveryPointCode,
-          recipientDeliveryPointAddress,
-          userPhone: contactPhone || userPhone,
-          email,
-          deliveryMethod,
-          paymentPayer,
-          photoFile,
-        }
-        
-        navigate('/payment', {
-          state: {
-            wizardData,
-            company: selectedOffer.company_id,
-            companyName: selectedOffer.company_name,
-            companyCode: selectedOffer.company_code,
-            price: selectedOffer.price,
-            tariffCode: selectedOffer.tariff_code,
-            tariffName: selectedOffer.tariff_name,
-            deliveryTime: selectedOffer.delivery_time,
-          }
-        })
-      } else {
-        handleNavigateToOffers()
-      }
-    }
-  }
-
 
   const handleRoleSelect = (role) => {
     setSelectedRole(role)
-    setCurrentStep('package')
+    navigate('/wizard?step=package', { state: { wizardData: { selectedRole: role } } })
   }
 
+  const handlePhotoChange = async (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setPhotoError('Файл слишком большой. Максимальный размер 5 МБ.')
+        setPhotoPreview(null)
+        setPhotoFile(null)
+        setPhotoUrl(null)
+        setPhotoAnalysis(null)
+      } else {
+        setPhotoError('')
+        setPhotoFile(file)
+        setPhotoAnalyzing(true)
+        setPhotoAnalysis(null)
+        const reader = new FileReader()
+        reader.onloadend = () => {
+          setPhotoPreview(reader.result)
+        }
+        reader.readAsDataURL(file)
+        
+        try {
+          const formData = new FormData()
+          formData.append('image', file)
+          const uploadResponse = await ordersAPI.uploadPackageImage(formData)
+          if (uploadResponse.data?.success && uploadResponse.data?.image_url) {
+            setPhotoUrl(uploadResponse.data.image_url)
+          }
+          
+          const analyzeFormData = new FormData()
+          analyzeFormData.append('image', file)
+          const analyzeResponse = await tariffsAPI.analyzeImage(analyzeFormData)
+          if (analyzeResponse.data) {
+            setPhotoAnalysis(analyzeResponse.data)
+            if (analyzeResponse.data.length) setLength(analyzeResponse.data.length.toString())
+            if (analyzeResponse.data.width) setWidth(analyzeResponse.data.width.toString())
+            if (analyzeResponse.data.height) setHeight(analyzeResponse.data.height.toString())
+            if (analyzeResponse.data.weight) setWeight(analyzeResponse.data.weight.toString())
+            if (analyzeResponse.data.declared_value) setEstimatedValue(analyzeResponse.data.declared_value.toString())
+          }
+        } catch (err) {
+          console.error('Ошибка обработки изображения:', err)
+          setPhotoError(err.response?.data?.error || 'Ошибка обработки изображения')
+        } finally {
+          setPhotoAnalyzing(false)
+        }
+      }
+    }
+  }
+
+  const handlePhotoRemove = () => {
+    setPhotoPreview(null)
+    setPhotoFile(null)
+    setPhotoUrl(null)
+    setPhotoAnalysis(null)
+    setPhotoAnalyzing(false)
+    setPhotoError('')
+    const input = document.getElementById('photo-upload')
+    if (input) input.value = ''
+    const inputReplace = document.getElementById('photo-replace')
+    if (inputReplace) inputReplace.value = ''
+  }
+
+  const handlePackageContinue = () => {
+      if (selectedRole === 'sender') {
+      navigate('/wizard?step=contactPhone')
+    } else if (selectedRole === 'recipient') {
+      navigate('/wizard?step=recipientFIO')
+    }
+  }
+
+  const handleRecipientFIOContinue = () => {
+      if (selectedRole === 'recipient') {
+      navigate('/wizard?step=deliveryAddress')
+        }
+      }
+
+  const handleDeliveryAddressContinue = () => {
+      if (selectedRole === 'recipient') {
+      navigate('/wizard?step=recipientUserPhone')
+    }
+  }
+
+  const handleRecipientUserSendCode = async (method = 'telegram') => {
+    if (!recipientUserPhone) {
+      setRecipientUserCodeError('Введите номер телефона')
+      return
+    }
+
+    setRecipientUserCodeLoading(true)
+    setRecipientUserCodeError('')
+
+    const TEST_PHONES = ['+79999999999', '+79991111111', '+79990000000']
+    const TEST_CODE = '1234'
+
+    const cleanPhone = recipientUserPhone.replace(/\D/g, '')
+    const isTestPhone = TEST_PHONES.some(testPhone => cleanPhone.includes(testPhone.replace(/\D/g, '')))
+    
+    if (isTestPhone) {
+      setTimeout(() => {
+        setRecipientUserCodeSent(true)
+        if (method === 'telegram') {
+          setRecipientUserTelegramSent(true)
+        }
+        setRecipientUserCodeLoading(false)
+        console.log('🔧 Тестовый режим: код отправлен для номера', recipientUserPhone)
+        console.log('🔧 Тестовый код:', TEST_CODE)
+      }, 500)
+      return
+    }
+    
+    try {
+      const response = await authAPI.sendCode(recipientUserPhone, method)
+      if (response.data?.success || response.data?.telegram_sent) {
+        if (response.data?.telegram_sent) {
+          setRecipientUserTelegramSent(true)
+        }
+        setRecipientUserCodeSent(true)
+    } else {
+        setRecipientUserCodeError(response.data?.error || 'Ошибка отправки кода')
+      }
+        } catch (err) {
+      const errorData = err.response?.data
+      setRecipientUserCodeError(errorData?.error || err.message || 'Ошибка отправки кода')
+    } finally {
+      setRecipientUserCodeLoading(false)
+    }
+  }
+
+  const handleRecipientUserVerifyCode = async (code = null) => {
+    const codeToVerify = code || recipientUserSmsCode
+    if (!codeToVerify || codeToVerify.length !== 4) {
+      setRecipientUserCodeError('Введите код')
+      return
+    }
+    
+    setRecipientUserCodeLoading(true)
+    setRecipientUserCodeError('')
+
+    const TEST_PHONES = ['+79999999999', '+79991111111', '+79990000000']
+    const TEST_CODE = '1234'
+    
+    const cleanPhone = recipientUserPhone.replace(/\D/g, '')
+    const isTestPhone = TEST_PHONES.some(testPhone => cleanPhone.includes(testPhone.replace(/\D/g, '')))
+    
+    if (isTestPhone && codeToVerify === TEST_CODE) {
+      setTimeout(() => {
+        setRecipientUserCodeSent(false)
+        setRecipientUserSmsCode('')
+        setRecipientUserCodeError('')
+        setRecipientUserTelegramSent(false)
+        setRecipientUserCodeLoading(false)
+        console.log('🔧 Тестовый режим: код верифицирован успешно')
+        if (selectedRole === 'recipient') {
+          navigate('/wizard?step=senderPhone')
+        }
+      }, 500)
+      return
+    }
+    
+    if (isTestPhone && codeToVerify !== TEST_CODE) {
+      setRecipientUserCodeError('Неверный код. Тестовый код: ' + TEST_CODE)
+      setRecipientUserCodeLoading(false)
+      return
+    }
+
+    try {
+      await authAPI.verifyCode(recipientUserPhone, codeToVerify)
+      setRecipientUserCodeSent(false)
+      setRecipientUserSmsCode('')
+      setRecipientUserCodeError('')
+      setRecipientUserTelegramSent(false)
+      if (selectedRole === 'recipient') {
+        navigate('/wizard?step=senderPhone')
+      }
+        } catch (err) {
+      setRecipientUserCodeError(err.response?.data?.error || err.message || 'Неверный код')
+    } finally {
+      setRecipientUserCodeLoading(false)
+    }
+  }
+
+  const handleRecipientUserResendCode = async () => {
+    if (recipientUserPhone) {
+      await handleRecipientUserSendCode('sms')
+    }
+  }
+
+  const handleSenderPhoneContinue = () => {
+      if (selectedRole === 'recipient') {
+      navigate('/wizard?step=senderAddress')
+    }
+  }
+
+  const handleSenderAddressContinue = () => {
+    if (!fromCity || !toCity) {
+      console.error('Города не заполнены:', { fromCity, toCity })
+      alert('Пожалуйста, укажите города отправления и назначения')
+      return
+    }
+
+      if (selectedRole === 'recipient') {
+        const wizardData = {
+        fromCity: fromCity.trim(),
+        toCity: toCity.trim(),
+        senderAddress: senderAddress,
+        deliveryAddress: deliveryAddress,
+        recipientAddress: deliveryAddress,
+        weight: weight || '1',
+        length: length || '0',
+        width: width || '0',
+        height: height || '0',
+          packageOption,
+        selectedSize,
+        estimatedValue,
+        recipientPhone: recipientUserPhone,
+        recipientUserPhone: recipientUserPhone,
+        contactPhone: recipientUserPhone,
+        senderPhone: senderPhone,
+          recipientFIO,
+        senderFIO,
+        pickupSenderName: senderFIO,
+        paymentPayer: 'me',
+        selectedRole: 'recipient',
+        photoUrl
+      }
+      
+      navigate('/offers', {
+        state: { wizardData }
+      })
+    }
+  }
+
+  // Тестовые номера для разработки (не требуют реальной отправки SMS)
+  const TEST_PHONES = ['+79999999999', '+79991111111', '+79990000000']
+  const TEST_CODE = '1234'
+
   const handleSendCode = async (method = 'telegram') => {
-    const phoneToUse = currentStep === 'contactPhone' ? contactPhone : userPhone
-    if (!phoneToUse) {
+    if (!contactPhone) {
       setCodeError('Введите номер телефона')
       return
     }
+    
+    // Проверка на тестовый номер
+    const cleanPhone = contactPhone.replace(/\D/g, '')
+    const isTestPhone = TEST_PHONES.some(testPhone => cleanPhone.includes(testPhone.replace(/\D/g, '')))
+    
+    if (isTestPhone) {
+      // Фейковая отправка кода для тестового номера
+      setCodeLoading(true)
+      setTimeout(() => {
+        setCodeSent(true)
+        if (method === 'telegram') {
+          setTelegramSent(true)
+        }
+        setCodeLoading(false)
+        console.log('🔧 Тестовый режим: код отправлен для номера', contactPhone)
+        console.log('🔧 Тестовый код:', TEST_CODE)
+      }, 500)
+      return
+    }
+
+    // Реальная отправка кода
     setCodeLoading(true)
     setCodeError('')
     setTelegramSent(false)
     try {
-      const response = await authAPI.sendCode(phoneToUse, method)
+      const response = await authAPI.sendCode(contactPhone, method)
       if (response.data?.success || response.data?.telegram_sent) {
         if (response.data?.telegram_sent) {
           setTelegramSent(true)
         }
         setCodeSent(true)
-        if (currentStep === 'contactPhone') {
-          setUserPhone(contactPhone)
-        }
       } else {
         setCodeError(response.data?.error || 'Ошибка отправки кода')
       }
@@ -557,10 +440,6 @@ function WizardPage() {
       setCodeLoading(false)
     }
   }
-  
-  const handleSendSmsCode = async () => {
-    await handleSendCode('sms')
-  }
 
   const handleVerifyCode = async (code = null) => {
     const codeToVerify = code || smsCode
@@ -568,28 +447,100 @@ function WizardPage() {
       setCodeError('Введите код')
       return
     }
-    setCodeLoading(true)
-    setCodeError('')
-    try {
-      const phoneToUse = currentStep === 'contactPhone' ? contactPhone : userPhone
-      const response = await authAPI.verifyCode(phoneToUse, codeToVerify)
-      
-      if (currentStep === 'contactPhone') {
-        setUserPhone(contactPhone)
+    
+    const inviteRecipient = location.state?.inviteRecipient || location.state?.wizardData?.inviteRecipient || false
+    
+    // Проверка на тестовый номер и код
+    const cleanPhone = contactPhone.replace(/\D/g, '')
+    const isTestPhone = TEST_PHONES.some(testPhone => cleanPhone.includes(testPhone.replace(/\D/g, '')))
+    
+    if (isTestPhone && codeToVerify === TEST_CODE) {
+      // Фейковая верификация для тестового номера
+      setCodeLoading(true)
+      setTimeout(() => {
         setCodeSent(false)
         setSmsCode('')
         setCodeError('')
         setTelegramSent(false)
-        setCurrentStep('pickupAddress')
+        setCodeLoading(false)
+        console.log('🔧 Тестовый режим: код верифицирован успешно')
+        if (selectedRole === 'sender') {
+          if (inviteRecipient) {
+            const wizardDataForOrder = {
+              fromCity,
+              toCity,
+              pickupAddress,
+              pickupSenderName,
+              recipientPhone,
+              contactPhone,
+              weight: weight || '1',
+              length: length || '0',
+              width: width || '0',
+              height: height || '0',
+              packageOption,
+              selectedSize,
+              estimatedValue,
+              selectedRole: 'sender',
+              inviteRecipient: true,
+              photoUrl
+            }
+            navigate('/wizard?step=orderComplete', { 
+              state: { 
+                wizardData: wizardDataForOrder,
+                inviteRecipient: true,
+                selectedRole: 'sender'
+              } 
+            })
       } else {
+            navigate('/wizard?step=pickupAddress')
+          }
+        }
+      }, 500)
+      return
+    }
+    
+    if (isTestPhone && codeToVerify !== TEST_CODE) {
+      setCodeError('Неверный код. Тестовый код: ' + TEST_CODE)
+      return
+    }
+
+    // Реальная верификация кода
+    setCodeLoading(true)
+    setCodeError('')
+    try {
+      const response = await authAPI.verifyCode(contactPhone, codeToVerify)
         setCodeSent(false)
         setSmsCode('')
         setCodeError('')
         setTelegramSent(false)
         if (selectedRole === 'sender') {
-          setCurrentStep('senderFIO')
+        if (inviteRecipient) {
+          const wizardDataForOrder = {
+            fromCity,
+            toCity,
+            pickupAddress,
+            pickupSenderName,
+            recipientPhone,
+            contactPhone,
+            weight: weight || '1',
+            length: length || '0',
+            width: width || '0',
+            height: height || '0',
+            packageOption,
+            selectedSize,
+            estimatedValue,
+            selectedRole: 'sender',
+            inviteRecipient: true
+          }
+          navigate('/wizard?step=orderComplete', { 
+            state: { 
+              wizardData: wizardDataForOrder,
+              inviteRecipient: true,
+              selectedRole: 'sender'
+            } 
+          })
         } else {
-          setCurrentStep('senderPhone')
+          navigate('/wizard?step=pickupAddress')
         }
       }
     } catch (err) {
@@ -599,1221 +550,585 @@ function WizardPage() {
     }
   }
 
-  const handleResendCode = () => {
-    setCodeSent(false)
-    setSmsCode('')
-    setCodeError('')
-    setTelegramSent(false)
+  const handlePickupAddressContinue = () => {
+    const inviteRecipient = location.state?.inviteRecipient || location.state?.wizardData?.inviteRecipient || false
+    if (selectedRole === 'sender') {
+      if (inviteRecipient) {
+        navigate('/wizard?step=contactPhone', { state: { ...location.state, inviteRecipient: true } })
+      } else {
+        navigate('/wizard?step=recipientPhone')
+      }
+    }
   }
 
-  const handleCalculate = () => {
+  const handleRecipientPhoneContinue = () => {
+    const inviteRecipient = location.state?.inviteRecipient || location.state?.wizardData?.inviteRecipient || false
+    const returnToOffers = location.state?.returnToOffers || false
+    
+    if (selectedRole === 'sender') {
+      if (inviteRecipient && returnToOffers) {
+        const wizardData = {
+          fromCity: fromCity.trim(),
+          toCity: toCity.trim(),
+          recipientPhone,
+          selectedRole: 'sender',
+          inviteRecipient: true
+        }
+        navigate('/offers', {
+          state: { wizardData, recipientNotified: true }
+        })
+      } else {
+        navigate('/wizard?step=payment')
+      }
+    }
+  }
+
+  const handlePaymentContinue = () => {
+    if (paymentPayer === 'recipient') {
+      const inviteRecipient = location.state?.inviteRecipient || location.state?.wizardData?.inviteRecipient || false
+      if (inviteRecipient) {
+        navigate('/wizard?step=orderComplete', { state: { ...location.state, inviteRecipient: true } })
+      } else {
+        if (selectedOffer && needsPvzSelection(selectedOffer)) {
+          navigate('/wizard?step=selectPvz')
+        } else {
+          navigate('/wizard?step=orderComplete')
+        }
+      }
+    } else if (paymentPayer === 'me') {
+      navigate('/wizard?step=recipientAddress')
+    }
+  }
+
+  const needsPvzSelection = (offer) => {
+    if (!offer) return false
+    const isCDEK = offer.company_name === 'CDEK' || offer.company_code === 'cdek'
+    if (!isCDEK) return false
+    
+    const tariffCode = offer.tariff_code
+    if (!tariffCode) return false
+    
+    const PVZ_TARIFFS = [136, 62, 63, 233, 234, 235, 236, 237, 238, 239, 240]
+    return PVZ_TARIFFS.includes(tariffCode)
+  }
+
+  const handleSelectPvzContinue = () => {
+    if (!recipientDeliveryPointCode) {
+      alert('Пожалуйста, выберите пункт выдачи')
+      return
+    }
+    navigate('/wizard?step=email')
+  }
+
+  const handleEmailContinue = () => {
+    if (!selectedOffer) {
+      console.error('Оффер не выбран')
+      return
+    }
+    
+    let wizardDataForPayment
+    
+    if (selectedRole === 'recipient') {
+      const recipientPhoneToUse = recipientUserPhone || location.state?.wizardData?.recipientUserPhone || location.state?.wizardData?.recipientPhone
+      const senderPhoneToUse = senderPhone || location.state?.wizardData?.senderPhone
+      const senderFIOToUse = senderFIO || location.state?.wizardData?.senderFIO
+      const recipientFIOToUse = recipientFIO || location.state?.wizardData?.recipientFIO
+      const senderAddressToUse = senderAddress || location.state?.wizardData?.senderAddress
+      const deliveryAddressToUse = deliveryAddress || location.state?.wizardData?.deliveryAddress
+      
+      wizardDataForPayment = {
+        fromCity,
+        toCity,
+        senderAddress: senderAddressToUse,
+        deliveryAddress: deliveryAddressToUse,
+        recipientAddress: deliveryAddressToUse,
+        weight: weight || '1',
+        length: length || '0',
+        width: width || '0',
+        height: height || '0',
+        packageOption,
+        selectedSize,
+        estimatedValue,
+        recipientPhone: recipientPhoneToUse,
+        recipientUserPhone: recipientPhoneToUse,
+        contactPhone: recipientPhoneToUse,
+        senderPhone: senderPhoneToUse,
+        recipientFIO: recipientFIOToUse,
+        senderFIO: senderFIOToUse,
+        senderName: senderFIOToUse,
+        pickupSenderName: senderFIOToUse,
+        recipientName: recipientFIOToUse,
+        email,
+        agreePersonalData,
+        agreeMarketing,
+        selectedOffer,
+        recipientDeliveryPointCode,
+        recipientDeliveryPointAddress,
+        paymentPayer: 'me',
+        selectedRole: 'recipient',
+        photoUrl
+      }
+    } else {
+      wizardDataForPayment = {
+        fromCity,
+        toCity,
+        senderAddress: pickupAddress,
+        deliveryAddress: recipientAddress,
+        weight: weight || '1',
+        length: length || '0',
+        width: width || '0',
+        height: height || '0',
+        packageOption,
+        selectedSize,
+        estimatedValue,
+        recipientPhone,
+        contactPhone,
+        recipientFIO,
+        pickupSenderName,
+        senderName: pickupSenderName,
+        senderPhone: contactPhone,
+        recipientName: recipientFIO,
+        email,
+        agreePersonalData,
+        agreeMarketing,
+        selectedOffer,
+        recipientDeliveryPointCode,
+        recipientDeliveryPointAddress,
+        photoUrl
+      }
+    }
+    
+    navigate('/payment', {
+      state: {
+        wizardData: wizardDataForPayment,
+        company: selectedOffer.company_id,
+        companyName: selectedOffer.company_name,
+        companyCode: selectedOffer.company_code,
+        price: selectedOffer.price,
+        tariffCode: selectedOffer.tariff_code,
+        tariffName: selectedOffer.tariff_name,
+        deliveryTime: selectedOffer.delivery_time
+      }
+    })
+  }
+
+  const handleRecipientAddressContinue = () => {
     if (!fromCity || !toCity) {
+      console.error('Города не заполнены:', { fromCity, toCity })
+      alert('Пожалуйста, укажите города отправления и назначения')
       return
     }
 
-    if (packageDataCompleted) {
-      let finalWeight = '1'
-      let finalLength = ''
-      let finalWidth = ''
-      let finalHeight = ''
+    const wizardData = {
+      fromCity: fromCity.trim(),
+      toCity: toCity.trim(),
+      senderAddress: pickupAddress,
+      pickupAddress: pickupAddress,
+      deliveryAddress: recipientAddress,
+      recipientAddress: recipientAddress,
+      weight: weight || '1',
+      length: length || '0',
+      width: width || '0',
+      height: height || '0',
+      packageOption,
+      selectedSize,
+      estimatedValue,
+      recipientPhone,
+      contactPhone,
+      recipientFIO,
+      pickupSenderName,
+      paymentPayer,
+      selectedRole: 'sender',
+      photoUrl
+    }
+    
+    navigate('/offers', {
+      state: { wizardData }
+    })
+  }
 
-      if (packageOption === 'manual') {
-        finalWeight = weight || '1'
-        finalLength = length || ''
-        finalWidth = width || ''
-        finalHeight = height || ''
-      } else if (packageOption === 'unknown' && selectedSize) {
-        const sizeOption = sizeOptions.find(opt => opt.id === selectedSize)
-        if (sizeOption) {
-          const weightMatch = sizeOption.weight.match(/(\d+)/)
-          finalWeight = weightMatch ? weightMatch[1] : '5'
-          const dimMatch = sizeOption.dimensions.match(/(\d+)х(\d+)х(\d+)/)
-          if (dimMatch) {
-            finalLength = dimMatch[1]
-            finalWidth = dimMatch[2]
-            finalHeight = dimMatch[3]
-          }
-        }
-      }
-
-      const wizardData = {
-        fromCity,
-        toCity,
-        selectedRole,
-        length: finalLength,
-        width: finalWidth,
-        height: finalHeight,
-        weight: finalWeight,
-        selectedSize,
-        packageOption,
-        senderPhone,
-        senderFIO,
-        senderAddress: deliveryMethod === 'courier' ? senderAddress : fromCity,
-        deliveryAddress,
-        recipientPhone,
-        recipientAddress,
-        recipientFIO,
-        recipientDeliveryPointCode,
-        recipientDeliveryPointAddress,
-        userPhone: contactPhone || userPhone,
-        email,
-        deliveryMethod,
-        paymentPayer,
-        photoFile,
-      }
-      
-      navigate('/offers', { state: { wizardData } })
+  const handleResendCode = async () => {
+    if (contactPhone) {
+      await handleSendCode('sms')
     }
   }
 
-  const handleNavigateToOffers = () => {
-    let finalWeight = '1'
-    let finalLength = ''
-    let finalWidth = ''
-    let finalHeight = ''
+  const authObj = {
+    codeSent,
+    codeLoading,
+    codeError,
+    telegramSent,
+    smsCode,
+    setSmsCode: (code) => setSmsCode(code),
+    resetCodeState: () => {
+                        setCodeSent(false)
+                        setSmsCode('')
+                        setCodeError('')
+                        setTelegramSent(false)
+    },
+    handleSendCode: handleSendCode
+  }
 
-    if (packageOption === 'manual') {
-      finalWeight = weight || '1'
-      finalLength = length || ''
-      finalWidth = width || ''
-      finalHeight = height || ''
-    } else if (packageOption === 'unknown' && selectedSize) {
-      const sizeOption = sizeOptions.find(opt => opt.id === selectedSize)
-      if (sizeOption) {
-        const weightMatch = sizeOption.weight.match(/(\d+)/)
-        finalWeight = weightMatch ? weightMatch[1] : '5'
-        const dimMatch = sizeOption.dimensions.match(/(\d+)х(\d+)х(\d+)/)
-        if (dimMatch) {
-          finalLength = dimMatch[1]
-          finalWidth = dimMatch[2]
-          finalHeight = dimMatch[3]
-        }
-      }
-    }
+  const getProgress = () => {
+    if (currentStep === 'orderComplete') return 100
+    if (currentStep === 'recipientAddress') return 90
+    if (currentStep === 'payment') return 80
+    if (currentStep === 'recipientPhone') return 70
+    if (currentStep === 'pickupAddress') return 60
+    if (currentStep === 'contactPhone') return codeSent ? 50 : 40
+    if (currentStep === 'email') return 95
+    if (currentStep === 'selectPvz') return 90
+    if (currentStep === 'senderAddress') return 75
+    if (currentStep === 'senderPhone') return 70
+    if (currentStep === 'recipientUserPhone') return recipientUserCodeSent ? 65 : 60
+    if (currentStep === 'deliveryAddress') return 50
+    if (currentStep === 'recipientFIO') return 40
+    if (currentStep === 'package') return 30
+    if (selectedRole) return 20
+    return 0
+  }
 
-    const wizardData = {
-      fromCity,
-      toCity,
-      selectedRole,
-      length: finalLength,
-      width: finalWidth,
-      height: finalHeight,
-      weight: finalWeight,
-      selectedSize,
-      packageOption,
-      senderPhone,
-      senderFIO,
-      senderAddress: deliveryMethod === 'courier' ? senderAddress : fromCity,
-      deliveryAddress,
-      recipientPhone,
-      recipientAddress,
-      recipientFIO,
-      recipientDeliveryPointCode,
-      recipientDeliveryPointAddress,
-      userPhone: contactPhone || userPhone,
-      email,
-      deliveryMethod,
-      paymentPayer,
-      photoFile,
-      returnToPayment: currentStep === 'recipientPhone' && selectedRole === 'sender',
+  const getProgressText = () => {
+    if (currentStep === 'orderComplete') return 'Готово'
+    if (currentStep === 'email') return 'Электронный адрес'
+    if (currentStep === 'selectPvz') return 'Выбор пункта выдачи'
+    if (currentStep === 'recipientAddress') return 'Адрес получателя'
+    if (currentStep === 'senderAddress') return 'Адрес отправителя и ФИО'
+    if (currentStep === 'senderPhone') return 'Укажите номер отправителя'
+    if (currentStep === 'recipientUserPhone') return 'Ваш телефон'
+    if (currentStep === 'deliveryAddress') return 'Куда доставить посылку?'
+    if (currentStep === 'recipientFIO') return 'Ваши данные'
+    if (currentStep === 'payment') return 'Кто оплатит доставку?'
+    if (currentStep === 'recipientPhone') return 'Телефон получателя'
+    if (currentStep === 'pickupAddress') return 'Где забрать посылку?'
+    if (currentStep === 'contactPhone') {
+      const inviteRecipient = location.state?.inviteRecipient || location.state?.wizardData?.inviteRecipient || false
+      return inviteRecipient ? 'Ваш телефон' : 'Как с вами связаться?'
     }
+    if (currentStep === 'package') return 'Расскажите о посылке'
+    if (selectedRole) return 'Выбрана роль'
+    return 'Начните заполнение формы'
+  }
+
+  const handleBack = () => {
+    const inviteRecipient = location.state?.inviteRecipient || location.state?.wizardData?.inviteRecipient || false
     
-    // Сохраняем данные в URL для надежности
-    try {
-      const jsonString = JSON.stringify(wizardData)
-      const encoded = btoa(unescape(encodeURIComponent(jsonString)))
-      navigate(`/offers?data=${encodeURIComponent(encoded)}`, { state: { wizardData } })
-    } catch (err) {
-      console.error('Ошибка кодирования данных:', err)
-      navigate('/offers', { state: { wizardData } })
+    if (currentStep === 'orderComplete') {
+      if (inviteRecipient) {
+        navigate('/wizard?step=contactPhone', { state: { ...location.state, inviteRecipient: true } })
+      } else if (paymentPayer === 'recipient') {
+        navigate('/wizard?step=payment')
+                              } else {
+        navigate('/wizard?step=recipientAddress')
+      }
+    } else if (currentStep === 'contactPhone' && inviteRecipient) {
+      navigate('/wizard?step=pickupAddress', { state: { ...location.state, inviteRecipient: true } })
+    } else if (currentStep === 'pickupAddress' && inviteRecipient) {
+      navigate('/offers', {
+        state: {
+          wizardData: {
+            fromCity,
+            toCity,
+            recipientPhone,
+            selectedRole: 'sender',
+            inviteRecipient: true,
+            photoUrl
+          },
+          recipientNotified: true
+        }
+      })
+    } else if (currentStep === 'selectPvz') {
+      navigate('/offers', {
+        state: {
+          wizardData: {
+            fromCity,
+            toCity,
+            senderAddress: pickupAddress || senderAddress,
+            deliveryAddress: recipientAddress || deliveryAddress,
+            weight,
+            length,
+            width,
+            height,
+            packageOption,
+            selectedSize,
+            recipientPhone,
+            contactPhone,
+            recipientFIO,
+            pickupSenderName,
+            selectedOffer,
+            photoUrl
+          }
+        }
+      })
+    } else if (currentStep === 'email') {
+      navigate('/offers', {
+        state: {
+          wizardData: {
+            fromCity,
+            toCity,
+            senderAddress: pickupAddress,
+            deliveryAddress: recipientAddress,
+            weight,
+            length,
+            width,
+            height,
+            packageOption,
+            selectedSize,
+            recipientPhone,
+            contactPhone,
+            recipientFIO,
+            pickupSenderName,
+            photoUrl
+          }
+        }
+      })
+    } else if (currentStep === 'recipientAddress') {
+      navigate('/wizard?step=payment')
+    } else if (currentStep === 'payment') {
+      navigate('/wizard?step=recipientPhone')
+    } else if (currentStep === 'recipientPhone') {
+      navigate('/wizard?step=pickupAddress')
+    } else if (currentStep === 'pickupAddress') {
+      navigate('/wizard?step=contactPhone')
+    } else if (currentStep === 'contactPhone') {
+      navigate('/wizard?step=package')
+      if (codeSent) {
+                        setCodeSent(false)
+                        setSmsCode('')
+                        setCodeError('')
+                        setTelegramSent(false)
+      }
+    } else if (currentStep === 'senderAddress') {
+      navigate('/wizard?step=senderPhone')
+    } else if (currentStep === 'senderPhone') {
+      navigate('/wizard?step=recipientUserPhone')
+    } else if (currentStep === 'recipientUserPhone') {
+      if (recipientUserCodeSent) {
+        setRecipientUserCodeSent(false)
+        setRecipientUserSmsCode('')
+        setRecipientUserCodeError('')
+        setRecipientUserTelegramSent(false)
+      }
+      navigate('/wizard?step=deliveryAddress')
+    } else if (currentStep === 'deliveryAddress') {
+      navigate('/wizard?step=recipientFIO')
+    } else if (currentStep === 'recipientFIO') {
+      navigate('/wizard?step=package')
+    } else if (currentStep === 'package') {
+      navigate('/wizard?step=role')
+      setSelectedRole(null)
+    } else {
+      navigate('/calculate')
     }
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F5F5]">
-      <header className="w-full bg-[#0077FE] flex flex-col items-center px-6 py-6 gap-6">
-        <Link to="/calculate">
-          <img src={logoSvg} alt="PochtaHub" className="h-8" />
-        </Link>
-        <div className="w-full max-w-[720px] bg-white rounded-2xl flex items-stretch p-2">
-          <div className="flex-1 px-6 py-2 border-r border-[#E5E5E5]">
-            <CityInput
-              placeholder="Откуда"
-              value={fromCity}
-              onChange={(e) => setFromCity(e.target.value)}
-              variant="hero"
-              label="Откуда"
-            />
-          </div>
-          <div className="flex-1 px-6 py-2 ">
-            <CityInput
-              placeholder="Куда"
-              value={toCity}
-              onChange={(e) => setToCity(e.target.value)}
-              variant="hero"
-              label="Куда"
-            />
-          </div>
-          <button 
-            onClick={handleCalculate}
-            disabled={!fromCity || !toCity}
-            className="bg-[#0077FE] text-white px-4 py-2 text-base font-semibold whitespace-nowrap rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Рассчитать стоимость
-          </button>
-        </div>
-      </header>
-
-      <div className="flex justify-center pt-12 pb-8">
-        <div className="w-full max-w-[720px] bg-white rounded-2xl p-8 mx-6 ">
-          <div className="mb-6">
-            <div className="w-full h-1 bg-[#E5F0FF] rounded-full overflow-hidden">
-              <div className="h-full bg-[#0077FE]" style={{ 
-                width: currentStep === 'email' ? '100%' :
-                       currentStep === 'recipientAddress' || currentStep === 'senderAddress' ? '98%' :
-                       currentStep === 'payment' ? '95%' :
-                       currentStep === 'recipientPhone' ? '90%' :
-                       currentStep === 'deliveryMethod' ? '85%' :
-                       currentStep === 'userPhone' ? (selectedRole === 'recipient' ? '70%' : '90%') : 
-                       currentStep === 'deliveryAddress' ? (selectedRole === 'recipient' ? '60%' : '90%') :
-                       currentStep === 'senderFIO' ? '80%' :
-                       currentStep === 'contactPhone' && codeSent ? '75%' :
-                       currentStep === 'contactPhone' ? '70%' :
-                       currentStep === 'pickupAddress' ? '80%' :
-                       currentStep === 'senderPhone' ? (selectedRole === 'recipient' ? '80%' : '70%') :
-                       packageDataCompleted && selectedRole === 'recipient' ? '50%' : 
-                       selectedRole ? '50%' : '35%' 
-              }}></div>
-            </div>
-            <p className="text-sm text-[#858585] mt-2 text-center">
-              {currentStep === 'email'
-                ? 'Далее только транспортные компании...'
-                : currentStep === 'payment' || currentStep === 'recipientAddress' || currentStep === 'senderAddress'
-                  ? 'Уже подобрали транспортные компании...' 
-                  : currentStep === 'userPhone' || currentStep === 'deliveryAddress' || currentStep === 'senderFIO' || currentStep === 'senderPhone' || currentStep === 'recipientPhone' || currentStep === 'deliveryMethod' || currentStep === 'contactPhone' || currentStep === 'pickupAddress' || currentStep === 'orderComplete'
-                    ? 'Уже подбираем транспортные компании...' 
-                    : packageDataCompleted && selectedRole === 'recipient' 
-                      ? 'Уже подбираем транспортные компании...' 
-                      : selectedRole 
-                        ? 'Мы уже близко...' 
-                        : 'Осталось еще чуть-чуть...'}
-            </p>
-          </div>
-
-          {!selectedRole ? (
-            <>
-              <h1 className="text-3xl font-bold text-[#2D2D2D] mb-2 text-center">
-                Кто оформляет отправку?
-              </h1>
-              <p className="text-base text-[#2D2D2D] mb-8 text-center">
-                Выберите один из вариантов ниже 👉
-              </p>
-
-              <div className="grid grid-cols-2 gap-4 mb-8">
-                <button
-                  onClick={() => handleRoleSelect('sender')}
-                  className={`p-6 rounded-xl border transition-all ${
-                    selectedRole === 'sender'
-                      ? 'border-[#0077FE] bg-[#F0F7FF]'
-                      : 'border-[#E5E5E5] bg-[#F5F5F5] hover:border-[#0077FE]'
-                  }`}
-                >
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="w-16 h-16 flex items-center justify-center text-6xl">
-                      📦
-                    </div>
-                    <div className="text-center">
-                      <h3 className="text-lg font-bold text-[#2D2D2D] mb-2">Я отправитель</h3>
-                      <p className="text-sm text-[#2D2D2D] leading-relaxed">Посылка у меня. Я передам её курьеру</p>
-                    </div>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => handleRoleSelect('recipient')}
-                  className={`p-6 rounded-xl border transition-all ${
-                    selectedRole === 'recipient'
-                      ? 'border-[#0077FE] bg-[#F0F7FF]'
-                      : 'border-[#E5E5E5] bg-[#F5F5F5] hover:border-[#0077FE]'
-                  }`}
-                >
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="w-16 h-16 flex items-center justify-center text-6xl relative">
-                      <span>📲</span>
-                    </div>
-                    <div className="text-center">
-                      <h3 className="text-lg font-bold text-[#2D2D2D] mb-2">Я получатель</h3>
-                      <p className="text-sm text-[#2D2D2D] leading-relaxed">Посылка у отправителя. Я оформляю</p>
-                    </div>
-                  </div>
-                </button>
-              </div>
-            </>
-          ) : (currentStep === 'package' || (!packageDataCompleted && selectedRole !== null)) ? (
-            <>
-              <h1 className="text-3xl font-bold text-[#2D2D2D] mb-2 text-center">
-                Расскажите о посылке
-              </h1>
-              <p className="text-base text-[#2D2D2D] mb-8 text-center">
-                Фото - лучший способ: мы сами определим размеры и подберём упаковку.
-              </p>
-
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <button
-                  onClick={() => setPackageOption('photo')}
-                  className={`p-6 rounded-xl border transition-all ${
-                    packageOption === 'photo'
-                      ? 'border-[#0077FE] bg-[#F0F7FF]'
-                      : 'border-[#E5E5E5] bg-[#F5F5F5] hover:border-[#0077FE]'
-                  }`}
-                >
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="w-16 h-16 flex items-center justify-center text-6xl">
-                      📸
-                    </div>
-                    <p className="text-base font-semibold text-[#2D2D2D]">Сфотографировать посылку</p>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => setPackageOption('manual')}
-                  className={`p-6 rounded-xl border transition-all ${
-                    packageOption === 'manual'
-                      ? 'border-[#0077FE] bg-[#F0F7FF]'
-                      : 'border-[#E5E5E5] bg-[#F5F5F5] hover:border-[#0077FE]'
-                  }`}
-                >
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="w-16 h-16 flex items-center justify-center text-6xl">
-                      ✏️
-                    </div>
-                    <p className="text-base font-semibold text-[#2D2D2D]">Указать габариты вручную</p>
-                  </div>
-                </button>
-              </div>
-
-              {!packageOption && (
-                <div className="text-center mb-8">
-                  <button
-                    onClick={() => setPackageOption('unknown')}
-                    className="text-sm text-[#0077FE] hover:underline"
-                  >
-                    Не знаю габариты
-                  </button>
-                </div>
-              )}
-
-              {packageOption === 'photo' && (
-                <div className="mb-8">
-                  <div className="border-2 border-dashed border-[#0077FE] rounded-xl p-8 mb-6">
-                    {!photoPreview ? (
-                      <div className="flex flex-col items-center gap-4">
-                        <p className="text-sm text-[#2D2D2D]">Фотография весом не более 5 мб.</p>
-                        <input
-                          type="file"
-                          id="photo-upload"
-                          accept="image/*"
-                          onChange={(e) => {
-                            const file = e.target.files[0]
-                            if (file) {
-                              if (file.size > 5 * 1024 * 1024) {
-                                setPhotoError('Файл слишком большой. Максимальный размер 5 МБ.')
-                                setPhotoFile(null)
-                                setPhotoPreview(null)
-                              } else {
-                                setPhotoFile(file)
-                                setPhotoError('')
-                                const reader = new FileReader()
-                                reader.onloadend = () => {
-                                  setPhotoPreview(reader.result)
-                                }
-                                reader.readAsDataURL(file)
-                              }
-                            }
-                          }}
-                          className="hidden"
-                        />
-                        <label
-                          htmlFor="photo-upload"
-                          className="px-6 py-3 bg-[#0077FE] text-white rounded-xl text-base font-semibold cursor-pointer hover:bg-[#0066CC] transition-colors"
-                        >
-                          Загрузить фото
-                        </label>
-                        {photoError && (
-                          <p className="text-sm text-red-500">{photoError}</p>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center">
-                        <div className="relative inline-block">
-                          <img
-                            src={photoPreview}
-                            alt="Загруженное фото"
-                            className="max-w-full h-auto rounded-lg max-h-64"
-                          />
-                          <button
-                            onClick={() => {
-                              setPhotoFile(null)
-                              setPhotoPreview(null)
-                              setPhotoError('')
-                              const input = document.getElementById('photo-upload')
-                              if (input) input.value = ''
-                            }}
-                            className="absolute top-2 right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-lg hover:bg-gray-100 transition-colors"
-                          >
-                            <span className="text-[#2D2D2D] text-lg font-bold">×</span>
-                          </button>
-                        </div>
-                        <div className="mt-4 text-center">
-                          <input
-                            type="file"
-                            id="photo-replace"
-                            accept="image/*"
-                            onChange={(e) => {
-                              const file = e.target.files[0]
-                              if (file) {
-                                if (file.size > 5 * 1024 * 1024) {
-                                  setPhotoError('Файл слишком большой. Максимальный размер 5 МБ.')
-                                } else {
-                                  setPhotoFile(file)
-                                  setPhotoError('')
-                                  const reader = new FileReader()
-                                  reader.onloadend = () => {
-                                    setPhotoPreview(reader.result)
-                                  }
-                                  reader.readAsDataURL(file)
-                                }
-                              }
-                            }}
-                            className="hidden"
-                          />
-                          <label
-                            htmlFor="photo-replace"
-                            className="text-sm text-[#0077FE] cursor-pointer hover:underline"
-                          >
-                            Загрузить другое фото
-                          </label>
-                        </div>
-                        {photoError && (
-                          <p className="text-sm text-red-500 mt-2 text-center">{photoError}</p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <button 
-                    onClick={handleContinue}
-                    className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold"
-                  >
-                    Продолжить
-                  </button>
-                </div>
-              )}
-
-              {packageOption === 'manual' && (
-                <div className="mb-8">
-                  <div className="grid grid-cols-4 gap-4 mb-4">
-                    <NumberInput
-                      value={length}
-                      onChange={(e) => setLength(e.target.value)}
-                      label="Длина, см"
-                    />
-                    <NumberInput
-                      value={width}
-                      onChange={(e) => setWidth(e.target.value)}
-                      label="Ширина, см"
-                    />
-                    <NumberInput
-                      value={height}
-                      onChange={(e) => setHeight(e.target.value)}
-                      label="Высота, см"
-                    />
-                    <NumberInput
-                      value={weight}
-                      onChange={(e) => setWeight(e.target.value)}
-                      label="Вес, кг"
-                    />
-                  </div>
-                  <div className="mb-6">
-                    <NumberInput
-                      value={estimatedValue}
-                      onChange={(e) => setEstimatedValue(e.target.value)}
-                      label="Оценочная стоимость"
-                    />
-                  </div>
-                  <button 
-                    onClick={handleContinue}
-                    className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold"
-                  >
-                    Продолжить
-                  </button>
-                </div>
-              )}
-
-              {packageOption === 'unknown' && (
-                <div className="mb-8">
-                  <div className="grid grid-cols-4 gap-4 mb-6">
-                    {sizeOptions.map((option) => (
-                      <button
-                        key={option.id}
-                        onClick={() => setSelectedSize(option.id)}
-                        className={`p-4 rounded-xl border transition-all ${
-                          selectedSize === option.id
-                            ? 'border-[#0077FE] bg-[#F0F7FF]'
-                            : 'border-[#E5E5E5] bg-white hover:border-[#0077FE]'
-                        }`}
-                      >
-                        <div className="flex flex-col items-center gap-3">
-                          <div className="w-12 h-12 flex items-center justify-center">
-                            <img src={option.icon} alt="" className="w-full h-full" />
-                          </div>
-                          <div className="text-center">
-                            <p className="text-sm font-semibold text-[#2D2D2D] mb-1">{option.name}</p>
-                            <p className="text-xs text-[#2D2D2D]">{option.dimensions}</p>
-                            <p className="text-xs text-[#2D2D2D]">{option.weight}</p>
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                  <div className="mb-6">
-                    <NumberInput
-                      value={estimatedValue}
-                      onChange={(e) => setEstimatedValue(e.target.value)}
-                      label="Оценочная стоимость"
-                    />
-                  </div>
-                  <button 
-                    onClick={handleContinue}
-                    className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold"
-                  >
-                    Продолжить
-                  </button>
-                </div>
-              )}
-
-            </>
-          ) : (
-            <>
-              {currentStep === 'senderPhone' && (
-                <div className="mb-8">
-                  <h1 className="text-3xl font-bold text-[#2D2D2D] mb-2 text-center">
-                    Укажите номер отправителя
-                  </h1>
-                  <p className="text-base text-[#2D2D2D] mb-8 text-center">
-                    мы свяжемся с отправителем, номер нужен для оформления и связи с курьером
-                  </p>
-                  <div className="mb-6">
-                    <PhoneInput
-                      value={senderPhone}
-                      onChange={(e) => setSenderPhone(e.target.value)}
-                      label="Телефон отправителя"
-                    />
-                  </div>
-                  <button 
-                    onClick={handleContinue}
-                    className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold"
-                  >
-                    Продолжить
-                  </button>
-                </div>
-              )}
-
-              {currentStep === 'contactPhone' && !codeSent && (
-                <div className="mb-8">
-                  <h1 className="text-3xl font-bold text-[#2D2D2D] mb-2 text-center">
-                    Как с вами связаться?
-                  </h1>
-                  <p className="text-base text-[#2D2D2D] mb-8 text-center">
-                    Курьер позвонит перед приездом
-                  </p>
-                  <div className="mb-6">
-                    <PhoneInput
-                      value={contactPhone}
-                      onChange={(e) => setContactPhone(e.target.value)}
-                      label="Ваш телефон"
-                    />
-                  </div>
-                  {codeError && (
-                    <div className="mb-4">
-                      <p className="text-sm text-red-500 text-center mb-2">{codeError}</p>
-                    </div>
-                  )}
-                  <button 
-                    onClick={() => handleSendCode('telegram')}
-                    disabled={codeLoading || !contactPhone}
-                    className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold hover:bg-[#0066CC] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {codeLoading ? 'Отправка...' : 'Получить код в Telegram'}
-                  </button>
-                  <button 
-                    onClick={handleSendSmsCode}
-                    disabled={codeLoading || !contactPhone}
-                    className="w-full bg-[#F5F5F5] text-[#2D2D2D] px-6 py-4 rounded-xl text-base font-semibold hover:bg-[#E5E5E5] transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-3"
-                  >
-                    {codeLoading ? 'Отправка...' : 'Отправить SMS'}
-                  </button>
-                </div>
-              )}
-
-              {currentStep === 'contactPhone' && codeSent && (
-                <div className="mb-8">
-                  <h1 className="text-3xl font-bold text-[#2D2D2D] mb-2 text-center">
-                    {telegramSent ? 'Введите код из Telegram' : 'Введите код из СМС'}
-                  </h1>
-                  <p className="text-base text-[#2D2D2D] mb-8 text-center">
-                    {telegramSent ? (
-                      <>Отправили в <strong>Telegram</strong></>
-                    ) : (
-                      <>Отправили на <strong>{contactPhone}</strong></>
-                    )}
-                  </p>
-                  <div className="mb-6">
-                    <CodeInput
-                      value={smsCode}
-                      onChange={(e) => setSmsCode(e.target.value)}
-                      onComplete={(code) => {
-                        setSmsCode(code)
-                        if (code && code.length === 4) {
-                          handleVerifyCode(code)
-                        }
-                      }}
-                    />
-                  </div>
-                  {codeError && (
-                    <div className="mb-4">
-                      <p className="text-sm text-red-500 text-center mb-2">{codeError}</p>
-                    </div>
-                  )}
-                  {telegramSent && (
-                    <p className="text-sm text-green-600 mb-4 text-center">
-                      Код отправлен в Telegram
-                    </p>
-                  )}
-                  {!telegramSent && codeSent && (
-                    <p className="text-sm text-[#858585] mb-4 text-center">
-                      Код отправлен в SMS
-                    </p>
-                  )}
-                  <div className="flex flex-col gap-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCodeSent(false)
-                        setSmsCode('')
-                        setCodeError('')
-                        setTelegramSent(false)
-                      }}
-                      className="text-sm text-[#0077FE] hover:underline"
-                    >
-                      Изменить номер
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleResendCode}
-                      disabled={codeLoading}
-                      className="text-sm text-[#858585] hover:text-[#2D2D2D] disabled:opacity-50"
-                    >
-                      Получить новый код
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {currentStep === 'pickupAddress' && (
-                <div className="mb-8">
-                  <h1 className="text-3xl font-bold text-[#2D2D2D] mb-2 text-center">
-                    Где забрать посылку?
-                  </h1>
-                  <p className="text-base text-[#2D2D2D] mb-8 text-center">
-                    Осталось указать адрес, откуда забрать посылку, и имя отправителя — чтобы мы могли оформить забор.
-                  </p>
-                  
-                  <div className="mb-6">
-                    <AddressInput
-                      value={pickupAddress}
-                      onChange={(e) => setPickupAddress(e.target.value)}
-                      onCityChange={(e) => {
-                        if (fromCity) {
-                          setFromCity(e.target.value)
-                        }
-                      }}
-                      label="Адрес забора"
-                      required
-                      city={fromCity}
-                    />
-                  </div>
-
-                  <div className="mb-6">
-                    <div className="relative">
-                      <div className={`relative border rounded-xl ${
-                        pickupSenderNameFocused ? 'border-[#0077FE]' : 'border-[#C8C7CC]'
-                      }`}>
-                        <input
-                          type="text"
-                          value={pickupSenderName}
-                          onChange={(e) => setPickupSenderName(e.target.value)}
-                          onFocus={() => setPickupSenderNameFocused(true)}
-                          onBlur={() => setPickupSenderNameFocused(false)}
-                          placeholder=" "
-                          className="w-full px-4 pt-6 pb-2 border-0 bg-transparent rounded-xl text-base text-[#2D2D2D] focus:outline-none"
-                        />
-                        <label className={`absolute left-4 transition-all duration-200 pointer-events-none ${
-                          pickupSenderName || pickupSenderNameFocused ? 'top-2 text-xs' : 'top-1/2 -translate-y-1/2 text-base'
-                        } ${pickupSenderNameFocused ? 'text-[#0077FE]' : 'text-[#858585]'}`}>
-                          Имя отправителя *
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-
-                  <button 
-                    onClick={handleContinue}
-                    disabled={!pickupAddress || !pickupSenderName}
-                    className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold hover:bg-[#0066CC] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Продолжить
-                  </button>
-                </div>
-              )}
-
-              {currentStep === 'senderFIO' && (
-                <div className="mb-8">
-                  <h1 className="text-3xl font-bold text-[#2D2D2D] mb-2 text-center">
-                    Укажите недостающие данные о Вас
-                  </h1>
-                  <p className="text-base text-[#2D2D2D] mb-8 text-center">
-                    ФИО необходимо для того, чтобы отправить посылку
-                  </p>
-                  <div className="mb-6">
-                    <div className="relative">
-                      <div className={`relative border rounded-xl ${
-                        fioFocused ? 'border-[#0077FE]' : 'border-[#C8C7CC]'
-                      }`}>
-                        <input
-                          type="text"
-                          value={senderFIO}
-                          onChange={(e) => setSenderFIO(e.target.value)}
-                          onFocus={() => setFioFocused(true)}
-                          onBlur={() => setFioFocused(false)}
-                          placeholder=" "
-                          className="w-full px-4 pt-6 pb-2 border-0 bg-transparent rounded-xl text-base text-[#2D2D2D] focus:outline-none"
-                        />
-                        <label className={`absolute left-4 transition-all duration-200 pointer-events-none ${
-                          senderFIO || fioFocused ? 'top-2 text-xs' : 'top-1/2 -translate-y-1/2 text-base'
-                        } ${fioFocused ? 'text-[#0077FE]' : 'text-[#858585]'}`}>
-                          ФИО
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={handleContinue}
-                    className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold"
-                  >
-                    Продолжить
-                  </button>
-                </div>
-              )}
-
-              {currentStep === 'deliveryMethod' && (
-                <div className="mb-8">
-                  <h1 className="text-3xl font-bold text-[#2D2D2D] mb-2 text-center">
-                    Как вы хотите передать посылку?
-                  </h1>
-                  <p className="text-base text-[#2D2D2D] mb-8 text-center">
-                    Выберите один из способов👇
-                  </p>
-                  <div className="grid grid-cols-2 gap-4 mb-8">
-                    <button
-                      onClick={() => {
-                        setDeliveryMethod('courier')
-                        if (fromCity) {
-                          setSenderAddress(fromCity)
-                        }
-                      }}
-                      className={`p-6 rounded-xl border-2 transition-all ${
-                        deliveryMethod === 'courier'
-                          ? 'border-[#0077FE] bg-white'
-                          : 'border-[#E5E5E5] bg-[#F5F5F5]'
-                      }`}
-                    >
-                      <span className="flex flex-col items-center gap-4">
-                        <span className="w-16 h-16 flex items-center justify-center text-6xl">
-                          👋
-                        </span>
-                        <span className="text-base font-semibold text-[#2D2D2D]">Курьер заберёт посылку</span>
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setDeliveryMethod('pickup')
-                      }}
-                      className={`p-6 rounded-xl border-2 transition-all ${
-                        deliveryMethod === 'pickup'
-                          ? 'border-[#0077FE] bg-white'
-                          : 'border-[#E5E5E5] bg-[#F5F5F5]'
-                      }`}
-                    >
-                      <span className="flex flex-col items-center gap-4">
-                        <span className="w-16 h-16 flex items-center justify-center text-6xl">
-                          🏫
-                        </span>
-                        <span className="text-base font-semibold text-[#2D2D2D]">Сдам в пункте приёма</span>
-                      </span>
-                    </button>
-                  </div>
-                  {deliveryMethod === 'courier' && (
-                    <div className="mb-6">
-                      <AddressInput
-                        value={senderAddress || fromCity}
-                        onChange={(e) => {
-                          setSenderAddress(e.target.value)
-                          setFromCity(e.target.value)
-                        }}
-                        label="Адрес"
-                      />
-                    </div>
-                  )}
-                  {deliveryMethod === 'pickup' && (
-                    <div className="mb-6 p-4 bg-[#F5F5F5] rounded-xl flex items-start gap-3">
-                      <div className="w-6 h-6 rounded-full bg-[#0077FE] flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span className="text-white text-xs font-bold">i</span>
-                      </div>
-                      <p className="text-sm text-[#2D2D2D]">
-                        Мы покажем ближайшие пункты приёма без очереди после подтверждения отправки. Нажмите "Продолжить".
-                      </p>
-                    </div>
-                  )}
-                  <button 
-                    onClick={handleContinue}
-                    disabled={!deliveryMethod || (deliveryMethod === 'courier' && !senderAddress)}
-                    className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Продолжить
-                  </button>
-                </div>
-              )}
-
-              {currentStep === 'recipientPhone' && (
-                <div className="mb-8">
-                  <h1 className="text-3xl font-bold text-[#2D2D2D] mb-2 text-center">
-                    Телефон получателя
-                  </h1>
-                  <p className="text-base text-[#2D2D2D] mb-8 text-center">
-                    Получателю придёт ссылка на оплату или отслеживание
-                  </p>
-                  <div className="mb-6">
-                    <PhoneInput
-                      value={recipientPhone}
-                      onChange={(e) => setRecipientPhone(e.target.value)}
-                      label="Телефон получателя"
-                    />
-                  </div>
-                  <button 
-                    onClick={handleContinue}
-                    disabled={!recipientPhone}
-                    className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold disabled:opacity-50"
-                  >
-                    Продолжить
-                  </button>
-                </div>
-              )}
-
-              {currentStep === 'deliveryAddress' && (
-                <div className="mb-8">
-                  <h1 className="text-3xl font-bold text-[#2D2D2D] mb-2 text-center">
-                    Куда доставить посылку?
-                  </h1>
-                  <div className="mb-6">
-                    <AddressInput
-                      value={deliveryAddress || toCity}
-                      onChange={(e) => setDeliveryAddress(e.target.value)}
-                      label="Адрес"
-                      city={toCity}
-                    />
-                  </div>
-                  <button 
-                    onClick={handleContinue}
-                    className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold"
-                  >
-                    Продолжить
-                  </button>
-                </div>
-              )}
-
-              {currentStep === 'userPhone' && !codeSent && (
-                <div className="mb-8">
-                  <h1 className="text-3xl font-bold text-[#2D2D2D] mb-2 text-center">
-                    Ваш телефон
-                  </h1>
-                  <p className="text-base text-[#2D2D2D] mb-8 text-center">
-                    Это необходимо для оформления заказа, так же вы сможете отслеживать статус используя номер
-                  </p>
-                  <div className="mb-6">
-                    <PhoneInput
-                      value={userPhone}
-                      onChange={(e) => setUserPhone(e.target.value)}
-                      label="Ваш телефон"
-                    />
-                  </div>
-                  {codeError && (
-                    <div className="mb-4">
-                      <p className="text-sm text-red-500 text-center mb-2">{codeError}</p>
-                    </div>
-                  )}
-                  <div className="flex flex-col gap-3">
-                    <button
-                      onClick={() => handleSendCode('telegram')}
-                      disabled={codeLoading || !userPhone}
-                      className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold disabled:opacity-50"
-                    >
-                      {codeLoading ? 'Отправка...' : 'Получить код в Telegram'}
-                    </button>
-                    <button
-                      onClick={() => handleSendCode('sms')}
-                      disabled={codeLoading || !userPhone}
-                      className="w-full bg-white border border-[#0077FE] text-[#0077FE] px-6 py-4 rounded-xl text-base font-semibold disabled:opacity-50"
-                    >
-                      {codeLoading ? 'Отправка...' : 'Отправить SMS'}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {currentStep === 'userPhone' && codeSent && (
-                <div className="mb-8">
-                  <h1 className="text-3xl font-bold text-[#2D2D2D] mb-2 text-center">
-                    {telegramSent ? 'Введите код из Telegram' : 'Введите код из СМС'}
-                  </h1>
-                  <p className="text-base text-[#2D2D2D] mb-8 text-center">
-                    {telegramSent ? (
-                      <>Отправили в <strong>Telegram</strong></>
-                    ) : (
-                      <>Отправили на <strong>{userPhone}</strong></>
-                    )}
-                  </p>
-                  <div className="mb-6">
-                    <CodeInput
-                      value={smsCode}
-                      onChange={(e) => setSmsCode(e.target.value)}
-                      onComplete={(code) => {
-                        setSmsCode(code)
-                        if (code && code.length === 4) {
-                          handleVerifyCode(code)
-                        }
-                      }}
-                    />
-                  </div>
-                  {codeError && (
-                    <div className="mb-4">
-                      <p className="text-sm text-red-500 text-center mb-2">{codeError}</p>
-                    </div>
-                  )}
-                  {telegramSent && (
-                    <p className="text-sm text-green-600 mb-4 text-center">
-                      Код отправлен в Telegram
-                    </p>
-                  )}
-                  <div className="flex flex-col gap-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCodeSent(false)
-                        setSmsCode('')
-                        setCodeError('')
-                        setTelegramSent(false)
-                      }}
-                      className="text-sm text-[#0077FE] hover:underline"
-                    >
-                      Изменить номер
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleResendCode}
-                      disabled={codeLoading}
-                      className="text-sm text-[#858585] hover:text-[#2D2D2D] disabled:opacity-50"
-                    >
-                      Получить новый код
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {currentStep === 'payment' && (
-                <div className="mb-8">
-                  <h1 className="text-3xl font-bold text-[#2D2D2D] mb-2 text-center">
-                    Кто оплатит доставку?
-                  </h1>
-                  <div className="grid grid-cols-2 gap-4 mb-8">
-                    <button
-                      onClick={() => setPaymentPayer(selectedRole === 'sender' ? 'me' : 'me')}
-                      className={`p-6 rounded-xl border transition-all ${
-                        paymentPayer === 'me'
-                          ? 'border-[#0077FE] bg-[#F0F7FF]'
-                          : 'border-[#E5E5E5] bg-white hover:border-[#0077FE]'
-                      }`}
-                    >
-                      <div className="flex flex-col items-center gap-4">
-                        <div className="w-16 h-16 flex items-center justify-center text-6xl">
-                          💸
-                        </div>
-                        <p className="text-base font-semibold text-[#2D2D2D]">Я оплачу</p>
-                      </div>
-                    </button>
-                    <button
-                      onClick={() => setPaymentPayer(selectedRole === 'sender' ? 'recipient' : 'sender')}
-                      className={`p-6 rounded-xl border transition-all ${
-                        (selectedRole === 'sender' && paymentPayer === 'recipient') || (selectedRole === 'recipient' && paymentPayer === 'sender')
-                          ? 'border-[#0077FE] bg-[#F0F7FF]'
-                          : 'border-[#E5E5E5] bg-white hover:border-[#0077FE]'
-                      }`}
-                    >
-                      <div className="flex flex-col items-center gap-4">
-                        <div className="w-16 h-16 flex items-center justify-center text-6xl">
-                        🙎‍♂️
-                        </div>
-                        <p className="text-base font-semibold text-[#2D2D2D]">
-                          {selectedRole === 'sender' ? 'Получатель оплатит по ссылке' : 'Отправитель оплатит'}
-                        </p>
-                      </div>
-                    </button>
-                  </div>
-                  <button 
-                    onClick={handleContinue}
-                    disabled={!paymentPayer}
-                    className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Продолжить
-                  </button>
-                </div>
-              )}
-
-              {currentStep === 'recipientAddress' && (
-                <div className="mb-8">
-                  <h1 className="text-3xl font-bold text-[#2D2D2D] mb-2 text-center">
-                    Пожалуйста, укажите адрес получателя и ФИО
-                  </h1>
-                  <div className="mb-6">
-                    <AddressInput
-                      value={recipientAddress || toCity}
-                      onChange={(e) => {
-                        setRecipientAddress(e.target.value)
-                        setToCity(e.target.value)
-                      }}
-                      label="Адрес"
-                      city={toCity}
-                    />
-                  </div>
-                  <div className="mb-6">
-                    <div className="relative">
-                      <div className={`relative border rounded-xl ${
-                        recipientFioFocused ? 'border-[#0077FE]' : 'border-[#C8C7CC]'
-                      }`}>
-                        <input
-                          type="text"
-                          value={recipientFIO}
-                          onChange={(e) => setRecipientFIO(e.target.value)}
-                          onFocus={() => setRecipientFioFocused(true)}
-                          onBlur={() => setRecipientFioFocused(false)}
-                          placeholder=" "
-                          className="w-full px-4 pt-6 pb-2 border-0 bg-transparent rounded-xl text-base text-[#2D2D2D] focus:outline-none"
-                        />
-                        <label className={`absolute left-4 transition-all duration-200 pointer-events-none ${
-                          recipientFIO || recipientFioFocused ? 'top-2 text-xs' : 'top-1/2 -translate-y-1/2 text-base'
-                        } ${recipientFioFocused ? 'text-[#0077FE]' : 'text-[#858585]'}`}>
-                          ФИО
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={handleContinue}
-                    className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold"
-                  >
-                    Продолжить
-                  </button>
-                </div>
-              )}
-
-              {currentStep === 'orderComplete' && (
-                <div className="mb-8">
-                  <div className="text-center mb-8">
-                    <div className="text-6xl mb-4">👍</div>
-                    <h1 className="text-3xl font-bold text-[#2D2D2D] mb-4">
-                      Готово 👍 Отправление создано
-                    </h1>
-                    <p className="text-base text-[#2D2D2D] mb-8">
-                      Получатель выберет и оплатит доставку. Мы сообщим Вам, когда назначим курьера.
-                    </p>
-                    <button
-                      onClick={() => navigate('/cabinet')}
-                      className="bg-[#0077FE] text-white px-8 py-4 rounded-xl text-base font-semibold hover:bg-[#0066CC] transition-colors"
-                    >
-                      Понятно
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {currentStep === 'senderAddress' && (
-                <div className="mb-8">
-                  <h1 className="text-3xl font-bold text-[#2D2D2D] mb-2 text-center">
-                    Пожалуйста, укажите адрес отправителя и ФИО
-                  </h1>
-                  <div className="mb-6">
-                    <AddressInput
-                      value={senderAddress || fromCity}
-                      onChange={(e) => {
-                        setSenderAddress(e.target.value)
-                        setFromCity(e.target.value)
-                      }}
-                      label="Адрес"
-                      city={fromCity}
-                    />
-                  </div>
-                  <div className="mb-6">
-                    <div className="relative">
-                      <div className={`relative border rounded-xl ${
-                        fioFocused ? 'border-[#0077FE]' : 'border-[#C8C7CC]'
-                      }`}>
-                        <input
-                          type="text"
-                          value={senderFIO}
-                          onChange={(e) => setSenderFIO(e.target.value)}
-                          onFocus={() => setFioFocused(true)}
-                          onBlur={() => setFioFocused(false)}
-                          placeholder=" "
-                          className="w-full px-4 pt-6 pb-2 border-0 bg-transparent rounded-xl text-base text-[#2D2D2D] focus:outline-none"
-                        />
-                        <label className={`absolute left-4 transition-all duration-200 pointer-events-none ${
-                          senderFIO || fioFocused ? 'top-2 text-xs' : 'top-1/2 -translate-y-1/2 text-base'
-                        } ${fioFocused ? 'text-[#0077FE]' : 'text-[#858585]'}`}>
-                          ФИО
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={handleContinue}
-                    className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold"
-                  >
-                    Продолжить
-                  </button>
-                </div>
-              )}
-
-              {currentStep === 'selectPvz' && (
-                <div className="mb-8">
-                  <h1 className="text-3xl font-bold text-[#2D2D2D] mb-2 text-center">
-                    Выберите пункт выдачи
-                  </h1>
-                  <p className="text-base text-[#2D2D2D] mb-6 text-center">
-                    Выберите удобный ПВЗ СДЭК в городе {toCity || 'получателя'}
-                  </p>
-                  
-                  <CdekMapWidget
-                    city={toCity || recipientAddress}
-                    cityFrom={fromCity || senderAddress}
-                    tariffCode={selectedOffer?.tariff_code}
-                    transportCompanyId={selectedOffer?.company_id || 2}
-                    weight={parseFloat(weight) || 1}
-                    length={parseFloat(length) || 20}
-                    width={parseFloat(width) || 20}
-                    height={parseFloat(height) || 20}
+    <WizardLayout
+      fromCity={fromCity}
+      toCity={toCity}
+      onFromCityChange={(e) => setFromCity(e.target.value)}
+      onToCityChange={(e) => setToCity(e.target.value)}
+      onCalculate={handleCalculate}
+      progress={getProgress()}
+      progressText={getProgressText()}
+      onBack={handleBack}
+    >
+      {currentStep === 'role' ? (
+        <RoleSelectStep
+          onRoleSelect={handleRoleSelect}
+          selectedRole={selectedRole}
+        />
+      ) : currentStep === 'package' ? (
+        <PackageStep
+          packageOption={packageOption}
+          onPackageOptionChange={setPackageOption}
+          photoPreview={photoPreview}
+          photoError={photoError}
+          photoAnalyzing={photoAnalyzing}
+          photoAnalysis={photoAnalysis}
+          onPhotoChange={handlePhotoChange}
+          onPhotoRemove={handlePhotoRemove}
+          length={length}
+          onLengthChange={(e) => setLength(e.target.value)}
+          width={width}
+          onWidthChange={(e) => setWidth(e.target.value)}
+          height={height}
+          onHeightChange={(e) => setHeight(e.target.value)}
+          weight={weight}
+          onWeightChange={(e) => setWeight(e.target.value)}
+          estimatedValue={estimatedValue}
+          onEstimatedValueChange={(e) => setEstimatedValue(e.target.value)}
+          selectedSize={selectedSize}
+          onSelectedSizeChange={setSelectedSize}
+          onContinue={handlePackageContinue}
+        />
+      ) : currentStep === 'contactPhone' && selectedRole === 'sender' ? (
+        <ContactPhoneStep
+          phone={contactPhone}
+          onPhoneChange={(e) => setContactPhone(e.target.value)}
+          auth={authObj}
+          selectedRole={selectedRole}
+          title={(location.state?.inviteRecipient || location.state?.wizardData?.inviteRecipient) ? 'Ваш телефон' : undefined}
+          description={(location.state?.inviteRecipient || location.state?.wizardData?.inviteRecipient) ? 'Это необходимо для оформления заказа' : undefined}
+          onVerifyCode={handleVerifyCode}
+          onResendCode={handleResendCode}
+        />
+      ) : currentStep === 'pickupAddress' && selectedRole === 'sender' ? (
+        <PickupAddressStep
+          pickupAddress={pickupAddress}
+          onPickupAddressChange={(e) => setPickupAddress(e.target.value)}
+          pickupSenderName={pickupSenderName}
+          onPickupSenderNameChange={(e) => setPickupSenderName(e.target.value)}
+          fromCity={fromCity}
+          onContinue={handlePickupAddressContinue}
+        />
+      ) : currentStep === 'recipientPhone' && selectedRole === 'sender' ? (
+        <RecipientPhoneStep
+          recipientPhone={recipientPhone}
+          onRecipientPhoneChange={(e) => setRecipientPhone(e.target.value)}
+          onContinue={handleRecipientPhoneContinue}
+        />
+      ) : currentStep === 'payment' && selectedRole === 'sender' ? (
+        <PaymentStep
+          paymentPayer={paymentPayer}
+          onPaymentPayerChange={setPaymentPayer}
+          selectedRole={selectedRole}
+          onContinue={handlePaymentContinue}
+        />
+      ) : currentStep === 'recipientFIO' && selectedRole === 'recipient' ? (
+        <RecipientFIOStep
+          recipientFIO={recipientFIO}
+          onRecipientFIOChange={(e) => setRecipientFIO(e.target.value)}
+          recipientFioFocused={recipientFioFocused}
+          onRecipientFioFocus={() => setRecipientFioFocused(true)}
+          onRecipientFioBlur={() => setRecipientFioFocused(false)}
+          onContinue={handleRecipientFIOContinue}
+        />
+      ) : currentStep === 'deliveryAddress' && selectedRole === 'recipient' ? (
+        <DeliveryAddressStep
+          deliveryAddress={deliveryAddress}
+          onDeliveryAddressChange={(e) => setDeliveryAddress(e.target.value)}
+          toCity={toCity}
+          onContinue={handleDeliveryAddressContinue}
+        />
+      ) : currentStep === 'recipientUserPhone' && selectedRole === 'recipient' ? (
+        <ContactPhoneStep
+          phone={recipientUserPhone}
+          onPhoneChange={(e) => setRecipientUserPhone(e.target.value)}
+          selectedRole={selectedRole}
+          title="Ваш телефон"
+          description="Это необходимо для оформления заказа"
+          auth={{
+            codeSent: recipientUserCodeSent,
+            codeLoading: recipientUserCodeLoading,
+            codeError: recipientUserCodeError,
+            smsCode: recipientUserSmsCode,
+            setSmsCode: setRecipientUserSmsCode,
+            telegramSent: recipientUserTelegramSent,
+            resetCodeState: () => {
+              setRecipientUserCodeSent(false)
+              setRecipientUserSmsCode('')
+              setRecipientUserCodeError('')
+              setRecipientUserTelegramSent(false)
+            },
+            handleSendCode: handleRecipientUserSendCode
+          }}
+          onVerifyCode={handleRecipientUserVerifyCode}
+          onResendCode={handleRecipientUserResendCode}
+        />
+      ) : currentStep === 'senderPhone' && selectedRole === 'recipient' ? (
+        <SenderPhoneStep
+          senderPhone={senderPhone}
+          onSenderPhoneChange={(e) => setSenderPhone(e.target.value)}
+          onContinue={handleSenderPhoneContinue}
+        />
+      ) : currentStep === 'senderAddress' && selectedRole === 'recipient' ? (
+        <SenderAddressStep
+          senderAddress={senderAddress}
+          onSenderAddressChange={(e) => setSenderAddress(e.target.value)}
+          senderFIO={senderFIO}
+          onSenderFIOChange={(e) => setSenderFIO(e.target.value)}
+          fioFocused={senderFioFocused}
+          onFioFocus={() => setSenderFioFocused(true)}
+          onFioBlur={() => setSenderFioFocused(false)}
+          fromCity={fromCity}
+          onContinue={handleSenderAddressContinue}
+        />
+      ) : currentStep === 'recipientAddress' && selectedRole === 'sender' ? (
+        <RecipientAddressStep
+          recipientAddress={recipientAddress}
+          onRecipientAddressChange={(e) => setRecipientAddress(e.target.value)}
+          recipientFIO={recipientFIO}
+          onRecipientFIOChange={(e) => setRecipientFIO(e.target.value)}
+          recipientFioFocused={recipientFioFocused}
+          onRecipientFioFocus={() => setRecipientFioFocused(true)}
+          onRecipientFioBlur={() => setRecipientFioFocused(false)}
+          toCity={toCity}
+          onContinue={handleRecipientAddressContinue}
+        />
+      ) : currentStep === 'selectPvz' && selectedOffer && needsPvzSelection(selectedOffer) ? (
+        <SelectPvzStep
+          toCity={toCity}
+          fromCity={fromCity}
+          recipientAddress={recipientAddress || deliveryAddress}
+          senderAddress={pickupAddress || senderAddress}
+          selectedOffer={selectedOffer}
+          weight={weight}
+          length={length}
+          width={width}
+          height={height}
+          recipientDeliveryPointCode={recipientDeliveryPointCode}
+          onSelect={(point) => {
+            setRecipientDeliveryPointCode(point.code)
+            setRecipientDeliveryPointAddress(point.address)
+          }}
+          onContinue={handleSelectPvzContinue}
+        />
+      ) : currentStep === 'email' ? (
+        <EmailStep
+          email={email}
+          onEmailChange={(e) => setEmail(e.target.value)}
+          emailFocused={emailFocused}
+          onEmailFocus={() => setEmailFocused(true)}
+          onEmailBlur={() => setEmailFocused(false)}
+          agreePersonalData={agreePersonalData}
+          onAgreePersonalDataChange={(e) => setAgreePersonalData(e.target.checked)}
+          agreeMarketing={agreeMarketing}
+          onAgreeMarketingChange={(e) => setAgreeMarketing(e.target.checked)}
+          loadingOffers={false}
+          onContinue={handleEmailContinue}
+        />
+      ) : currentStep === 'orderComplete' && selectedRole === 'sender' ? (
+        (() => {
+          const inviteRecipient = location.state?.inviteRecipient || location.state?.wizardData?.inviteRecipient || false
+          if (inviteRecipient) {
+            return <OrderCompleteStep />
+          }
+          if (selectedOffer && needsPvzSelection(selectedOffer)) {
+            return (
+              <SelectPvzStep
+                toCity={toCity}
+                fromCity={fromCity}
+                recipientAddress={recipientAddress || deliveryAddress}
+                senderAddress={pickupAddress || senderAddress}
+                selectedOffer={selectedOffer}
+                weight={weight}
+                length={length}
+                width={width}
+                height={height}
+                recipientDeliveryPointCode={recipientDeliveryPointCode}
                     onSelect={(point) => {
                       setRecipientDeliveryPointCode(point.code)
                       setRecipientDeliveryPointAddress(point.address)
                     }}
-                    selectedCode={recipientDeliveryPointCode}
-                  />
-                  
-                  <button 
-                    onClick={handleContinue}
-                    disabled={!recipientDeliveryPointCode}
-                    className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed mt-6"
-                  >
-                    Продолжить
-                  </button>
-                </div>
-              )}
-
-              {currentStep === 'email' && (
-                <div className="mb-8">
-                  <h1 className="text-3xl font-bold text-[#2D2D2D] mb-2 text-center">
-                    Укажите ваш электронный адрес
-                  </h1>
-                  <p className="text-base text-[#2D2D2D] mb-8 text-center">
-                    По нему вы сможете авторизоваться, чтобы отслеживать статус доставки
-                  </p>
-                  <div className="mb-6">
-                    <div className="relative">
-                      <div className={`relative border rounded-xl ${
-                        emailFocused ? 'border-[#0077FE]' : 'border-[#C8C7CC]'
-                      }`}>
-                        <input
-                          type="email"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          onFocus={() => setEmailFocused(true)}
-                          onBlur={() => setEmailFocused(false)}
-                          placeholder=" "
-                          className="w-full px-4 pt-6 pb-2 border-0 bg-transparent rounded-xl text-base text-[#2D2D2D] focus:outline-none"
-                        />
-                        <label className={`absolute left-4 transition-all duration-200 pointer-events-none ${
-                          email || emailFocused ? 'top-2 text-xs' : 'top-1/2 -translate-y-1/2 text-base'
-                        } ${emailFocused ? 'text-[#0077FE]' : 'text-[#858585]'}`}>
-                          Электронный адрес
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mb-6 space-y-4">
-                    <label className="flex items-start gap-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={agreePersonalData}
-                        onChange={(e) => setAgreePersonalData(e.target.checked)}
-                        className="mt-1 w-5 h-5 rounded border-[#C8C7CC] text-[#0077FE] focus:ring-[#0077FE]"
-                      />
-                      <span className="text-sm text-[#2D2D2D]">
-                        Я согласен с <a href="#" className="text-[#0077FE] hover:underline">Условиями обработки моих персональных данных</a>, а также даю <a href="#" className="text-[#0077FE] hover:underline">Согласие на обработку моих ПД</a>
-                      </span>
-                    </label>
-                    <label className="flex items-start gap-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={agreeMarketing}
-                        onChange={(e) => setAgreeMarketing(e.target.checked)}
-                        className="mt-1 w-5 h-5 rounded border-[#C8C7CC] text-[#0077FE] focus:ring-[#0077FE]"
-                      />
-                      <span className="text-sm text-[#2D2D2D]">
-                        Даю <a href="#" className="text-[#0077FE] hover:underline">Согласие для направления информационных сообщений</a>. Отписаться от рассылки можно в любое время.
-                      </span>
-                    </label>
-                  </div>
-                  <button 
-                    onClick={handleContinue}
-                    disabled={!email || !agreePersonalData || loadingOffers}
-                    className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {loadingOffers ? 'Загрузка...' : 'Продолжить'}
-                  </button>
-                </div>
-              )}
-            </>
-          )}
-
-          <div className="text-center">
-            <button
-              onClick={handleBack}
-              className="text-sm text-[#858585] hover:text-[#2D2D2D] transition-colors"
-            >
-              ← Вернуться назад
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+                onContinue={handleSelectPvzContinue}
+              />
+            )
+          }
+          return <OrderCompleteStep />
+        })()
+      ) : null}
+    </WizardLayout>
   )
 }
 

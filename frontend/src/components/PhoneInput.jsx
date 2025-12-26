@@ -8,7 +8,8 @@ function PhoneInput({ value, onChange, label = 'Телефон', required = fals
 
   const handleAccept = (val, mask) => {
     if (!mask) {
-      onChange({ target: { value: val } })
+      const processed = val && val.startsWith('8') ? '+7' + val.substring(1) : val
+      onChange({ target: { value: processed } })
       return
     }
     
@@ -17,17 +18,22 @@ function PhoneInput({ value, onChange, label = 'Телефон', required = fals
     
     if (unmasked.startsWith('8')) {
       const digits = unmasked.substring(1)
-      if (digits.length > 0) {
-        const formatted = digits.length >= 10 
-          ? `+7 (${digits.substring(0, 3)}) ${digits.substring(3, 6)}-${digits.substring(6, 8)}-${digits.substring(8, 10)}`
-          : `+7 (${digits}`
+      let formatted = '+7'
+      if (digits.length >= 10) {
+        formatted = `+7 (${digits.substring(0, 3)}) ${digits.substring(3, 6)}-${digits.substring(6, 8)}-${digits.substring(8, 10)}`
+      } else if (digits.length >= 7) {
+        formatted = `+7 (${digits.substring(0, 3)}) ${digits.substring(3, 6)}-${digits.substring(6)}`
+      } else if (digits.length >= 4) {
+        formatted = `+7 (${digits.substring(0, 3)}) ${digits.substring(3)}`
+      } else if (digits.length > 0) {
+        formatted = `+7 (${digits}`
+      }
         processedValue = formatted
         if (maskRef.current) {
           setTimeout(() => {
             maskRef.current.value = processedValue
             maskRef.current.updateValue()
-          }, 10)
-        }
+        }, 0)
       }
     }
     

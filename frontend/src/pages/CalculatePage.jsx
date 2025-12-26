@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import CityInput from '../components/CityInput'
+import CityForm from '../components/CityForm'
 import PhoneInput from '../components/PhoneInput'
 import CodeInput from '../components/CodeInput'
 import { authAPI } from '../api'
@@ -12,10 +13,7 @@ import iconVerify from '../assets/images/icon-verify.svg'
 import heroConcept from '../assets/images/hero-concept.svg'
 import logosStrip from '../assets/images/logos-strip.svg'
 import iconCheckCircle from '../assets/images/icon-check-circle.svg'
-import aboutMain from '../assets/images/about-main.png'
-import aboutBox1 from '../assets/images/about-box-1.png'
-import aboutBox2 from '../assets/images/about-box-2.png'
-import aboutBox3 from '../assets/images/about-box-3.png'
+import aboutPic from '../assets/images/about_pic.png'
 import qrCode from '../assets/images/qr-code.svg'
 
 function CalculatePage() {
@@ -280,175 +278,179 @@ function CalculatePage() {
       </div>
 
       {/* Header */}
-      <header className="w-full flex justify-center items-center p-6">
-        <div className="w-full max-w-[1128px] flex items-center gap-6">
+      <header className="w-full flex justify-center items-center p-4 md:p-6">
+        <div className="w-full max-w-[1128px] flex items-center gap-3 md:gap-6">
           <Link to="/calculate">
-            <img src={logoSvg} alt="PochtaHub" className="h-8" />
+            <img src={logoSvg} alt="PochtaHub" className="h-6 md:h-8" />
           </Link>
-          <div className="flex items-center gap-1">
+          <div className="hidden md:flex items-center gap-1">
             <img src={iconVerify} alt="" className="w-6 h-6" />
             <span className="text-xs text-[#2D2D2D]">Агрегатор транспортных компаний</span>
           </div>
           <div className="ml-auto flex items-center gap-2">
             {isAuthenticated ? (
-              <Link to="/cabinet" className="px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#F4EEE2] text-[#2D2D2D]">Личный кабинет</Link>
+              <Link to="/cabinet" className="hidden md:inline-block px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#F4EEE2] text-[#2D2D2D]">Личный кабинет</Link>
             ) : (
               <button 
                 onClick={() => setShowLoginPopup(true)}
-                className="px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#F4EEE2] text-[#2D2D2D]"
+                className="hidden md:inline-block px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#F4EEE2] text-[#2D2D2D]"
               >
                 Войти
               </button>
             )}
-            <button className="px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#0077FE] text-white">Рассчитать</button>
+            <button className="px-3 md:px-4 py-2 md:py-2.5 rounded-lg text-xs md:text-sm font-semibold bg-[#0077FE] text-white">Рассчитать</button>
           </div>
         </div>
       </header>
 
       {/* Hero */}
-      <section className="w-full flex justify-center px-6">
-        <div className="w-full max-w-[1128px] border border-[#C8C7CC] rounded-2xl ">
-          <div className="bg-[#EEE5D3] py-2 flex items-center justify-center border rounded-t-2xl">
-            <img src={logosStrip} alt=""  />
+      <section className="w-full flex justify-center px-4 md:px-6">
+        <div className="w-full max-w-[1128px] border-[0.5px] border-[#C8C7CC] rounded-2xl">
+          <div className="bg-[#EEE5D3] py-2 flex items-center justify-center border-[0.5px] border-[#C8C7CC] rounded-t-2xl">
+            <img src={logosStrip} alt="" className="w-full max-w-full h-auto" />
           </div>
-          <div className="bg-[#F9F6F0] px-[72px] py-0 flex items-end justify-center gap-8">
-            <div className="flex-1 flex flex-col justify-center gap-6 py-12">
-              <h1 className="text-[48px] font-bold leading-[1.25] text-[#2D2D2D]">Сфотографируй посылку —<br />мы всё сделаем</h1>
-              <p className="text-base leading-[1.5] text-[#2D2D2D]">Получатель тоже может начать отправку<br />Если вы ждёте посылку — оформите доставку сами.<br />Мы свяжемся с отправителем и всё сделаем.</p>
+          <div className="bg-[#F9F6F0] px-4 md:px-[72px] py-6 md:py-0 flex flex-col md:flex-row items-center md:pb-0 pb-0 md:items-end justify-center gap-6 md:gap-8">
+            <div className="flex-1 flex flex-col justify-center gap-4 md:gap-6 py-6 md:py-12">
+              <h1 className="text-2xl md:text-[48px] font-bold leading-[1.25] text-[#2D2D2D] text-center md:text-left">Сфотографируй посылку —<br />мы всё сделаем</h1>
+              <p className="text-sm md:text-base leading-[1.5] text-[#2D2D2D] text-center md:text-left">Получатель тоже может начать отправку<br />Если вы ждёте посылку — оформите доставку сами.<br />Мы свяжемся с отправителем и всё сделаем.</p>
             </div>
-            <div className="shrink-0">
-              <img src={heroConcept} alt="" className="h-[428px]" />
+            <div className="shrink-0 flex items-center justify-center">
+              <img src={heroConcept} alt="" className="h-[200px] md:h-[428px] w-auto" />
             </div>
           </div>
-          <form className="bg-white border-t border-[#C8C7CC] shadow-[0_4px_8px_0_rgba(0,0,0,0.08)] flex" onSubmit={handleCalculate}>
-            <div className="flex-1 flex items-center ">
-              <CityInput
-                placeholder="Откуда"
-                value={fromCity}
-                onChange={(e) => setFromCity(e.target.value)}
-              />
-            </div>
-            <div className="flex-1 flex items-center border-l border-[#C8C7CC]">
-              <CityInput
-                placeholder="Куда"
-                value={toCity}
-                onChange={(e) => setToCity(e.target.value)}
-              />
-            </div>
-            <div className="flex items-center justify-center px-1.5 py-1">
-              <button type="submit" className="px-8 py-4 rounded-[10px] text-base font-semibold bg-[#0077FE] text-white whitespace-nowrap">Рассчитать и оформить</button>
-            </div>
-          </form>
-          <div className="bg-[#F9F6F0] px-6 py-4 flex items-center justify-center border-t border-[#C8C7CC] rounded-b-2xl">
+          <CityForm
+            fromCity={fromCity}
+            toCity={toCity}
+            onFromCityChange={(e) => setFromCity(e.target.value)}
+            onToCityChange={(e) => setToCity(e.target.value)}
+            onSubmit={handleCalculate}
+            buttonText="Рассчитать и оформить"
+            variant="hero"
+          />
+          <div className="bg-[#F9F6F0] px-6 py-4 flex items-center justify-center rounded-b-2xl">
             <p className="text-sm text-[#2D2D2D]">Начать оформление может как отправитель, так и получатель</p>
           </div>
         </div>
       </section>
 
       {/* How */}
-      <section className="w-full flex justify-center px-6 py-16">
-        <div className="w-full max-w-[1128px] flex flex-col gap-8">
-          <h2 className="text-[40px] font-bold text-[#2D2D2D]">Как это работает?</h2>
-          <div className="flex flex-col gap-12">
-            <div className="flex gap-6 items-start justify-center">
-              <div className="pt-6">
-                <div className="w-[340px] h-[380px] bg-[rgba(0,119,254,0.16)] rounded-2xl p-6 flex flex-col gap-6 -rotate-3">
+      <section className="w-full flex justify-center px-4 md:px-6 py-8 md:py-16">
+        <div className="w-full max-w-[1128px] flex flex-col gap-6 md:gap-8">
+          <h2 className="text-2xl md:text-[40px] font-bold text-[#2D2D2D] text-center">Как это работает?</h2>
+          <div className="flex flex-col gap-8 md:gap-12">
+            <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-center md:items-start justify-center">
+              <div className="pt-0 md:pt-6">
+                <div className="w-full md:w-[340px] h-auto md:h-[380px] bg-[rgba(0,119,254,0.16)] rounded-2xl p-6 flex text-center items-center justify-between flex-col gap-6 -rotate-0 md:-rotate-3">
                   <div className="w-10 h-10 rounded-full bg-[#0077FE] flex items-center justify-center text-lg font-bold text-white">1</div>
-                  <h3 className="text-xl font-bold text-[#2D2D2D]">Сфотографируй посылку или выбери фото из галереи</h3>
+                  <h3 className="text-lg md:text-xl font-bold text-[#2D2D2D]">Сфотографируй посылку или выбери фото из галереи</h3>
                   <p className="text-sm text-[#2D2D2D]">Загрузи фотографию с компьютера или с телефона</p>
                 </div>
               </div>
               <div className="">
-                <div className="w-[312px] h-[348px] bg-[rgba(246,189,96,0.32)] rounded-2xl p-6 flex flex-col gap-6">
+                <div className="w-full md:w-[312px] h-auto md:h-[348px] bg-[rgba(246,189,96,0.32)] items-center justify-between text-center rounded-2xl p-6 flex flex-col gap-6">
                   <div className="w-10 h-10 rounded-full bg-[#F6BD60] flex items-center justify-center text-lg font-bold text-[#2D2D2D]">2</div>
-                  <h3 className="text-xl font-bold text-[#2D2D2D]">Сервис определит размеры и рассчитает стоимость доставки</h3>
+                  <h3 className="text-lg md:text-xl font-bold text-[#2D2D2D]">Сервис определит размеры и рассчитает стоимость доставки</h3>
                   <p className="text-sm text-[#2D2D2D]">Загрузи фотографию с компьютера или с телефона</p>
                 </div>
               </div>
-              <div className="pt-6">
-                <div className="w-[340px] h-[380px] bg-[rgba(87,167,115,0.24)] rounded-2xl p-6 flex flex-col gap-6 rotate-3">
+              <div className="pt-0 md:pt-6">
+                <div className="w-full md:w-[340px] h-auto md:h-[380px] bg-[rgba(87,167,115,0.24)] items-center justify-between text-center rounded-2xl p-6 flex flex-col gap-6 rotate-0 md:rotate-3">
                   <div className="w-10 h-10 rounded-full bg-[#57A773] flex items-center justify-center text-lg font-bold text-white">3</div>
-                  <h3 className="text-xl font-bold text-[#2D2D2D]">Если все устроит, курьер приедет к вам и заберет посылку</h3>
+                  <h3 className="text-lg md:text-xl font-bold text-[#2D2D2D]">Если все устроит, курьер приедет к вам и заберет посылку</h3>
                   <p className="text-sm text-[#2D2D2D]">Загрузи фотографию с компьютера или с телефона</p>
                 </div>
               </div>
             </div>
-            <div className="flex flex-col items-center gap-6">
-              <p className="text-lg font-bold text-[#2D2D2D] text-center">Рассчитайте стоимость и сроки посылки за несколько минут<br/>сразу во всех транспортных компаниях</p>
-              <form className="w-full max-w-[800px] bg-white border border-[#C8C7CC] rounded-xl shadow-[0_-4px_24px_rgba(0,0,0,0.08)] flex" onSubmit={handleCalculate}>
-                <div className="flex-1 flex items-center px-6 py-4">
-                  <CityInput
-                    placeholder="Откуда"
-                    value={fromCity}
-                    onChange={(e) => setFromCity(e.target.value)}
-                  />
-                </div>
-                <div className="flex-1 flex items-center px-6 py-4 border-l border-[#C8C7CC]">
-                  <CityInput
-                    placeholder="Куда"
-                    value={toCity}
-                    onChange={(e) => setToCity(e.target.value)}
-                  />
-                </div>
-                <div className="flex items-center justify-center px-1.5">
-                  <button type="submit" className="px-6 py-4 rounded-[10px] text-base font-semibold bg-[#0077FE] text-white whitespace-nowrap">Перейти к загрузке фото</button>
-                </div>
-              </form>
+            <div className="flex flex-col items-center gap-4 md:gap-6">
+              <p className="text-base md:text-lg font-bold text-[#2D2D2D] text-center px-4">Рассчитайте стоимость и сроки посылки за несколько минут<br className="hidden md:block"/>сразу во всех транспортных компаниях</p>
+              <CityForm
+                fromCity={fromCity}
+                toCity={toCity}
+                onFromCityChange={(e) => setFromCity(e.target.value)}
+                onToCityChange={(e) => setToCity(e.target.value)}
+                onSubmit={handleCalculate}
+                buttonText="Рассчитать и оформить"
+                variant="default"
+              />
             </div>
           </div>
         </div>
       </section>
 
       {/* About */}
-      <section className="w-full flex justify-center px-6 py-16">
+      <section className="w-full flex justify-center px-4 md:px-6 py-8 md:py-16">
         <div className="w-full max-w-[1128px] relative">
-          <div className="bg-[#F4EEE2] rounded-2xl p-12 flex">
-            <div className="flex-1 flex flex-col gap-6">
-              <div className="flex flex-col gap-4">
-                <h2 className="text-[40px] font-bold text-[#2D2D2D] leading-[1.1]">Экономьте<br/>время и деньги</h2>
-                <p className="text-base text-[#2D2D2D] max-w-[400px]">PochtaHub это новый способ передавать посылки.<br/>Вы просто делаете фото, и получаете готовое решение. Делаем вашу доставку в 3 клика</p>
+          <div className="bg-[#F4EEE2] rounded-2xl p-6 md:p-12 flex flex-col md:flex-row">
+            <div className="flex-1 flex flex-col gap-4 md:gap-6">
+              <div className="flex flex-col gap-3 md:gap-4">
+                <h2 className="text-2xl md:text-[40px] font-bold text-[#2D2D2D] leading-[1.1]">PochtaHub — просто отправить. Удобно получить</h2>
+                <div className="flex flex-col gap-2 md:gap-3 text-sm md:text-base text-[#2D2D2D] max-w-full md:max-w-[400px]">
+                  <p><span className="font-semibold">Отправителю</span> не нужно разбираться в доставке — он просто передаёт посылку курьеру или сдаёт её в пункт приёма.</p>
+                  <p><span className="font-semibold">Получатель</span> сам выбирает транспортную компанию, сроки и стоимость, и оплачивает доставку онлайн.</p>
+                </div>
               </div>
-              <button className="w-fit px-6 py-4 rounded-[10px] text-base font-semibold bg-[#0077FE] text-white">Получить расчет</button>
+              <button className="w-full md:w-fit px-6 py-4 rounded-[10px] text-base font-semibold bg-[#0077FE] text-white">Я получатель — хочу оформить доставку</button>
             </div>
-            <div className="flex-1"></div>
+            <div className="flex-1 flex items-center justify-center mt-6 md:mt-0">
+              <img src={aboutPic} alt="" className="max-w-full h-auto md:absolute md:right-[85px] md:bottom-0" />
+            </div>
           </div>
-          <img src={aboutMain} alt="" className="absolute right-12 bottom-0 h-[320px]" />
-          <img src={aboutBox1} alt="" className="absolute right-[380px] top-8 h-[80px]" />
-          <img src={aboutBox2} alt="" className="absolute right-[80px] top-4 h-[60px]" />
-          <img src={aboutBox3} alt="" className="absolute right-[200px] bottom-[100px] h-[50px]" />
         </div>
       </section>
 
       {/* Bullets */}
-      <section className="w-full flex justify-center px-6 py-16">
-        <div className="w-full max-w-[1128px] grid grid-cols-2 gap-6">
+      <section className="w-full flex justify-center px-4 md:px-6 py-8 md:py-16">
+        <div className="w-full max-w-[1128px] grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
           <div className="bg-white border border-[#C8C7CC] rounded-2xl p-6 flex flex-col gap-3">
             <div className="w-12 h-12 rounded-full bg-[#F4F2F3] flex items-center justify-center">
-              <img src={iconCheckCircle} alt="" className="w-6 h-6" />
+              <svg className="w-6 h-6 text-[#0077FE]" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
             </div>
             <h3 className="text-xl font-bold text-[#2D2D2D]">Все варианты доставки в одном месте</h3>
-            <p className="text-sm text-[#2D2D2D]">Сразу видите предложения от проверенных транспортных компаний без перехода по разным сайтам.</p>
+            <div className="flex flex-col gap-2 text-sm text-[#2D2D2D]">
+              <p>Сравните стоимость и сроки сразу по нескольким транспортным компаниям.</p>
+              <p>Без перехода на сайты, без ручного поиска — всё в одном месте.</p>
+            </div>
           </div>
           <div className="bg-white border border-[#C8C7CC] rounded-2xl p-6 flex flex-col gap-3">
             <div className="w-12 h-12 rounded-full bg-[#F4F2F3] flex items-center justify-center">
-              <img src={iconCheckCircle} alt="" className="w-6 h-6" />
+              <svg className="w-6 h-6 text-[#0077FE]" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
             </div>
-            <h3 className="text-xl font-bold text-[#2D2D2D]">Никакой головной боли</h3>
-            <p className="text-sm text-[#2D2D2D]">Мы сами подберем надежную транспортную компанию под ваш маршрут и бюджет. Просто выберите готовое решение.</p>
+            <h3 className="text-xl font-bold text-[#2D2D2D]">Сервис для отправителя и получателя</h3>
+            <div className="flex flex-col gap-2 text-sm text-[#2D2D2D]">
+              <p>Начать отправку может любой: и отправитель, и получатель.</p>
+              <p>Мы сами свяжемся со второй стороной и поможем всё оформить — удобно и без неловких диалогов.</p>
+            </div>
+          </div>
+          <div className="bg-white border border-[#C8C7CC] rounded-2xl p-6 flex flex-col gap-3">
+            <div className="w-12 h-12 rounded-full bg-[#F4F2F3] flex items-center justify-center">
+              <svg className="w-6 h-6 text-[#0077FE]" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold text-[#2D2D2D]">Никакой головной боли и лучшая цена</h3>
+            <div className="flex flex-col gap-2 text-sm text-[#2D2D2D]">
+              <p>Мы автоматизировали всё оформление: расчёты, выбор ТК, документы и передачу посылки.</p>
+              <p>Не нужно ходить по сайтам или стоять в очередях — всё за пару минут онлайн.</p>
+              <p>Стоимость сервиса — всего 50 Р.</p>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="w-full flex justify-center px-6 py-12 mt-auto">
-        <div className="w-full max-w-[1128px] flex flex-col gap-8">
-          <div className="flex flex-col gap-6">
-            <div className="flex items-center gap-4">
+      <footer className="w-full flex justify-center px-4 md:px-6 py-8 md:py-12 mt-auto">
+        <div className="w-full max-w-[1128px] flex flex-col gap-6 md:gap-8">
+          <div className="flex flex-col gap-4 md:gap-6">
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-4">
               <span className="text-sm text-[#2D2D2D] cursor-pointer">Рассчитать доставку</span>
-              <div className="w-px h-4 bg-[#C8C7CC]"></div>
+              <div className="hidden md:block w-px h-4 bg-[#C8C7CC]"></div>
               <span className="text-sm text-[#2D2D2D] cursor-pointer">Рассчитать в Telegram-боте</span>
             </div>
-            <div className="flex gap-12">
+            <div className="flex flex-col md:flex-row gap-6 md:gap-12">
               <div className="flex flex-col gap-2">
                 <span className="text-sm text-[#2D2D2D]">CDEK</span>
                 <span className="text-sm text-[#2D2D2D]">Деловые Линии</span>
@@ -461,7 +463,7 @@ function CalculatePage() {
                 <span className="text-sm text-[#2D2D2D]">Байкал Сервис</span>
                 <span className="text-sm text-[#2D2D2D]">Boxberry</span>
               </div>
-              <div className="ml-auto bg-white border border-[#C8C7CC] rounded-xl p-3 flex items-center gap-3">
+              <div className="md:ml-auto bg-white border border-[#C8C7CC] rounded-xl p-3 flex items-center gap-3 w-full md:w-auto justify-center md:justify-start">
                 <img src={qrCode} alt="" className="w-12 h-12" />
                 <div className="flex flex-col gap-1">
                   <span className="text-sm font-semibold text-[#2D2D2D]">@pochtahub_bot</span>
@@ -471,28 +473,30 @@ function CalculatePage() {
               </div>
             </div>
           </div>
-            <img src={logosStrip} alt=""  />
-          <div className="flex items-center gap-6">
-            <img src={logoSvg} alt="PochtaHub" className="h-8" />
-            <div className="flex items-center gap-1">
+          <div className="w-full overflow-hidden">
+            <img src={logosStrip} alt="" className="w-full h-auto" />
+          </div>
+          <div className="flex flex-col md:flex-row items-center md:items-center gap-4 md:gap-6">
+            <img src={logoSvg} alt="PochtaHub" className="h-6 md:h-8" />
+            <div className="hidden md:flex items-center gap-1">
               <img src={iconVerify} alt="" className="w-6 h-6" />
               <span className="text-xs text-[#2D2D2D]">Агрегатор транспортных компаний</span>
             </div>
             <div className="ml-auto flex items-center gap-2">
               {isAuthenticated ? (
-                <Link to="/cabinet" className="px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#F4EEE2] text-[#2D2D2D]">Личный кабинет</Link>
+                <Link to="/cabinet" className="hidden md:inline-block px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#F4EEE2] text-[#2D2D2D]">Личный кабинет</Link>
               ) : (
                 <button 
                   onClick={() => setShowLoginPopup(true)}
-                  className="px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#F4EEE2] text-[#2D2D2D]"
+                  className="hidden md:inline-block px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#F4EEE2] text-[#2D2D2D]"
                 >
                   Войти
                 </button>
               )}
-              <button className="px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#0077FE] text-white">Рассчитать</button>
+              <button className="px-3 md:px-4 py-2 md:py-2.5 rounded-lg text-xs md:text-sm font-semibold bg-[#0077FE] text-white">Рассчитать</button>
             </div>
           </div>
-          <div className="flex gap-12 pt-6 border-t border-[#C8C7CC]">
+          <div className="flex flex-col md:flex-row gap-6 md:gap-12 pt-6 border-t border-[#C8C7CC]">
             <div className="flex flex-col gap-2">
               <a href="#" className="text-xs text-[#858585]">Политика конфиденциальности и обработки ПД</a>
               <a href="#" className="text-xs text-[#858585]">Согласие на обработку ПД</a>
@@ -502,7 +506,7 @@ function CalculatePage() {
               <a href="#" className="text-xs text-[#858585]">Пользовательское соглашение</a>
               <a href="#" className="text-xs text-[#858585]">Политика cookie</a>
             </div>
-            <div className="ml-auto flex items-center gap-2 cursor-pointer">
+            <div className="md:ml-auto flex items-center gap-2 cursor-pointer justify-center md:justify-start">
               <span className="text-sm text-[#2D2D2D]">Наверх</span>
               <div className="w-10 h-10 rounded-full bg-[#F4F2F3] flex items-center justify-center text-base">↑</div>
             </div>

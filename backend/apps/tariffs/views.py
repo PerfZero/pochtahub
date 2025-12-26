@@ -102,14 +102,14 @@ class AnalyzeImageView(generics.GenericAPIView):
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a measurement assistant. Analyze objects in the image and estimate their dimensions and value. Always respond with valid JSON only, even if the object is not a package."
+                        "content": "You are a measurement assistant. Analyze the MAIN object in the foreground of the image and estimate its dimensions and value with high precision. Always respond with valid JSON only, even if the object is not a package."
                     },
                     {
                         "role": "user",
                         "content": [
                             {
                                 "type": "text",
-                                "text": "Analyze all objects in this image (packages, boxes, items, etc.). Count how many objects you see. For each object, identify its name/type. Estimate dimensions in centimeters (length, width, height) and weight in kilograms for the main object or combined objects. Use reference objects (hands, phones, etc.) for scale. Estimate the total declared value in rubles (оценочная стоимость) for insurance purposes based on the visible items. Return ONLY valid JSON: {\"object_count\": number, \"object_names\": [\"name1\", \"name2\", ...], \"length\": number, \"width\": number, \"height\": number, \"weight\": number, \"declared_value\": number}. All numeric values must be numbers. If you cannot determine a dimension, estimate based on visible objects. The declared_value should be a reasonable estimate of the total value of all items in rubles for insurance calculation."
+                                "text": "Analyze ONLY the main object in the FOREGROUND of this image. Ignore all background objects, other items, or anything not in the center/front of the photo. Focus on the single most prominent object (package, box, item, smartphone, etc.) that is clearly visible in the foreground.\n\nIMPORTANT for dimensions:\n- Length: longest horizontal dimension\n- Width: shorter horizontal dimension (perpendicular to length)\n- Height: vertical dimension (thickness/depth). For thin objects like smartphones, tablets, books - pay special attention to height/thickness. Even thin objects have measurable height (usually 0.5-2 cm for phones, 1-3 cm for tablets). Minimum height should be at least 0.5 cm for any solid object.\n- Weight: estimate in kilograms based on object type and size\n\nUse reference objects (hands, fingers, phones, coins, etc.) for scale if visible. Be precise with height measurements - even very thin objects have measurable thickness.\n\nEstimate the declared value in rubles (оценочная стоимость) for insurance purposes based on THIS MAIN OBJECT.\n\nReturn ONLY valid JSON: {\"object_count\": 1, \"object_names\": [\"name of main object\"], \"length\": number, \"width\": number, \"height\": number, \"weight\": number, \"declared_value\": number}. All numeric values must be numbers. Height must be at least 0.5 cm for any solid object. The declared_value should be a reasonable estimate of the main object's value in rubles for insurance calculation."
                             },
                             {
                                 "type": "image_url",
@@ -165,13 +165,17 @@ class AnalyzeImageView(generics.GenericAPIView):
                     object_names = []
                 declared_value = safe_float(data.get('declared_value'), 0)
                 
+                if height > 0 and height < 1:
+                    height = 1.0
+                    logger.info(f"Высота скорректирована до минимума 1 см (было меньше)")
+                
                 if length == 0 and width == 0 and height == 0 and weight == 0:
                     logger.warning(f"All values are zero. Raw response: {content}")
                 
                 return Response({
                     'length': max(0, length),
                     'width': max(0, width),
-                    'height': max(0, height),
+                    'height': max(1, height) if height > 0 else 0,
                     'weight': max(0, weight),
                     'object_count': object_count,
                     'object_names': object_names,
@@ -202,10 +206,14 @@ class AnalyzeImageView(generics.GenericAPIView):
                     if not isinstance(object_names, list):
                         object_names = []
                     
+                    height_value = safe_float(data.get('height'), 0)
+                    if height_value > 0 and height_value < 1:
+                        height_value = 1.0
+                    
                     return Response({
                         'length': max(0, safe_float(data.get('length'), 0)),
                         'width': max(0, safe_float(data.get('width'), 0)),
-                        'height': max(0, safe_float(data.get('height'), 0)),
+                        'height': max(1, height_value) if height_value > 0 else 0,
                         'weight': max(0, safe_float(data.get('weight'), 0)),
                         'object_count': safe_int(data.get('object_count'), 1),
                         'object_names': object_names,

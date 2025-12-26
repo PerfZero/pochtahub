@@ -155,7 +155,7 @@ function CityInput({ value = '', onChange, label = 'Город', required = fals
           placeholder=" "
           className="peer w-full px-4 pt-6 pb-2 border-0 rounded-xl text-base text-[#2D2D2D] focus:outline-none focus:border-[#0077FE]"
         />
-        <label className={`absolute left-4 transition-all duration-200 pointer-events-none ${
+        <label className={`absolute left-4 bold  transition-all duration-200 pointer-events-none ${
           isFloating
             ? 'top-3 text-xs'
             : 'top-1/2 -translate-y-1/2 text-base'

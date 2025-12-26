@@ -35,6 +35,7 @@ class Order(models.Model):
     length = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='Длина (см)')
     width = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='Ширина (см)')
     height = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name='Высота (см)')
+    package_image = models.ImageField(upload_to='package_images/', blank=True, null=True, verbose_name='Фото посылки')
 
     transport_company_id = models.IntegerField(null=True, blank=True, verbose_name='ID транспортной компании')
     transport_company_name = models.CharField(max_length=100, blank=True, verbose_name='Название транспортной компании')

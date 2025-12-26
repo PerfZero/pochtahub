@@ -4,7 +4,7 @@ import logoSvg from '../assets/whitelogo.svg'
 import cdekIcon from '../assets/images/cdek.svg'
 import CityInput from '../components/CityInput'
 import NumberInput from '../components/NumberInput'
-import { tariffsAPI } from '../api'
+import { tariffsAPI, ordersAPI } from '../api'
 
 const API_URL = import.meta.env.VITE_API_URL || '/api'
 const getMediaUrl = (path) => {
@@ -81,8 +81,11 @@ function OffersPage() {
   const [recalculating, setRecalculating] = useState(false)
   const [photoFile, setPhotoFile] = useState(null)
   const [photoPreview, setPhotoPreview] = useState(null)
+  const [photoUrl, setPhotoUrl] = useState(wizardData.photoUrl || null)
   const [photoError, setPhotoError] = useState('')
-  const [length, setLength] = useState('')
+  const [photoAnalyzing, setPhotoAnalyzing] = useState(false)
+  const [photoAnalysis, setPhotoAnalysis] = useState(null)
+    const [length, setLength] = useState('')
   const [width, setWidth] = useState('')
   const [height, setHeight] = useState('')
   const [weight, setWeight] = useState('')
@@ -93,10 +96,16 @@ function OffersPage() {
   const assistantMessageInitial = 'Привет! Я виртуальный ассистент Саша. Я помогу оформить доставку без лишних действий. Хотите, чтобы получатель сам выбрал доставку и указал точный адрес?'
   const assistantMessageSecond = 'Я помогу быстро отправить или получить посылку. Представленный расчёт ниже, сейчас ориентировочный. Хотите сделать его точнее?'
   const assistantMessageSuccess = 'Отлично! Теперь мы можем посчитать точную стоимость вашей посылки. Выберите наиболее подходящее предложение ниже.'
+  const assistantMessageAfterRecipient = 'Получатель уже получил уведомление. Чтобы мы точно рассчитали доставку, давайте уточним размеры посылки.'
+  
+  const [recipientNotified, setRecipientNotified] = useState(location.state?.recipientNotified || false)
   
   const getCurrentMessage = () => {
     if (selectedPackageOption) {
       return assistantMessageSuccess
+    }
+    if (recipientNotified) {
+      return assistantMessageAfterRecipient
     }
     return assistantStep === 'initial' ? assistantMessageInitial : assistantMessageSecond
   }
@@ -167,7 +176,8 @@ function OffersPage() {
         width: finalWidth,
         height: finalHeight,
         packageOption: 'photo',
-        photoFile
+        photoFile,
+        photoUrl
       }
       
       setWizardData(updatedWizardData)
@@ -175,7 +185,7 @@ function OffersPage() {
       
       try {
         const response = await tariffsAPI.calculate({
-          weight: parseFloat(finalWeight),
+          weight: parseFloat(parseFloat(finalWeight).toFixed(2)),
           length: parseFloat(finalLength) || 0,
           width: parseFloat(finalWidth) || 0,
           height: parseFloat(finalHeight) || 0,
@@ -183,11 +193,20 @@ function OffersPage() {
           to_city: updatedWizardData.toCity,
           from_address: updatedWizardData.senderAddress || updatedWizardData.fromCity,
           to_address: updatedWizardData.deliveryAddress || updatedWizardData.toCity,
+          courier_pickup: filterCourierPickup,
+          courier_delivery: filterCourierDelivery,
         })
         
         if (response.data && response.data.options) {
           setOffers(response.data.options)
+          setError('')
+        } else {
+          console.error('Нет предложений в ответе (photo)')
+          setError('Не удалось получить предложения')
         }
+      } catch (err) {
+        console.error('Ошибка при пересчете офферов (photo):', err)
+        setError(err.response?.data?.error || 'Ошибка при пересчете офферов')
       } finally {
         setRecalculating(false)
       }
@@ -206,7 +225,7 @@ function OffersPage() {
       
       try {
         const response = await tariffsAPI.calculate({
-          weight: parseFloat(weight),
+          weight: parseFloat(parseFloat(weight).toFixed(2)),
           length: parseFloat(length),
           width: parseFloat(width),
           height: parseFloat(height),
@@ -214,11 +233,20 @@ function OffersPage() {
           to_city: updatedWizardData.toCity,
           from_address: updatedWizardData.senderAddress || updatedWizardData.fromCity,
           to_address: updatedWizardData.deliveryAddress || updatedWizardData.toCity,
+          courier_pickup: filterCourierPickup,
+          courier_delivery: filterCourierDelivery,
         })
         
         if (response.data && response.data.options) {
           setOffers(response.data.options)
+          setError('')
+        } else {
+          console.error('Нет предложений в ответе (manual)')
+          setError('Не удалось получить предложения')
         }
+      } catch (err) {
+        console.error('Ошибка при пересчете офферов (manual):', err)
+        setError(err.response?.data?.error || 'Ошибка при пересчете офферов')
       } finally {
         setRecalculating(false)
       }
@@ -255,7 +283,7 @@ function OffersPage() {
       
       try {
         const response = await tariffsAPI.calculate({
-          weight: parseFloat(finalWeight),
+          weight: parseFloat(parseFloat(finalWeight).toFixed(2)),
           length: parseFloat(finalLength),
           width: parseFloat(finalWidth),
           height: parseFloat(finalHeight),
@@ -263,15 +291,25 @@ function OffersPage() {
           to_city: updatedWizardData.toCity,
           from_address: updatedWizardData.senderAddress || updatedWizardData.fromCity,
           to_address: updatedWizardData.deliveryAddress || updatedWizardData.toCity,
+          courier_pickup: filterCourierPickup,
+          courier_delivery: filterCourierDelivery,
         })
         
         if (response.data && response.data.options) {
           setOffers(response.data.options)
+          setError('')
+        } else {
+          console.error('Нет предложений в ответе (unknown)')
+          setError('Не удалось получить предложения')
         }
+      } catch (err) {
+        console.error('Ошибка при пересчете офферов (unknown):', err)
+        setError(err.response?.data?.error || 'Ошибка при пересчете офферов')
       } finally {
         setRecalculating(false)
       }
     } else {
+      console.error('Не выполнено ни одно условие для пересчета', { packageOption, photoPreview, length, width, height, weight, selectedSize })
       setRecalculating(false)
     }
   }
@@ -336,22 +374,35 @@ function OffersPage() {
     }
     
     const loadOffers = async () => {
-      if (!currentWizardData.weight || !currentWizardData.fromCity || !currentWizardData.toCity) {
-        setError('Недостаточно данных для расчета')
+      if (!currentWizardData.fromCity || !currentWizardData.toCity) {
+        if (!recipientNotified) {
+          setError('Недостаточно данных для расчета')
+        }
+        setLoading(false)
+        return
+      }
+      
+      const weightToUse = currentWizardData.weight || '1'
+      const lengthToUse = currentWizardData.length || '0'
+      const widthToUse = currentWizardData.width || '0'
+      const heightToUse = currentWizardData.height || '0'
+      
+      if (!currentWizardData.weight && !recipientNotified && offers.length > 0) {
         setLoading(false)
         return
       }
 
       try {
         setLoading(true)
+        setError('')
         const dimensions = {
-          length: currentWizardData.length || 0,
-          width: currentWizardData.width || 0,
-          height: currentWizardData.height || 0,
+          length: parseFloat(lengthToUse) || 0,
+          width: parseFloat(widthToUse) || 0,
+          height: parseFloat(heightToUse) || 0,
         }
         
         const response = await tariffsAPI.calculate({
-          weight: parseFloat(currentWizardData.weight),
+          weight: parseFloat(parseFloat(weightToUse).toFixed(2)),
           ...dimensions,
           from_city: currentWizardData.fromCity,
           to_city: currentWizardData.toCity,
@@ -360,14 +411,10 @@ function OffersPage() {
           courier_pickup: filterCourierPickup,
           courier_delivery: filterCourierDelivery,
         })
-
-        console.log('Ответ API расчета тарифов:', response.data)
         
         if (response.data && response.data.options) {
-          console.log('Найдено предложений:', response.data.options.length)
           setOffers(response.data.options)
         } else {
-          console.error('Нет предложений в ответе:', response.data)
           setError('Не удалось получить предложения')
         }
       } catch (err) {
@@ -379,6 +426,19 @@ function OffersPage() {
 
     loadOffers()
   }, [location.search, location.state])
+  
+  // Обновляем recipientNotified при возврате с WizardPage
+  useEffect(() => {
+    if (location.state?.recipientNotified) {
+      setRecipientNotified(true)
+    }
+    if (location.state?.wizardData) {
+      setWizardData(location.state.wizardData)
+      if (location.state.wizardData.recipientPhone) {
+        setRecipientNotified(true)
+      }
+    }
+  }, [location.state])
 
   const getCompanyInitial = (name) => {
     if (!name) return '?'
@@ -408,6 +468,46 @@ function OffersPage() {
   const cheapestOffer = sortedOffers.length > 0 ? sortedOffers[0] : null
   const fastestOffer = [...offers].sort((a, b) => (a.delivery_time || 999) - (b.delivery_time || 999))[0]
 
+  const handleNavigateToRecipientPhone = () => {
+    const updatedWizardData = {
+      ...wizardData,
+      fromCity: wizardData.fromCity || fromCity,
+      toCity: wizardData.toCity || toCity,
+      deliveryName: deliveryName,
+      selectedRole: 'sender', // Устанавливаем роль отправителя
+    }
+    
+    // Если получатель уже получил уведомление, переходим на package
+    const targetStep = recipientNotified ? 'package' : 'recipientPhone'
+    const returnToOffers = !recipientNotified // returnToOffers только при первом переходе
+    
+    // Сохраняем данные в URL для надежности
+    try {
+      const jsonString = JSON.stringify(updatedWizardData)
+      const encoded = btoa(unescape(encodeURIComponent(jsonString)))
+      navigate(`/wizard?data=${encodeURIComponent(encoded)}&step=${targetStep}`, {
+        state: { 
+          wizardData: updatedWizardData, 
+          returnToOffers: returnToOffers, 
+          currentStep: targetStep, 
+          selectedRole: 'sender',
+          inviteRecipient: true
+        }
+      })
+    } catch (err) {
+      console.error('Ошибка кодирования данных:', err)
+      navigate(`/wizard?step=${targetStep}`, {
+        state: { 
+          wizardData: updatedWizardData, 
+          returnToOffers: returnToOffers, 
+          currentStep: targetStep, 
+          selectedRole: 'sender',
+          inviteRecipient: true
+        }
+      })
+    }
+  }
+
   const handleSelectOffer = (offer) => {
     const updatedWizardData = {
       ...wizardData,
@@ -427,18 +527,50 @@ function OffersPage() {
       returnToPayment: wizardData.returnToPayment || false,
     }
     
-    // Сохраняем данные в URL для надежности
-    try {
-      const jsonString = JSON.stringify(updatedWizardData)
-      const encoded = btoa(unescape(encodeURIComponent(jsonString)))
-      navigate(`/wizard?data=${encodeURIComponent(encoded)}`, {
-        state: { wizardData: updatedWizardData, selectedOffer: updatedWizardData.selectedOffer }
-      })
-    } catch (err) {
-      console.error('Ошибка кодирования данных:', err)
-      navigate('/wizard', {
-        state: { wizardData: updatedWizardData, selectedOffer: updatedWizardData.selectedOffer }
-      })
+    const isAssistantFlow = wizardData.inviteRecipient && wizardData.recipientPhone
+    const hasCompletedFlow = (wizardData.pickupAddress || wizardData.senderAddress) && 
+                             wizardData.recipientPhone && 
+                             wizardData.paymentPayer && 
+                             (wizardData.recipientAddress || wizardData.deliveryAddress)
+    
+    const selectedOfferData = {
+      company_id: offer.company_id,
+      company_name: offer.company_name,
+      company_code: offer.company_code,
+      price: offer.price,
+      tariff_code: offer.tariff_code,
+      tariff_name: offer.tariff_name,
+      delivery_time: offer.delivery_time,
+    }
+    
+    const navigateState = {
+      wizardData: updatedWizardData,
+      selectedOffer: selectedOfferData
+    }
+    
+    const needsPvzSelection = (offer) => {
+      const isCDEK = offer.company_name === 'CDEK' || offer.company_code === 'cdek'
+      if (!isCDEK) return false
+      
+      const tariffCode = offer.tariff_code
+      if (!tariffCode) return false
+      
+      const PVZ_TARIFFS = [136, 62, 63, 233, 234, 235, 236, 237, 238, 239, 240]
+      return PVZ_TARIFFS.includes(tariffCode)
+    }
+    
+    if (isAssistantFlow) {
+      navigateState.inviteRecipient = true
+      navigateState.selectedRole = 'sender'
+      navigate('/wizard?step=pickupAddress', { state: navigateState })
+    } else if (hasCompletedFlow) {
+      if (needsPvzSelection(offer)) {
+        navigate('/wizard?step=selectPvz', { state: navigateState })
+      } else {
+        navigate('/wizard?step=email', { state: navigateState })
+      }
+    } else {
+      navigate('/wizard?step=role', { state: navigateState })
     }
   }
 
@@ -466,7 +598,7 @@ function OffersPage() {
       }
       
       const response = await tariffsAPI.calculate({
-        weight: parseFloat(updatedWizardData.weight),
+        weight: parseFloat(parseFloat(updatedWizardData.weight).toFixed(2)),
         ...dimensions,
         from_city: fromCity,
         to_city: toCity,
@@ -475,14 +607,10 @@ function OffersPage() {
         courier_pickup: filterCourierPickup,
         courier_delivery: filterCourierDelivery,
       })
-
-      console.log('Ответ API расчета тарифов (handleCalculate):', response.data)
       
       if (response.data && response.data.options) {
-        console.log('Найдено предложений:', response.data.options.length)
         setOffers(response.data.options)
       } else {
-        console.error('Нет предложений в ответе:', response.data)
         setError('Не удалось получить предложения')
       }
     } catch (err) {
@@ -510,7 +638,7 @@ function OffersPage() {
         }
         
         const response = await tariffsAPI.calculate({
-          weight: parseFloat(wizardData.weight),
+          weight: parseFloat(parseFloat(wizardData.weight).toFixed(2)),
           ...dimensions,
           from_city: fromCity,
           to_city: toCity,
@@ -568,12 +696,12 @@ function OffersPage() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F5]">
-      <header className="w-full bg-[#0077FE] flex flex-col items-center px-6 py-6 gap-6">
+      <header className="w-full bg-[#0077FE] flex flex-col items-center px-4 md:px-6 py-4 md:py-6 gap-4 md:gap-6">
         <Link to="/calculate">
-          <img src={logoSvg} alt="PochtaHub" className="h-8" />
+          <img src={logoSvg} alt="PochtaHub" className="h-6 md:h-8" />
         </Link>
-        <div className="w-full max-w-[720px] bg-white rounded-2xl flex items-stretch  p-2">
-          <div className="flex-1 px-6 py-2 border-r border-[#E5E5E5]">
+        <div className="w-full max-w-[720px] bg-white rounded-2xl flex flex-col md:flex-row items-stretch p-2 gap-2 md:gap-0">
+          <div className="flex-1 px-4 md:px-6 py-2 border-b md:border-b-0 md:border-r border-[#E5E5E5]">
             <CityInput
               placeholder="Откуда"
               value={fromCity}
@@ -582,7 +710,7 @@ function OffersPage() {
               label="Откуда"
             />
           </div>
-          <div className="flex-1 px-6 py-2">
+          <div className="flex-1 px-4 md:px-6 py-2 border-b md:border-b-0 md:border-r border-[#E5E5E5]">
             <CityInput
               placeholder="Куда"
               value={toCity}
@@ -594,7 +722,7 @@ function OffersPage() {
           <button 
             onClick={handleCalculate}
             disabled={!fromCity || !toCity || !wizardData.weight || loading}
-            className="bg-[#0077FE] text-white px-4 py-2 text-base font-semibold whitespace-nowrap rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+            className="bg-[#0077FE] text-white px-4 py-3 md:py-2 text-sm md:text-base font-semibold whitespace-nowrap rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Расчет...' : 'Рассчитать стоимость'}
           </button>
@@ -602,7 +730,7 @@ function OffersPage() {
       </header>
 
       {showPackagePopup && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 md:p-6">
           <div className="bg-white rounded-2xl max-w-[468px] w-full max-h-[90vh] overflow-y-auto relative">
             <button
               onClick={() => {
@@ -610,6 +738,7 @@ function OffersPage() {
                 setPackageOption(null)
                 setPhotoFile(null)
                 setPhotoPreview(null)
+                setPhotoUrl(null)
                 setPhotoError('')
                 setLength('')
                 setWidth('')
@@ -623,35 +752,65 @@ function OffersPage() {
             </button>
             
             {packageOption === 'photo' && (
-              <div className="p-8">
-                <h2 className="text-3xl font-bold text-[#2D2D2D] mb-8 text-center">
+              <div className="p-4 md:p-8">
+                <h2 className="text-2xl md:text-3xl font-bold text-[#2D2D2D] mb-6 md:mb-8 text-center">
                   Загрузить фото
                 </h2>
                 
                 <div className="mb-6">
-                  <div className="border-2 border-dashed border-[#0077FE] rounded-xl p-8 mb-6">
+                  <div className="border-2 border-dashed border-[#0077FE] rounded-xl p-4 md:p-8 mb-6">
                     {!photoPreview ? (
-                      <div className="flex flex-col items-center gap-4">
-                        <p className="text-sm text-[#2D2D2D]">Фотография весом не более 5 мб.</p>
+                      <div className="flex flex-col items-center gap-3 md:gap-4">
+                        <p className="text-xs md:text-sm text-[#2D2D2D] text-center">Фотография весом не более 5 мб.</p>
                         <input
                           type="file"
                           id="photo-upload-popup"
                           accept="image/*"
-                          onChange={(e) => {
+                          onChange={async (e) => {
                             const file = e.target.files[0]
                             if (file) {
                               if (file.size > 5 * 1024 * 1024) {
                                 setPhotoError('Файл слишком большой. Максимальный размер 5 МБ.')
                                 setPhotoFile(null)
                                 setPhotoPreview(null)
+                                setPhotoUrl(null)
+                                setPhotoAnalysis(null)
                               } else {
                                 setPhotoFile(file)
                                 setPhotoError('')
+                                setPhotoAnalyzing(true)
+                                setPhotoAnalysis(null)
                                 const reader = new FileReader()
                                 reader.onloadend = () => {
                                   setPhotoPreview(reader.result)
                                 }
                                 reader.readAsDataURL(file)
+                                
+                                try {
+                                  const formData = new FormData()
+                                  formData.append('image', file)
+                                  const uploadResponse = await ordersAPI.uploadPackageImage(formData)
+                                  if (uploadResponse.data?.success && uploadResponse.data?.image_url) {
+                                    setPhotoUrl(uploadResponse.data.image_url)
+                                  }
+                                  
+                                  const analyzeFormData = new FormData()
+                                  analyzeFormData.append('image', file)
+                                  const analyzeResponse = await tariffsAPI.analyzeImage(analyzeFormData)
+                                  if (analyzeResponse.data) {
+                                    setPhotoAnalysis(analyzeResponse.data)
+                                    if (analyzeResponse.data.length) setLength(analyzeResponse.data.length.toString())
+                                    if (analyzeResponse.data.width) setWidth(analyzeResponse.data.width.toString())
+                                    if (analyzeResponse.data.height) setHeight(analyzeResponse.data.height.toString())
+                                    if (analyzeResponse.data.weight) setWeight(analyzeResponse.data.weight.toString())
+                                    if (analyzeResponse.data.declared_value) setEstimatedValue(analyzeResponse.data.declared_value.toString())
+                                  }
+                                } catch (err) {
+                                  console.error('Ошибка обработки изображения:', err)
+                                  setPhotoError(err.response?.data?.error || 'Ошибка обработки изображения')
+                                } finally {
+                                  setPhotoAnalyzing(false)
+                                }
                               }
                             }
                           }}
@@ -669,31 +828,95 @@ function OffersPage() {
                       </div>
                     ) : (
                       <div className="flex flex-col items-center">
-                        <div className="relative inline-block">
+                        <div className="relative inline-block w-full">
                           <img
                             src={photoPreview}
                             alt="Загруженное фото"
-                            className="max-w-full h-auto rounded-lg max-h-64"
+                            className="max-w-full h-auto rounded-lg max-h-48 md:max-h-64"
                           />
                           <button
                             onClick={() => {
                               setPhotoFile(null)
                               setPhotoPreview(null)
+                              setPhotoUrl(null)
+                              setPhotoAnalysis(null)
+                              setPhotoAnalyzing(false)
                               setPhotoError('')
                               const input = document.getElementById('photo-upload-popup')
                               if (input) input.value = ''
                             }}
-                            className="absolute top-2 right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-lg hover:bg-gray-100 transition-colors"
+                            className="absolute top-2 right-2 w-7 h-7 md:w-8 md:h-8 bg-white rounded-full flex items-center justify-center shadow-lg hover:bg-gray-100 transition-colors"
                           >
-                            <span className="text-[#2D2D2D] text-lg font-bold">×</span>
+                            <span className="text-[#2D2D2D] text-base md:text-lg font-bold">×</span>
                           </button>
                         </div>
+                        
+                        {photoAnalyzing && (
+                          <div className="mt-3 md:mt-4 text-center">
+                            <p className="text-xs md:text-sm text-[#0077FE]">Анализируем изображение...</p>
+                          </div>
+                        )}
+                        
+                        {photoAnalysis && !photoAnalyzing && (
+                          <div className="mt-4 w-full bg-[#F0F7FF] rounded-xl p-3 md:p-4 border border-[#0077FE]">
+                            <h3 className="text-sm md:text-base font-semibold text-[#2D2D2D] mb-2 md:mb-3 text-center">
+                              Результаты анализа
+                            </h3>
+                            <div className="grid grid-cols-2 gap-2 md:gap-3 mb-3">
+                              <div className="bg-white rounded-lg p-2 md:p-3">
+                                <p className="text-xs text-[#666] mb-1">Длина</p>
+                                <p className="text-sm md:text-base font-semibold text-[#2D2D2D]">
+                                  {photoAnalysis.length ? `${Math.round(photoAnalysis.length)} см` : '—'}
+                                </p>
+                              </div>
+                              <div className="bg-white rounded-lg p-2 md:p-3">
+                                <p className="text-xs text-[#666] mb-1">Ширина</p>
+                                <p className="text-sm md:text-base font-semibold text-[#2D2D2D]">
+                                  {photoAnalysis.width ? `${Math.round(photoAnalysis.width)} см` : '—'}
+                                </p>
+                              </div>
+                              <div className="bg-white rounded-lg p-2 md:p-3">
+                                <p className="text-xs text-[#666] mb-1">Высота</p>
+                                <p className="text-sm md:text-base font-semibold text-[#2D2D2D]">
+                                  {photoAnalysis.height ? `${Math.round(photoAnalysis.height)} см` : '—'}
+                                </p>
+                              </div>
+                              <div className="bg-white rounded-lg p-2 md:p-3">
+                                <p className="text-xs text-[#666] mb-1">Вес</p>
+                                <p className="text-sm md:text-base font-semibold text-[#2D2D2D]">
+                                  {photoAnalysis.weight ? `${photoAnalysis.weight.toFixed(2)} кг` : '—'}
+                                </p>
+                              </div>
+                            </div>
+                            {photoAnalysis.object_count > 0 && (
+                              <div className="bg-white rounded-lg p-3 mb-3">
+                                <p className="text-xs text-[#666] mb-1">
+                                  Обнаружено объектов: {photoAnalysis.object_count}
+                                </p>
+                                {photoAnalysis.object_names && photoAnalysis.object_names.length > 0 && (
+                                  <p className="text-sm text-[#2D2D2D]">
+                                    {photoAnalysis.object_names.join(', ')}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                            {photoAnalysis.declared_value > 0 && (
+                              <div className="bg-white rounded-lg p-3">
+                                <p className="text-xs text-[#666] mb-1">Оценочная стоимость</p>
+                                <p className="text-base font-semibold text-[#2D2D2D]">
+                                  {Math.round(photoAnalysis.declared_value)} ₽
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        
                         <div className="mt-4 text-center">
                           <input
                             type="file"
                             id="photo-replace-popup"
                             accept="image/*"
-                            onChange={(e) => {
+                            onChange={async (e) => {
                               const file = e.target.files[0]
                               if (file) {
                                 if (file.size > 5 * 1024 * 1024) {
@@ -701,11 +924,39 @@ function OffersPage() {
                                 } else {
                                   setPhotoFile(file)
                                   setPhotoError('')
+                                  setPhotoAnalyzing(true)
+                                  setPhotoAnalysis(null)
                                   const reader = new FileReader()
                                   reader.onloadend = () => {
                                     setPhotoPreview(reader.result)
                                   }
                                   reader.readAsDataURL(file)
+                                  
+                                  try {
+                                    const formData = new FormData()
+                                    formData.append('image', file)
+                                    const uploadResponse = await ordersAPI.uploadPackageImage(formData)
+                                    if (uploadResponse.data?.success && uploadResponse.data?.image_url) {
+                                      setPhotoUrl(uploadResponse.data.image_url)
+                                    }
+                                    
+                                    const analyzeFormData = new FormData()
+                                    analyzeFormData.append('image', file)
+                                    const analyzeResponse = await tariffsAPI.analyzeImage(analyzeFormData)
+                                    if (analyzeResponse.data) {
+                                      setPhotoAnalysis(analyzeResponse.data)
+                                      if (analyzeResponse.data.length) setLength(analyzeResponse.data.length.toString())
+                                      if (analyzeResponse.data.width) setWidth(analyzeResponse.data.width.toString())
+                                      if (analyzeResponse.data.height) setHeight(analyzeResponse.data.height.toString())
+                                      if (analyzeResponse.data.weight) setWeight(analyzeResponse.data.weight.toString())
+                                      if (analyzeResponse.data.declared_value) setEstimatedValue(analyzeResponse.data.declared_value.toString())
+                                    }
+                                  } catch (err) {
+                                    console.error('Ошибка обработки изображения:', err)
+                                    setPhotoError(err.response?.data?.error || 'Ошибка обработки изображения')
+                                  } finally {
+                                    setPhotoAnalyzing(false)
+                                  }
                                 }
                               }
                             }}
@@ -728,7 +979,7 @@ function OffersPage() {
                   <button
                     onClick={handlePackageContinue}
                     disabled={isContinueDisabled}
-                    className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold hover:bg-[#0066CC] transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0077FE]"
+                    className="w-full bg-[#0077FE] text-white px-6 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold hover:bg-[#0066CC] transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0077FE]"
                   >
                     Продолжить
                   </button>
@@ -737,12 +988,12 @@ function OffersPage() {
             )}
             
             {packageOption === 'manual' && (
-              <div className="p-8">
-                  <h2 className="text-3xl font-bold text-[#2D2D2D] mb-8">
+              <div className="p-4 md:p-8">
+                  <h2 className="text-2xl md:text-3xl font-bold text-[#2D2D2D] mb-6 md:mb-8">
                     Указать точные размеры
                   </h2>
                   
-                  <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="grid grid-cols-2 gap-3 md:gap-4 mb-4">
                     <NumberInput
                       value={length}
                       onChange={(e) => setLength(e.target.value)}
@@ -791,7 +1042,7 @@ function OffersPage() {
                   <button
                     onClick={handlePackageContinue}
                     disabled={isContinueDisabled}
-                    className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold hover:bg-[#0066CC] transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0077FE]"
+                    className="w-full bg-[#0077FE] text-white px-6 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold hover:bg-[#0066CC] transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0077FE]"
                   >
                     Продолжить
                   </button>
@@ -799,12 +1050,12 @@ function OffersPage() {
               )}
             
             {packageOption === 'unknown' && (
-                <div className="p-8">
-                  <h2 className="text-3xl font-bold text-[#2D2D2D] mb-8">
+                <div className="p-4 md:p-8">
+                  <h2 className="text-2xl md:text-3xl font-bold text-[#2D2D2D] mb-6 md:mb-8">
                     Указать точные размеры
                   </h2>
                   
-                  <div className="grid grid-cols-2 tablet:grid-cols-4 gap-4 mb-6">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
                     {sizeOptions.map((option) => (
                       <button
                         key={option.id}
@@ -852,7 +1103,7 @@ function OffersPage() {
                   <button
                     onClick={handlePackageContinue}
                     disabled={isContinueDisabled}
-                    className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold hover:bg-[#0066CC] transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0077FE]"
+                    className="w-full bg-[#0077FE] text-white px-6 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold hover:bg-[#0066CC] transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0077FE]"
                   >
                     Продолжить
                   </button>
@@ -862,17 +1113,17 @@ function OffersPage() {
         </div>
       )}
       
-      <div className="flex justify-center pt-12 pb-8">
-        <div className="w-full max-w-[720px] mx-6">
+      <div className="flex justify-center pt-6 md:pt-12 pb-8">
+        <div className="w-full max-w-[720px] mx-4 md:mx-6">
           {showAssistant && (
-            <div className="bg-white rounded-2xl   px-4 py-4 mb-6 flex gap-3">
-              <div className="w-16 h-16 rounded-full overflow-hidden flex-shrink-0">
+            <div className="bg-white rounded-2xl px-3 md:px-4 py-3 md:py-4 mb-4 md:mb-6 flex gap-2 md:gap-3">
+              <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden flex-shrink-0">
                 <img src={assistantAvatar} alt="Саша" className="w-full h-full object-cover" />
               </div>
               <div className="flex-1 flex flex-col gap-1">
-                <p className="text-sm font-semibold text-[#2D2D2D]">Ассистент Саша</p>
-                <div className="bg-[#F9F6F0] rounded-tl-[5px] rounded-tr-[12px] rounded-bl-[8px] rounded-br-[8px] px-3 py-2 mb-1">
-                  <p className="text-base text-[#2D2D2D]">
+                <p className="text-xs md:text-sm font-semibold text-[#2D2D2D]">Ассистент Саша</p>
+                <div className="bg-[#F9F6F0] rounded-tl-[5px] rounded-tr-[12px] rounded-bl-[8px] rounded-br-[8px] px-2 md:px-3 py-2 mb-1">
+                  <p className="text-sm md:text-base text-[#2D2D2D]">
                     {recalculating ? 'Пересчитываем предложения...' : isThinking ? (
                       <span className="inline-flex gap-1">
                         <span className="animate-pulse">.</span>
@@ -889,8 +1140,32 @@ function OffersPage() {
                     )}
                   </p>
                 </div>
-                {recalculating ? null : assistantStep === 'initial' ? (
-                  <div className="flex gap-1">
+                {recalculating ? null : recipientNotified ? (
+                  // Когда получатель уже получил уведомление, показываем кнопки для размеров
+                  <div className="flex flex-col md:flex-row gap-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPackageOption('photo')
+                        setShowPackagePopup(true)
+                      }}
+                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[8px] rounded-br-[8px] md:rounded-bl-[8px] md:rounded-br-[12px] px-2 md:px-3 py-2 text-sm md:text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
+                    >
+                      📸 Загрузить фото посылки
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPackageOption('manual')
+                        setShowPackagePopup(true)
+                      }}
+                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[8px] rounded-br-[8px] md:rounded-bl-[12px] md:rounded-br-[8px] md:rounded-tr-[8px] px-2 md:px-3 py-2 text-sm md:text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
+                    >
+                      📐 Указать точные размеры
+                    </button>
+                  </div>
+                ) : assistantStep === 'initial' ? (
+                  <div className="flex flex-col md:flex-row gap-1">
                     <button
                       type="button"
                       onClick={() => {
@@ -903,7 +1178,7 @@ function OffersPage() {
                           }
                         })
                       }}
-                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[8px] rounded-br-[12px] px-3 py-2 text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
+                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[8px] rounded-br-[8px] md:rounded-bl-[8px] md:rounded-br-[12px] px-2 md:px-3 py-2 text-sm md:text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
                     >
                       🤝 Да, пригласить получателя
                     </button>
@@ -913,13 +1188,13 @@ function OffersPage() {
                         setAssistantStep('second')
                         setTypedText('')
                       }}
-                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[12px] rounded-br-[8px] px-3 py-2 text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
+                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[8px] rounded-br-[8px] md:rounded-bl-[12px] md:rounded-br-[8px] md:rounded-tr-[8px] px-2 md:px-3 py-2 text-sm md:text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
                     >
                       📦 Нет, оформлю сам
                     </button>
                   </div>
                 ) : selectedPackageOption === 'photo' ? (
-                  <div className="flex gap-1">
+                  <div className="flex flex-col md:flex-row gap-1">
                     <button
                       type="button"
                       onClick={() => {
@@ -928,7 +1203,7 @@ function OffersPage() {
                         setPhotoFile(null)
                         setPhotoPreview(null)
                       }}
-                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[8px] rounded-br-[12px] px-3 py-2 text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
+                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[8px] rounded-br-[8px] md:rounded-bl-[8px] md:rounded-br-[12px] px-2 md:px-3 py-2 text-sm md:text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
                     >
                       📸 Загрузить другое фото
                     </button>
@@ -942,13 +1217,13 @@ function OffersPage() {
                         setHeight('')
                         setWeight('')
                       }}
-                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[12px] rounded-br-[8px] px-3 py-2 text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
+                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[8px] rounded-br-[8px] md:rounded-bl-[12px] md:rounded-br-[8px] md:rounded-tr-[8px] px-2 md:px-3 py-2 text-sm md:text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
                     >
                       📐 Указать точные размеры
                     </button>
                   </div>
                 ) : selectedPackageOption === 'manual' ? (
-                  <div className="flex gap-1">
+                  <div className="flex flex-col md:flex-row gap-1">
                     <button
                       type="button"
                       onClick={() => {
@@ -957,7 +1232,7 @@ function OffersPage() {
                         setPhotoFile(null)
                         setPhotoPreview(null)
                       }}
-                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[8px] rounded-br-[12px] px-3 py-2 text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
+                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[8px] rounded-br-[8px] md:rounded-bl-[8px] md:rounded-br-[12px] px-2 md:px-3 py-2 text-sm md:text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
                     >
                       📸 Загрузить фото посылки
                     </button>
@@ -967,30 +1242,42 @@ function OffersPage() {
                         setPackageOption('manual')
                         setShowPackagePopup(true)
                       }}
-                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[12px] rounded-br-[8px] px-3 py-2 text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
+                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[8px] rounded-br-[8px] md:rounded-bl-[12px] md:rounded-br-[8px] md:rounded-tr-[8px] px-2 md:px-3 py-2 text-sm md:text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
                     >
                       📐 Указать другие размеры
                     </button>
                   </div>
                 ) : (
-                  <div className="flex gap-1">
+                  <div className="flex flex-col md:flex-row gap-1">
                     <button
                       type="button"
                       onClick={() => {
-                        setPackageOption('photo')
-                        setShowPackagePopup(true)
+                        if (recipientNotified) {
+                          // Если получатель уже получил уведомление, открываем попап
+                          setPackageOption('photo')
+                          setShowPackagePopup(true)
+                        } else {
+                          // В первый раз переходим на recipientPhone
+                          handleNavigateToRecipientPhone()
+                        }
                       }}
-                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[8px] rounded-br-[12px] px-3 py-2 text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
+                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[8px] rounded-br-[8px] md:rounded-bl-[8px] md:rounded-br-[12px] px-2 md:px-3 py-2 text-sm md:text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
                     >
                       📸 Загрузить фото посылки
                     </button>
                     <button
                       type="button"
                       onClick={() => {
-                        setPackageOption('manual')
-                        setShowPackagePopup(true)
+                        if (recipientNotified) {
+                          // Если получатель уже получил уведомление, открываем попап
+                          setPackageOption('manual')
+                          setShowPackagePopup(true)
+                        } else {
+                          // В первый раз переходим на recipientPhone
+                          handleNavigateToRecipientPhone()
+                        }
                       }}
-                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[12px] rounded-br-[8px] px-3 py-2 text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
+                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[8px] rounded-br-[8px] md:rounded-bl-[12px] md:rounded-br-[8px] md:rounded-tr-[8px] px-2 md:px-3 py-2 text-sm md:text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
                     >
                       📐 Указать точные размеры
                     </button>
@@ -999,61 +1286,63 @@ function OffersPage() {
               </div>
             </div>
           )}
-          <div className=" rounded-2xl 8 mb-6">
+          <div className="rounded-2xl mb-4 md:mb-6">
             <div className="flex items-center justify-center gap-2 mb-2">
-              <h1 className="text-3xl text-center font-bold text-[#2D2D2D]">
+              <h1 className="text-xl md:text-3xl text-center font-bold text-[#2D2D2D] px-2">
               Предложения по вашим параметрам 🔥
               </h1>
             </div>
-            <p className="text-base text-center text-[#2D2D2D] mb-6">
+            <p className="text-sm md:text-base text-center text-[#2D2D2D] mb-4 md:mb-6 px-2">
             Выберите наиболее подходящий вариант доставки 👇
             </p>
 
-            <div className="flex items-center gap-4 mb-6 flex-wrap">
-              <label className="flex items-center gap-3 cursor-pointer bg-white border border-[#C8C7CC] rounded-full px-4 py-2 transition-shadow">
-                <span className="text-sm text-[#2D2D2D]">Курьер забирает</span>
-                <div className="relative">
-                  <input
-                    type="checkbox"
-                    checked={filterCourierPickup}
-                    onChange={(e) => {
-                      setFilterCourierPickup(e.target.checked)
-                    }}
-                    className="sr-only"
-                  />
-                  <div className={`w-11 h-6 rounded-full transition-colors duration-200 ${
-                    filterCourierPickup ? 'bg-[#0077FE]' : 'bg-[#E5E5E5]'
-                  }`}>
-                    <div className={`w-5 h-5 bg-white rounded-full transition-transform duration-200 mt-0.5 translate-y-0.5 ${
-                      filterCourierPickup ? 'translate-x-5' : 'translate-x-0.5'
-                    }`}></div>
+            <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4 mb-4 md:mb-6">
+              <div className="grid grid-cols-2 gap-3 md:flex md:gap-4">
+                <label className="flex items-center justify-between md:justify-start gap-3 cursor-pointer bg-white border border-[#C8C7CC] rounded-full px-4 py-2 transition-shadow">
+                  <span className="text-xs md:text-sm text-[#2D2D2D]">Курьер забирает</span>
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      checked={filterCourierPickup}
+                      onChange={(e) => {
+                        setFilterCourierPickup(e.target.checked)
+                      }}
+                      className="sr-only"
+                    />
+                    <div className={`w-11 h-6 rounded-full transition-colors duration-200 ${
+                      filterCourierPickup ? 'bg-[#0077FE]' : 'bg-[#E5E5E5]'
+                    }`}>
+                      <div className={`w-5 h-5 bg-white rounded-full transition-transform duration-200 mt-0.5 translate-y-0.5 ${
+                        filterCourierPickup ? 'translate-x-5' : 'translate-x-0.5'
+                      }`}></div>
+                    </div>
                   </div>
-                </div>
-              </label>
-              <label className="flex items-center gap-3 cursor-pointer bg-white border border-[#C8C7CC] rounded-full px-4 py-2 transition-shadow">
-                <span className="text-sm text-[#2D2D2D]">Курьер привезет</span>
-                <div className="relative">
-                  <input
-                    type="checkbox"
-                    checked={filterCourierDelivery}
-                    onChange={(e) => {
-                      setFilterCourierDelivery(e.target.checked)
-                    }}
-                    className="sr-only"
-                  />
-                  <div className={`w-11 h-6 rounded-full transition-colors duration-200 ${
-                    filterCourierDelivery ? 'bg-[#0077FE]' : 'bg-[#E5E5E5]'
-                  }`}>
-                    <div className={`w-5 h-5 bg-white rounded-full transition-transform duration-200 mt-0.5 translate-y-0.5 ${
-                      filterCourierDelivery ? 'translate-x-5' : 'translate-x-0.5'
-                    }`}></div>
+                </label>
+                <label className="flex items-center justify-between md:justify-start gap-3 cursor-pointer bg-white border border-[#C8C7CC] rounded-full px-4 py-2 transition-shadow">
+                  <span className="text-xs md:text-sm text-[#2D2D2D]">Курьер привезет</span>
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      checked={filterCourierDelivery}
+                      onChange={(e) => {
+                        setFilterCourierDelivery(e.target.checked)
+                      }}
+                      className="sr-only"
+                    />
+                    <div className={`w-11 h-6 rounded-full transition-colors duration-200 ${
+                      filterCourierDelivery ? 'bg-[#0077FE]' : 'bg-[#E5E5E5]'
+                    }`}>
+                      <div className={`w-5 h-5 bg-white rounded-full transition-transform duration-200 mt-0.5 translate-y-0.5 ${
+                        filterCourierDelivery ? 'translate-x-5' : 'translate-x-0.5'
+                      }`}></div>
+                    </div>
                   </div>
-                </div>
-              </label>
+                </label>
+              </div>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="ml-auto px-4 py-2 border border-[#C8C7CC] rounded-xl text-sm text-[#2D2D2D] focus:outline-none focus:border-[#0077FE]"
+                className="w-full md:w-auto md:ml-auto px-4 py-2 border border-[#C8C7CC] rounded-xl text-xs md:text-sm text-[#2D2D2D] focus:outline-none focus:border-[#0077FE]"
               >
                 <option value="price">По наилучшей цене</option>
                 <option value="delivery_time">По скорости доставки</option>
@@ -1108,67 +1397,63 @@ function OffersPage() {
                   return (
                     <div
                       key={`${offer.company_id}-${offer.tariff_code || index}`}
-                      className="relative flex items-center justify-between flex-row rounded-xl p-6 hover:shadow-lg transition-shadow border-b-4 border-[#add3ff] rounded-b-2xl bg-white"
+                      className="relative flex flex-col md:flex-row md:items-center md:justify-between rounded-xl p-4 md:p-6 hover:shadow-lg transition-shadow border-b-4 border-[#add3ff] rounded-b-2xl bg-white gap-3 md:gap-4"
                     >
                       {(isCheapest || isFastest) && (
-                        <div className="absolute -top-3 left-4 z-10">
+                        <div className="absolute -top-3 left-3 md:left-4 z-10">
                           {isCheapest && (
-                            <span className="px-3 py-1  bg-[#35c353] text-white rounded-full text-xs font-semibold ">
+                            <span className="px-2 md:px-3 py-1 bg-[#35c353] text-white rounded-full text-xs font-semibold">
                               Самый дешевый
                             </span>
                           )}
                           {isFastest && !isCheapest && (
-                            <span className="px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-semibold shadow-md">
+                            <span className="px-2 md:px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-semibold shadow-md">
                               Самый быстрый
                             </span>
                           )}
                         </div>
                       )}
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-center gap-4">
-                          {offer.company_logo ? (
-                            <img 
-                              src={getMediaUrl(offer.company_logo)} 
-                              alt={offer.company_name} 
-                              className="w-12 h-12 object-contain" 
-                            />
-                          ) : isCDEK ? (
-                            <img src={cdekIcon} alt="CDEK" className="w-12 h-12" />
-                          ) : (
-                            <div className={`w-12 h-12 rounded-full ${getCompanyColor(index)} flex items-center justify-center text-white text-lg font-bold`}>
-                              {getCompanyInitial(offer.company_name)}
-                            </div>
-                          )}
-                          <div>
-                            <p className="text-lg font-bold text-[#2D2D2D]">
-                              {offer.price ? Number(offer.price).toLocaleString('ru-RU') : '?'}₽
-                            </p>
-                            <p className="text-sm text-[#858585]">
-                              {offer.delivery_time_min && offer.delivery_time_max
-                                ? `Доставка за ${offer.delivery_time_min}-${offer.delivery_time_max} дн.`
-                                : offer.delivery_time
-                                ? `Доставка за ${offer.delivery_time} ${offer.delivery_time === 1 ? 'дн.' : 'дн.'}`
-                                : 'Срок доставки уточняется'}
-                            </p>
-                            {(deliveryName || offer.company_name) && (
-                              <p className="text-sm text-[#2D2D2D] mt-1 font-medium">
-                                {deliveryName || offer.company_name}
-                              </p>
-                            )}
+                      <div className="flex items-center gap-3 md:gap-4 flex-1">
+                        {offer.company_logo ? (
+                          <img 
+                            src={getMediaUrl(offer.company_logo)} 
+                            alt={offer.company_name} 
+                            className="w-10 h-10 md:w-12 md:h-12 object-contain" 
+                          />
+                        ) : isCDEK ? (
+                          <img src={cdekIcon} alt="CDEK" className="w-10 h-10 md:w-12 md:h-12" />
+                        ) : (
+                          <div className={`w-10 h-10 md:w-12 md:h-12 rounded-full ${getCompanyColor(index)} flex items-center justify-center text-white text-base md:text-lg font-bold`}>
+                            {getCompanyInitial(offer.company_name)}
                           </div>
+                        )}
+                        <div>
+                          <p className="text-base md:text-lg font-bold text-[#2D2D2D]">
+                            {offer.price ? Number(offer.price).toLocaleString('ru-RU') : '?'}₽
+                          </p>
+                          <p className="text-xs md:text-sm text-[#858585]">
+                            {offer.delivery_time_min && offer.delivery_time_max
+                              ? `Доставка за ${offer.delivery_time_min}-${offer.delivery_time_max} дн.`
+                              : offer.delivery_time
+                              ? `Доставка за ${offer.delivery_time} ${offer.delivery_time === 1 ? 'дн.' : 'дн.'}`
+                              : 'Срок доставки уточняется'}
+                          </p>
+                          {(deliveryName || offer.company_name) && (
+                            <p className="text-xs md:text-sm text-[#2D2D2D] mt-1 font-medium">
+                              {deliveryName || offer.company_name}
+                            </p>
+                          )}
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-4 ">
+                      <div className="flex items-center gap-2 md:gap-4">
                         {filterCourierPickup && (
-                          <span className="text-xs
- text-[#2D2D2D] flex items-center gap-1">
+                          <span className="text-xs text-[#2D2D2D] flex items-center gap-1 whitespace-nowrap">
                             <span className="text-green-500">✓</span> Курьер забирает
                           </span>
                         )}
                         {filterCourierDelivery && (
-                          <span className="text-xs
- text-[#2D2D2D] flex items-center gap-1">
+                          <span className="text-xs text-[#2D2D2D] flex items-center gap-1 whitespace-nowrap">
                             <span className="text-green-500">✓</span> Курьер привезет
                           </span>
                         )}
@@ -1177,7 +1462,7 @@ function OffersPage() {
                       {!isFromUrl && (
                         <button
                           onClick={() => handleSelectOffer(offer)}
-                          className={` px-3 py-3 rounded-xl font-size-14px font-semibold transition-colors rounded-8px px-16px w-171px h-40px text-sm
+                          className={`w-full md:w-auto px-4 md:px-3 py-3 md:py-3 rounded-xl font-semibold transition-colors text-sm whitespace-nowrap
  ${
                             isCheapest || isFastest
                               ? 'bg-[#0077FE] text-white hover:bg-[#0066CC]'
@@ -1196,16 +1481,16 @@ function OffersPage() {
           </div>
 
           {!isFromUrl && (
-            <div className="bg-white rounded-2xl p-8 relative">
-              <h2 className="text-2xl font-bold text-[#2D2D2D] mb-2">
+            <div className="bg-white rounded-2xl p-4 md:p-8 relative">
+              <h2 className="text-xl md:text-2xl font-bold text-[#2D2D2D] mb-2">
                 Сомневаешься что выбрать?
               </h2>
-              <p className="text-base text-[#2D2D2D] mb-6">
+              <p className="text-sm md:text-base text-[#2D2D2D] mb-4 md:mb-6">
                 Поделись расчётом с получателем, он сам выберет
               </p>
               <button 
                 onClick={handleShare}
-                className="w-full bg-[#0077FE] text-white px-6 py-4 rounded-xl text-base font-semibold hover:bg-[#0066CC] transition-colors"
+                className="w-full bg-[#0077FE] text-white px-6 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold hover:bg-[#0066CC] transition-colors"
               >
                 {shareSuccess ? 'Ссылка скопирована!' : 'Поделиться расчётом'}
               </button>

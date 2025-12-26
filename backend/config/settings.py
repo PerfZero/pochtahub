@@ -97,6 +97,9 @@ AUTH_PASSWORD_VALIDATORS = [
 LANGUAGE_CODE = 'ru-ru'
 TIME_ZONE = 'Europe/Moscow'
 USE_I18N = True
+
+# Frontend URL for SMS links
+FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')
 USE_TZ = True
 
 STATIC_URL = 'static/'
@@ -182,6 +185,16 @@ LOGGING = {
             'propagate': False,
         },
         'apps.auth': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'apps.payment': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'apps.orders': {
             'handlers': ['console', 'file'],
             'level': 'INFO',
             'propagate': False,

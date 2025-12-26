@@ -4,6 +4,8 @@ from rest_framework.decorators import api_view, permission_classes
 from .models import Order, OrderEvent
 from .serializers import OrderSerializer, OrderCreateSerializer, OrderStatusUpdateSerializer
 import logging
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 
 logger = logging.getLogger(__name__)
 
@@ -273,3 +275,36 @@ def get_order_tracking(request, pk):
             return Response({'error': 'Транспортная компания не указана'}, status=400)
     except Order.DoesNotExist:
         return Response({'error': 'Заказ не найден'}, status=404)
+
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def upload_package_image(request):
+    try:
+        if 'image' not in request.FILES:
+            return Response({'error': 'Изображение не предоставлено'}, status=400)
+        
+        image_file = request.FILES['image']
+        
+        if image_file.size > 5 * 1024 * 1024:
+            return Response({'error': 'Файл слишком большой. Максимальный размер 5 МБ.'}, status=400)
+        
+        allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif']
+        if image_file.content_type not in allowed_types:
+            return Response({'error': 'Неподдерживаемый тип файла'}, status=400)
+        
+        file_name = default_storage.save(
+            f'package_images/{image_file.name}',
+            ContentFile(image_file.read())
+        )
+        
+        file_url = request.build_absolute_uri(default_storage.url(file_name))
+        
+        return Response({
+            'success': True,
+            'image_url': file_url,
+            'file_name': file_name
+        }, status=status.HTTP_201_CREATED)
+    except Exception as e:
+        logger.error(f'Ошибка загрузки изображения: {str(e)}', exc_info=True)
+        return Response({'error': f'Ошибка загрузки изображения: {str(e)}'}, status=500)

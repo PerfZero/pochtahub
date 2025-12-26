@@ -7,11 +7,12 @@ const DADATA_TOKEN = import.meta.env.VITE_DADATA_TOKEN || ''
 function AddressInput({ value = '', onChange, onCityChange, label = 'Адрес', required = false, city = null }) {
   const [options, setOptions] = useState([])
   const [loading, setLoading] = useState(false)
-  const [inputValue, setInputValue] = useState(value)
   const [isOpen, setIsOpen] = useState(false)
   const [isFocused, setIsFocused] = useState(false)
   const wrapperRef = useRef(null)
   const inputRef = useRef(null)
+
+  const [inputValue, setInputValue] = useState(value)
 
   const hasValue = inputValue && inputValue.length > 0
   const isFloating = isFocused || hasValue
@@ -56,7 +57,7 @@ function AddressInput({ value = '', onChange, onCityChange, label = 'Адрес'
           query, 
           count: 10,
           ...(cleanCity ? { locations: [{ city: cleanCity }] } : {}),
-          restrict_value: false
+          restrict_value: cleanCity ? true : false
         },
         {
           headers: {
@@ -66,7 +67,13 @@ function AddressInput({ value = '', onChange, onCityChange, label = 'Адрес'
         }
       )
 
-      const suggestions = response.data.suggestions.map((item) => {
+      const suggestions = response.data.suggestions
+        .filter((item) => {
+          if (!cleanCity) return true
+          const itemCity = (item.data.city || item.data.settlement || '').replace(/^г\.?\s*/i, '').trim().toLowerCase()
+          return itemCity === cleanCity.toLowerCase()
+        })
+        .map((item) => {
         const fullAddress = item.value
         const addressWithoutCity = city ? removeCityFromAddress(fullAddress, city) : fullAddress
         return {

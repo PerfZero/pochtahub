@@ -1,7 +1,11 @@
 from rest_framework import serializers
 from .models import Order, OrderEvent
 from django.contrib.auth import get_user_model
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 import uuid
+import requests
+import os
 
 User = get_user_model()
 
@@ -15,6 +19,7 @@ class OrderEventSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     events = OrderEventSerializer(many=True, read_only=True)
+    package_image = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
@@ -22,16 +27,29 @@ class OrderSerializer(serializers.ModelSerializer):
             'id', 'status', 'sender_name', 'sender_phone', 'sender_address', 'sender_city',
             'sender_company', 'sender_tin', 'sender_contragent_type',
             'recipient_name', 'recipient_phone', 'recipient_address', 'recipient_city',
-            'weight', 'length', 'width', 'height', 'transport_company_id', 'transport_company_name',
+            'weight', 'length', 'width', 'height', 'package_image', 'transport_company_id', 'transport_company_name',
             'price', 'external_order_uuid', 'external_order_number', 'created_at', 'updated_at', 'events'
         )
         read_only_fields = ('id', 'created_at', 'updated_at', 'events')
+
+    def get_package_image(self, obj):
+        if obj.package_image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.package_image.url)
+            else:
+                from django.conf import settings
+                return f"{settings.MEDIA_URL}{obj.package_image}"
+        return None
 
 
 class OrderCreateSerializer(serializers.ModelSerializer):
     length = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
     width = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
     height = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
+    weight = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
+    package_image = serializers.URLField(required=False, allow_null=True, allow_blank=True)
+    selected_role = serializers.CharField(required=False, write_only=True)
     
     class Meta:
         model = Order
@@ -39,19 +57,33 @@ class OrderCreateSerializer(serializers.ModelSerializer):
             'id', 'sender_name', 'sender_phone', 'sender_address', 'sender_city',
             'sender_company', 'sender_tin', 'sender_contragent_type',
             'recipient_name', 'recipient_phone', 'recipient_address', 'recipient_city',
-            'recipient_delivery_point_code', 'weight', 'length', 'width', 'height', 
+            'recipient_delivery_point_code', 'weight', 'length', 'width', 'height', 'package_image',
             'transport_company_id', 'transport_company_name',
-            'tariff_code', 'tariff_name', 'price', 'status', 'created_at'
+            'tariff_code', 'tariff_name', 'price', 'status', 'created_at', 'selected_role'
         )
         read_only_fields = ('id', 'status', 'created_at')
 
     def create(self, validated_data):
         user = self.context['request'].user
+        selected_role = validated_data.pop('selected_role', None)
         
         if not user or not user.is_authenticated:
-            sender_phone = validated_data.get('sender_phone', '')
-            if sender_phone:
-                phone_clean = sender_phone.replace(' ', '').replace('-', '').replace('(', '').replace(')', '').replace('+', '')
+            phone_to_use = None
+            name_to_use = None
+            
+            if selected_role == 'recipient':
+                recipient_phone = validated_data.get('recipient_phone', '')
+                if recipient_phone:
+                    phone_to_use = recipient_phone
+                    name_to_use = validated_data.get('recipient_name', '')
+            else:
+                sender_phone = validated_data.get('sender_phone', '')
+                if sender_phone:
+                    phone_to_use = sender_phone
+                    name_to_use = validated_data.get('sender_name', '')
+            
+            if phone_to_use:
+                phone_clean = phone_to_use.replace(' ', '').replace('-', '').replace('(', '').replace(')', '').replace('+', '')
                 if not phone_clean.startswith('+'):
                     phone_clean = '+' + phone_clean
                 
@@ -62,10 +94,72 @@ class OrderCreateSerializer(serializers.ModelSerializer):
                     user = User.objects.create_user(
                         username=username,
                         phone=phone_clean,
-                        first_name=validated_data.get('sender_name', '')[:30] if validated_data.get('sender_name') else ''
+                        first_name=name_to_use[:30] if name_to_use else ''
                     )
         
         validated_data['user'] = user
+        
+        package_image_url = validated_data.pop('package_image', None)
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f'Получен package_image_url: {package_image_url}')
+        if package_image_url and isinstance(package_image_url, str) and package_image_url.strip():
+            try:
+                from django.conf import settings
+                from urllib.parse import urlparse
+                import logging
+                logger = logging.getLogger(__name__)
+                
+                parsed_url = urlparse(package_image_url)
+                path = parsed_url.path
+                
+                if '/media/' in path or 'package_images' in path:
+                    if '/media/' in path:
+                        file_path = path.split('/media/')[-1]
+                    else:
+                        parts = path.split('package_images/')
+                        if len(parts) > 1:
+                            file_path = f'package_images/{parts[-1]}'
+                        else:
+                            file_path = None
+                    
+                    if file_path and file_path.startswith('package_images/'):
+                        if default_storage.exists(file_path):
+                            validated_data['package_image'] = file_path
+                            logger.info(f'Используем существующий файл: {file_path}')
+                        else:
+                            logger.warning(f'Файл не найден: {file_path}, пытаемся скачать')
+                            response = requests.get(package_image_url, timeout=10)
+                            response.raise_for_status()
+                            file_name = os.path.basename(file_path) or f'package_{uuid.uuid4().hex[:8]}.jpg'
+                            file_path = default_storage.save(
+                                f'package_images/{file_name}',
+                                ContentFile(response.content)
+                            )
+                            validated_data['package_image'] = file_path
+                            logger.info(f'Изображение скачано и сохранено: {file_path}')
+                    else:
+                        logger.warning(f'Не удалось извлечь путь к файлу из URL: {package_image_url}')
+                        validated_data['package_image'] = None
+                else:
+                    response = requests.get(package_image_url, timeout=10)
+                    response.raise_for_status()
+                    file_name = os.path.basename(parsed_url.path)
+                    if not file_name or '.' not in file_name:
+                        file_name = f'package_{uuid.uuid4().hex[:8]}.jpg'
+                    file_path = default_storage.save(
+                        f'package_images/{file_name}',
+                        ContentFile(response.content)
+                    )
+                    validated_data['package_image'] = file_path
+                    logger.info(f'Изображение скачано и сохранено: {file_path}')
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f'Ошибка обработки изображения по URL {package_image_url}: {str(e)}', exc_info=True)
+                validated_data['package_image'] = None
+        else:
+            validated_data['package_image'] = None
         
         order = Order.objects.create(**validated_data)
         OrderEvent.objects.create(
@@ -212,9 +306,9 @@ class OrderCreateSerializer(serializers.ModelSerializer):
                         'packages': [{
                             'number': str(order.id),
                             'weight': int(float(order.weight) * 1000),
-                            'length': int(float(order.length)) if order.length else 10,
-                            'width': int(float(order.width)) if order.width else 10,
-                            'height': int(float(order.height)) if order.height else 10,
+                            'length': max(1, int(float(order.length))) if order.length and float(order.length) > 0 else (10 if float(order.weight) > 0.1 else 1),
+                            'width': max(1, int(float(order.width))) if order.width and float(order.width) > 0 else (10 if float(order.weight) > 0.1 else 1),
+                            'height': max(1, int(float(order.height))) if order.height and float(order.height) > 0 else (10 if float(order.weight) > 0.1 else 1),
                             'comment': f'Посылка #{order.id}',
                             'items': [items_data]
                         }]
