@@ -19,6 +19,7 @@ class Order(models.Model):
 
     sender_name = models.CharField(max_length=200, verbose_name='Имя отправителя')
     sender_phone = models.CharField(max_length=20, verbose_name='Телефон отправителя')
+    sender_email = models.EmailField(blank=True, null=True, verbose_name='Email отправителя')
     sender_address = models.TextField(verbose_name='Адрес отправителя')
     sender_city = models.CharField(max_length=100, verbose_name='Город отправителя')
     sender_company = models.CharField(max_length=200, blank=True, null=True, verbose_name='Название компании отправителя')
@@ -27,6 +28,7 @@ class Order(models.Model):
 
     recipient_name = models.CharField(max_length=200, verbose_name='Имя получателя')
     recipient_phone = models.CharField(max_length=20, verbose_name='Телефон получателя')
+    recipient_email = models.EmailField(blank=True, null=True, verbose_name='Email получателя')
     recipient_address = models.TextField(verbose_name='Адрес получателя')
     recipient_city = models.CharField(max_length=100, verbose_name='Город получателя')
     recipient_delivery_point_code = models.CharField(max_length=50, blank=True, null=True, verbose_name='Код ПВЗ получателя')
@@ -43,6 +45,13 @@ class Order(models.Model):
     tariff_code = models.IntegerField(null=True, blank=True, verbose_name='Код тарифа (CDEK)')
     tariff_name = models.CharField(max_length=200, blank=True, verbose_name='Название тарифа')
     price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Цена')
+    needs_packaging = models.BooleanField(default=False, verbose_name='Требуется упаковка')
+    
+    packaging_price = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='Стоимость упаковки')
+    insurance_price = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='Стоимость страховки')
+    pochtahub_commission = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='Комиссия PochtaHub')
+    acquiring_price = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='Стоимость эквайринга')
+    total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='Итоговая стоимость')
     
     external_order_uuid = models.CharField(max_length=100, blank=True, null=True, verbose_name='UUID заказа во внешней системе')
     external_order_number = models.CharField(max_length=100, blank=True, null=True, verbose_name='Номер заказа во внешней системе')
@@ -84,3 +93,28 @@ class OrderEvent(models.Model):
 
     def __str__(self):
         return f"{self.order.id} - {self.get_event_type_display()}"
+
+
+class AppSettings(models.Model):
+    packaging_price = models.DecimalField(max_digits=10, decimal_places=2, default=50, verbose_name='Стоимость упаковки (₽)')
+    pochtahub_commission = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='Комиссия PochtaHub (₽)')
+    acquiring_percent = models.DecimalField(max_digits=5, decimal_places=2, default=3.0, verbose_name='Процент эквайринга (%)')
+    insurance_price = models.DecimalField(max_digits=10, decimal_places=2, default=10, verbose_name='Стоимость страховки (₽)')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Дата обновления')
+
+    class Meta:
+        db_table = 'app_settings'
+        verbose_name = 'Настройки приложения'
+        verbose_name_plural = 'Настройки приложения'
+
+    def __str__(self):
+        return 'Настройки приложения'
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def load(cls):
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj

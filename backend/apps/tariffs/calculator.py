@@ -5,7 +5,7 @@ from .cdek_adapter import CDEKAdapter
 class TariffCalculator:
     @staticmethod
     def calculate(weight, dimensions, transport_company_id=None, from_city=None, to_city=None, 
-                 from_address=None, to_address=None, courier_pickup=False, courier_delivery=False):
+                 from_address=None, to_address=None, courier_pickup=False, courier_delivery=False, declared_value=None):
         if transport_company_id:
             companies = TransportCompany.objects.filter(id=transport_company_id, is_active=True)
         else:
@@ -60,7 +60,8 @@ class TariffCalculator:
                                 length=float(dimensions.get('length', 0)) if dimensions.get('length') else None,
                                 width=float(dimensions.get('width', 0)) if dimensions.get('width') else None,
                                 height=float(dimensions.get('height', 0)) if dimensions.get('height') else None,
-                                tariff_code=tariff_code
+                                tariff_code=tariff_code,
+                                declared_value=float(declared_value) if declared_value else None
                             )
                             logger.info(f'CDEK API вернул {len(cdek_results)} тарифов для кода {tariff_code}')
                             

@@ -16,6 +16,9 @@ function DeliveryAddressStep({
       <h1 className="text-xl md:text-3xl font-bold text-[#2D2D2D] mb-2 text-center px-2">
         Куда доставить посылку?
       </h1>
+      <p className="text-sm md:text-base text-[#2D2D2D] mb-6 md:mb-8 text-center px-2">
+        Укажите точный адрес доставки с номером дома
+      </p>
       <div className="mb-6">
         <AddressInput
           value={deliveryAddress}
@@ -25,6 +28,9 @@ function DeliveryAddressStep({
         />
         {error && (
           <p className="text-red-500 text-sm mt-2">{error}</p>
+        )}
+        {trimmedAddress && !hasHouseNumber && !error && (
+          <p className="text-red-500 text-sm mt-2">Укажите номер дома в адресе</p>
         )}
       </div>
       <button 

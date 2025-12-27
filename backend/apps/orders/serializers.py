@@ -20,15 +20,17 @@ class OrderEventSerializer(serializers.ModelSerializer):
 class OrderSerializer(serializers.ModelSerializer):
     events = OrderEventSerializer(many=True, read_only=True)
     package_image = serializers.SerializerMethodField()
+    transport_company_logo = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
         fields = (
-            'id', 'status', 'sender_name', 'sender_phone', 'sender_address', 'sender_city',
+            'id', 'status', 'sender_name', 'sender_phone', 'sender_email', 'sender_address', 'sender_city',
             'sender_company', 'sender_tin', 'sender_contragent_type',
-            'recipient_name', 'recipient_phone', 'recipient_address', 'recipient_city',
-            'recipient_delivery_point_code', 'recipient_delivery_point_address', 'weight', 'length', 'width', 'height', 'package_image', 'transport_company_id', 'transport_company_name',
-            'price', 'external_order_uuid', 'external_order_number', 'created_at', 'updated_at', 'events'
+            'recipient_name', 'recipient_phone', 'recipient_email', 'recipient_address', 'recipient_city',
+            'recipient_delivery_point_code', 'recipient_delivery_point_address', 'weight', 'length', 'width', 'height', 'package_image', 'transport_company_id', 'transport_company_name', 'transport_company_logo',
+            'price', 'external_order_uuid', 'external_order_number', 'created_at', 'updated_at', 'events',
+            'packaging_price', 'insurance_price', 'pochtahub_commission', 'acquiring_price', 'total_price', 'needs_packaging'
         )
         read_only_fields = ('id', 'created_at', 'updated_at', 'events')
 
@@ -40,6 +42,24 @@ class OrderSerializer(serializers.ModelSerializer):
             else:
                 from django.conf import settings
                 return f"{settings.MEDIA_URL}{obj.package_image}"
+        return None
+
+    def get_transport_company_logo(self, obj):
+        if obj.transport_company_id:
+            try:
+                from apps.tariffs.models import TransportCompany
+                company = TransportCompany.objects.get(id=obj.transport_company_id)
+                if company.logo:
+                    request = self.context.get('request')
+                    if request:
+                        return request.build_absolute_uri(company.logo.url)
+                    else:
+                        from django.conf import settings
+                        if company.logo.url.startswith('/'):
+                            return company.logo.url
+                        return f"/{settings.MEDIA_URL}{company.logo.url}" if not company.logo.url.startswith(settings.MEDIA_URL) else f"/{company.logo.url}"
+            except TransportCompany.DoesNotExist:
+                pass
         return None
 
 
@@ -54,12 +74,13 @@ class OrderCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = (
-            'id', 'sender_name', 'sender_phone', 'sender_address', 'sender_city',
+            'id', 'sender_name', 'sender_phone', 'sender_email', 'sender_address', 'sender_city',
             'sender_company', 'sender_tin', 'sender_contragent_type',
-            'recipient_name', 'recipient_phone', 'recipient_address', 'recipient_city',
+            'recipient_name', 'recipient_phone', 'recipient_email', 'recipient_address', 'recipient_city',
             'recipient_delivery_point_code', 'recipient_delivery_point_address', 'weight', 'length', 'width', 'height', 'package_image',
             'transport_company_id', 'transport_company_name',
-            'tariff_code', 'tariff_name', 'price', 'status', 'created_at', 'selected_role'
+            'tariff_code', 'tariff_name', 'price', 'status', 'created_at', 'selected_role', 'needs_packaging',
+            'packaging_price', 'insurance_price', 'pochtahub_commission', 'acquiring_price', 'total_price'
         )
         read_only_fields = ('id', 'status', 'created_at')
 
@@ -324,6 +345,17 @@ class OrderCreateSerializer(serializers.ModelSerializer):
                     
                     if seller_data:
                         order_data['seller'] = seller_data
+                    
+                    # Услуга упаковки не поддерживается через CDEK API
+                    # Стоимость упаковки сохраняется в нашей БД и отображается пользователю
+                    # if order.needs_packaging:
+                    #     if 'services' not in order_data:
+                    #         order_data['services'] = []
+                    #     order_data['services'].append({
+                    #         'code': 'PACKAGE_1',
+                    #         'parameter': '1'
+                    #     })
+                    #     logger.info(f'Добавлена услуга упаковки для заказа #{order.id}')
                     
                     cdek_response = adapter.create_order(order_data)
                     logger.info(f'Заказ создан в CDEK: {cdek_response}')

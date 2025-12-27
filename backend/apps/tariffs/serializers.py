@@ -38,6 +38,7 @@ class CalculatePriceSerializer(serializers.Serializer):
     transport_company_id = serializers.IntegerField(required=False)
     courier_pickup = serializers.BooleanField(required=False, default=False, help_text='Курьер забирает посылку')
     courier_delivery = serializers.BooleanField(required=False, default=False, help_text='Курьер привозит посылку')
+    declared_value = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True, default=None, help_text='Объявленная стоимость для расчета страховки')
 
 
 class AnalyzeImageSerializer(serializers.Serializer):

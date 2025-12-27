@@ -1,5 +1,54 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+
+// Функция для логирования данных визарда
+const logWizardStep = (step, data) => {
+  const timestamp = new Date().toISOString()
+  const logEntry = {
+    timestamp,
+    step,
+    data: JSON.parse(JSON.stringify(data)) // Глубокое копирование
+  }
+  
+  // Сохраняем в localStorage
+  const existingLogs = JSON.parse(localStorage.getItem('wizard_logs') || '[]')
+  existingLogs.push(logEntry)
+  localStorage.setItem('wizard_logs', JSON.stringify(existingLogs))
+  
+  // Выводим в консоль
+  console.log(`📝 [WIZARD LOG] Step: ${step}`, logEntry)
+  
+  // Ограничиваем размер (храним последние 100 записей)
+  if (existingLogs.length > 100) {
+    existingLogs.shift()
+    localStorage.setItem('wizard_logs', JSON.stringify(existingLogs))
+  }
+}
+
+// Функция для экспорта логов в JSON файл
+const exportWizardLogs = () => {
+  const logs = JSON.parse(localStorage.getItem('wizard_logs') || '[]')
+  const dataStr = JSON.stringify(logs, null, 2)
+  const dataBlob = new Blob([dataStr], { type: 'application/json' })
+  const url = URL.createObjectURL(dataBlob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `wizard_logs_${new Date().toISOString().split('T')[0]}.json`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+  console.log('✅ Логи экспортированы в файл')
+}
+
+// Добавляем функцию в window для доступа из консоли
+if (typeof window !== 'undefined') {
+  window.exportWizardLogs = exportWizardLogs
+  window.clearWizardLogs = () => {
+    localStorage.removeItem('wizard_logs')
+    console.log('🗑️ Логи очищены')
+  }
+}
 import WizardLayout from '../components/wizard/WizardLayout'
 import RoleSelectStep from './wizard/steps/RoleSelectStep'
 import PackageStep from './wizard/steps/PackageStep'
@@ -44,6 +93,15 @@ function WizardPage() {
   
   useEffect(() => {
     const wizardData = location.state?.wizardData
+    const stepFromUrl = new URLSearchParams(location.search).get('step') || 'role'
+    
+    // Логируем загрузку шага
+    logWizardStep(`load_${stepFromUrl}`, {
+      locationState: location.state,
+      wizardData: wizardData,
+      urlParams: location.search
+    })
+    
     if (location.state?.fromCity) {
       setFromCity(location.state.fromCity)
     }
@@ -72,6 +130,7 @@ function WizardPage() {
       if (wizardData.height) setHeight(wizardData.height)
       if (wizardData.selectedRole) setSelectedRole(wizardData.selectedRole)
       if (wizardData.photoUrl) setPhotoUrl(wizardData.photoUrl)
+      if (wizardData.estimatedValue) setEstimatedValue(wizardData.estimatedValue)
     }
     if (location.state?.selectedOffer || wizardData?.selectedOffer) {
       setSelectedOffer(location.state?.selectedOffer || wizardData?.selectedOffer)
@@ -90,7 +149,7 @@ function WizardPage() {
   const [width, setWidth] = useState('')
   const [height, setHeight] = useState('')
   const [weight, setWeight] = useState('')
-  const [estimatedValue, setEstimatedValue] = useState('')
+  const [estimatedValue, setEstimatedValue] = useState(location.state?.wizardData?.estimatedValue || '')
   const [selectedSize, setSelectedSize] = useState(null)
   
   // Contact phone data
@@ -206,7 +265,16 @@ function WizardPage() {
             if (analyzeResponse.data.width) setWidth(analyzeResponse.data.width.toString())
             if (analyzeResponse.data.height) setHeight(analyzeResponse.data.height.toString())
             if (analyzeResponse.data.weight) setWeight(analyzeResponse.data.weight.toString())
-            if (analyzeResponse.data.declared_value) setEstimatedValue(analyzeResponse.data.declared_value.toString())
+            if (analyzeResponse.data.declared_value) {
+              const declaredValue = analyzeResponse.data.declared_value.toString()
+              setEstimatedValue(declaredValue)
+              // Сохраняем в wizardData
+              const currentWizardData = location.state?.wizardData || {}
+              setWizardData({
+                ...currentWizardData,
+                estimatedValue: declaredValue
+              })
+            }
           }
         } catch (err) {
           console.error('Ошибка обработки изображения:', err)
@@ -232,18 +300,38 @@ function WizardPage() {
   }
 
   const handlePackageContinue = () => {
-      if (selectedRole === 'sender') {
-      navigate('/wizard?step=contactPhone')
+    const currentWizardData = {
+      ...location.state?.wizardData,
+      selectedRole,
+      weight,
+      length,
+      width,
+      height,
+      estimatedValue,
+      selectedSize,
+      packageOption,
+      photoUrl
+    }
+    logWizardStep('package', currentWizardData)
+    
+    if (selectedRole === 'sender') {
+      navigate('/wizard?step=contactPhone', { state: { wizardData: currentWizardData } })
     } else if (selectedRole === 'recipient') {
-      navigate('/wizard?step=recipientFIO')
+      navigate('/wizard?step=recipientFIO', { state: { wizardData: currentWizardData } })
     }
   }
 
   const handleRecipientFIOContinue = () => {
-      if (selectedRole === 'recipient') {
-      navigate('/wizard?step=deliveryAddress')
-        }
-      }
+    const currentWizardData = {
+      ...location.state?.wizardData,
+      recipientFIO
+    }
+    logWizardStep('recipientFIO', currentWizardData)
+    
+    if (selectedRole === 'recipient') {
+      navigate('/wizard?step=deliveryAddress', { state: { wizardData: currentWizardData } })
+    }
+  }
 
   const handleDeliveryAddressContinue = () => {
     const trimmedAddress = deliveryAddress.trim()
@@ -260,8 +348,14 @@ function WizardPage() {
     }
     
     setDeliveryAddressError('')
+    const currentWizardData = {
+      ...location.state?.wizardData,
+      deliveryAddress: trimmedAddress
+    }
+    logWizardStep('deliveryAddress', currentWizardData)
+    
     if (selectedRole === 'recipient') {
-      navigate('/wizard?step=recipientUserPhone')
+      navigate('/wizard?step=recipientUserPhone', { state: { wizardData: currentWizardData } })
     }
   }
 
@@ -383,6 +477,20 @@ function WizardPage() {
       return
     }
 
+    const trimmedAddress = senderAddress?.trim() || ''
+    if (!trimmedAddress) {
+      return
+    }
+    
+    const hasHouseNumber = /\d/.test(trimmedAddress)
+    if (!hasHouseNumber) {
+      return
+    }
+    
+    if (!senderFIO) {
+      return
+    }
+
       if (selectedRole === 'recipient') {
         const existingWizardData = location.state?.wizardData || {}
         const savedPickup = localStorage.getItem('filterCourierPickup')
@@ -489,15 +597,19 @@ function WizardPage() {
     const isTestPhone = TEST_PHONES.some(testPhone => cleanPhone.includes(testPhone.replace(/\D/g, '')))
     
     if (isTestPhone && codeToVerify === TEST_CODE) {
-      // Фейковая верификация для тестового номера
       setCodeLoading(true)
       setTimeout(() => {
+        const testAccessToken = 'test_access_token_' + Date.now()
+        const testRefreshToken = 'test_refresh_token_' + Date.now()
+        localStorage.setItem('access_token', testAccessToken)
+        localStorage.setItem('refresh_token', testRefreshToken)
+        console.log('🔧 Тестовый режим: код верифицирован успешно, токены сохранены')
+        window.dispatchEvent(new CustomEvent('authChange'))
         setCodeSent(false)
         setSmsCode('')
         setCodeError('')
         setTelegramSent(false)
         setCodeLoading(false)
-        console.log('🔧 Тестовый режим: код верифицирован успешно')
         if (selectedRole === 'sender') {
           if (inviteRecipient) {
             const wizardDataForOrder = {
@@ -542,7 +654,22 @@ function WizardPage() {
     setCodeLoading(true)
     setCodeError('')
     try {
+      console.log('🔐 Начало верификации кода для телефона:', contactPhone)
       const response = await authAPI.verifyCode(contactPhone, codeToVerify)
+      console.log('🔐 Ответ от API верификации:', response.data)
+      if (response.data && response.data.tokens) {
+        console.log('✅ Токены получены:', {
+          access: response.data.tokens.access ? 'есть' : 'нет',
+          refresh: response.data.tokens.refresh ? 'есть' : 'нет'
+        })
+        localStorage.setItem('access_token', response.data.tokens.access)
+        localStorage.setItem('refresh_token', response.data.tokens.refresh)
+        const savedToken = localStorage.getItem('access_token')
+        console.log('💾 Токен сохранен в localStorage:', savedToken ? 'ДА (длина: ' + savedToken.length + ')' : 'НЕТ')
+        window.dispatchEvent(new CustomEvent('authChange'))
+      } else {
+        console.log('⚠️ Токены не получены в ответе')
+      }
         setCodeSent(false)
         setSmsCode('')
         setCodeError('')
@@ -626,10 +753,16 @@ function WizardPage() {
       const existingWizardData = location.state?.wizardData || {}
       const filterCourierDelivery = existingWizardData.filterCourierDelivery || false
       
+      const updatedWizardData = {
+        ...existingWizardData,
+        needsPackaging: existingWizardData.needsPackaging === true
+      }
+      
       console.log('📊 handlePaymentContinue:', {
         paymentPayer,
         inviteRecipient,
         filterCourierDelivery,
+        needsPackaging: updatedWizardData.needsPackaging,
         selectedOffer: selectedOffer ? {
           company_name: selectedOffer.company_name,
           tariff_code: selectedOffer.tariff_code
@@ -638,21 +771,47 @@ function WizardPage() {
       
       if (inviteRecipient) {
         console.log('🚀 Переход на orderComplete (inviteRecipient)')
-        navigate('/wizard?step=orderComplete', { state: { ...location.state, inviteRecipient: true } })
+        navigate('/wizard?step=orderComplete', { 
+          state: { 
+            ...location.state, 
+            wizardData: updatedWizardData,
+            inviteRecipient: true 
+          } 
+        })
       } else {
         const needsPvz = selectedOffer && needsPvzSelection(selectedOffer, filterCourierDelivery)
         console.log('📊 needsPvz result:', needsPvz)
         if (needsPvz) {
           console.log('🚀 Переход на selectPvz')
-          navigate('/wizard?step=selectPvz')
+          navigate('/wizard?step=selectPvz', { 
+            state: { 
+              ...location.state,
+              wizardData: updatedWizardData
+            } 
+          })
         } else {
           console.log('🚀 Переход на orderComplete')
-          navigate('/wizard?step=orderComplete')
+          navigate('/wizard?step=orderComplete', { 
+            state: { 
+              ...location.state,
+              wizardData: updatedWizardData
+            } 
+          })
         }
       }
     } else if (paymentPayer === 'me') {
+      const existingWizardData = location.state?.wizardData || {}
+      const updatedWizardData = {
+        ...existingWizardData,
+        needsPackaging: existingWizardData.needsPackaging === true
+      }
       console.log('🚀 Переход на recipientAddress')
-      navigate('/wizard?step=recipientAddress')
+      navigate('/wizard?step=recipientAddress', { 
+        state: { 
+          ...location.state,
+          wizardData: updatedWizardData
+        } 
+      })
     }
   }
 
@@ -705,10 +864,26 @@ function WizardPage() {
       alert('Пожалуйста, выберите пункт выдачи')
       return
     }
-    navigate('/wizard?step=email')
+    const existingWizardData = location.state?.wizardData || {}
+    navigate('/wizard?step=email', {
+      state: {
+        ...location.state,
+        wizardData: {
+          ...existingWizardData,
+          recipientDeliveryPointCode,
+          recipientDeliveryPointAddress,
+          needsPackaging: existingWizardData.needsPackaging === true
+        }
+      }
+    })
   }
 
   const handleEmailContinue = () => {
+    const existingWizardData = location.state?.wizardData || {}
+    const existingWizardDataForPayment = {
+      ...existingWizardData,
+      needsPackaging: existingWizardData.needsPackaging === true
+    }
     if (!selectedOffer) {
       console.error('Оффер не выбран')
       return
@@ -724,6 +899,7 @@ function WizardPage() {
       const senderAddressToUse = senderAddress || location.state?.wizardData?.senderAddress
       const deliveryAddressToUse = deliveryAddress || location.state?.wizardData?.deliveryAddress
       
+      const existingWizardDataRecipient = location.state?.wizardData || {}
       wizardDataForPayment = {
         fromCity,
         toCity,
@@ -754,8 +930,13 @@ function WizardPage() {
         recipientDeliveryPointAddress,
         paymentPayer: 'me',
         selectedRole: 'recipient',
-        photoUrl
+        photoUrl,
+        needsPackaging: existingWizardDataRecipient.needsPackaging === true
       }
+      console.log('📦 Формирование wizardDataForPayment (recipient):', {
+        needsPackagingFromState: existingWizardDataRecipient.needsPackaging,
+        finalNeedsPackaging: wizardDataForPayment.needsPackaging
+      })
     } else {
       wizardDataForPayment = {
         fromCity,
@@ -783,8 +964,13 @@ function WizardPage() {
         selectedOffer,
         recipientDeliveryPointCode,
         recipientDeliveryPointAddress,
-        photoUrl
+        photoUrl,
+        needsPackaging: existingWizardDataForPayment.needsPackaging === true
       }
+      console.log('📦 Формирование wizardDataForPayment (sender):', {
+        needsPackagingFromState: existingWizardDataForPayment.needsPackaging,
+        finalNeedsPackaging: wizardDataForPayment.needsPackaging
+      })
     }
     
     navigate('/payment', {
@@ -793,10 +979,12 @@ function WizardPage() {
         company: selectedOffer.company_id,
         companyName: selectedOffer.company_name,
         companyCode: selectedOffer.company_code,
+        companyLogo: selectedOffer.company_logo,
         price: selectedOffer.price,
         tariffCode: selectedOffer.tariff_code,
         tariffName: selectedOffer.tariff_name,
-        deliveryTime: selectedOffer.delivery_time
+        deliveryTime: selectedOffer.delivery_time,
+        insuranceCost: selectedOffer.insurance_cost || null
       }
     })
   }
@@ -821,10 +1009,16 @@ function WizardPage() {
       ? existingWizardData.filterCourierDelivery 
       : (savedDelivery !== null ? savedDelivery === 'true' : false)
     
+    const finalSelectedOffer = selectedOffer || existingWizardData.selectedOffer || location.state?.selectedOffer
+    
     console.log('📊 handleRecipientAddressContinue:', {
       existingWizardDataFilterCourierDelivery: existingWizardData.filterCourierDelivery,
       savedDelivery,
-      filterCourierDelivery
+      filterCourierDelivery,
+      selectedOfferFromState: selectedOffer,
+      selectedOfferFromWizardData: existingWizardData.selectedOffer,
+      selectedOfferFromLocation: location.state?.selectedOffer,
+      finalSelectedOffer
     })
     
     const wizardData = {
@@ -848,11 +1042,18 @@ function WizardPage() {
       paymentPayer,
       selectedRole: 'sender',
       photoUrl,
+      selectedOffer: finalSelectedOffer,
+      returnToPayment: true,
       filterCourierPickup: existingWizardData.filterCourierPickup,
-      filterCourierDelivery: filterCourierDelivery
+      filterCourierDelivery: filterCourierDelivery,
+      needsPackaging: existingWizardData.needsPackaging === true
     }
     
-    console.log('🚀 Переход на /offers с wizardData:', wizardData)
+    console.log('🚀 Переход на /offers с wizardData:', {
+      ...wizardData,
+      hasSelectedOffer: !!wizardData.selectedOffer,
+      selectedOfferDetails: wizardData.selectedOffer
+    })
     navigate('/offers', {
       state: { wizardData }
     })
@@ -970,8 +1171,10 @@ function WizardPage() {
             contactPhone,
             recipientFIO,
             pickupSenderName,
-            selectedOffer,
+            selectedOffer: selectedOffer || existingWizardData.selectedOffer,
             photoUrl,
+            returnToPayment: true,
+            needsPackaging: existingWizardData.needsPackaging === true,
             filterCourierPickup: existingWizardData.filterCourierPickup,
             filterCourierDelivery: existingWizardData.filterCourierDelivery
           }
@@ -996,7 +1199,10 @@ function WizardPage() {
             contactPhone,
             recipientFIO,
             pickupSenderName,
+            selectedOffer: selectedOffer || existingWizardData.selectedOffer,
             photoUrl,
+            returnToPayment: true,
+            needsPackaging: existingWizardData.needsPackaging === true,
             filterCourierPickup: existingWizardData.filterCourierPickup,
             filterCourierDelivery: existingWizardData.filterCourierDelivery
           }

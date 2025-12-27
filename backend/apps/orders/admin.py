@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django import forms
 from django.utils.html import format_html
-from .models import Order, OrderEvent
+from .models import Order, OrderEvent, AppSettings
 from apps.tariffs.models import TransportCompany
 from apps.tariffs.cdek_adapter import CDEKAdapter
 
@@ -245,3 +245,32 @@ class OrderEventAdmin(admin.ModelAdmin):
     list_filter = ('event_type', 'created_at')
     search_fields = ('order__id', 'description')
     readonly_fields = ('created_at',)
+
+
+@admin.register(AppSettings)
+class AppSettingsAdmin(admin.ModelAdmin):
+    list_display = ('id', 'packaging_price', 'pochtahub_commission', 'acquiring_percent', 'insurance_price', 'updated_at')
+    
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        # Создаем запись, если её нет
+        AppSettings.load()
+        return qs
+
+    fieldsets = (
+        ('Цены и комиссии', {
+            'fields': ('packaging_price', 'pochtahub_commission', 'acquiring_percent', 'insurance_price'),
+            'description': 'Настройте цены и комиссии для расчетов на странице оплаты'
+        }),
+        ('Системная информация', {
+            'fields': ('updated_at',),
+            'classes': ('collapse',)
+        }),
+    )
+    readonly_fields = ('updated_at',)

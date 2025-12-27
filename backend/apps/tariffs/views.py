@@ -45,6 +45,7 @@ class CalculatePriceView(generics.GenericAPIView):
         to_address = serializer.validated_data.get('to_address')
         courier_pickup = serializer.validated_data.get('courier_pickup', False)
         courier_delivery = serializer.validated_data.get('courier_delivery', False)
+        declared_value = serializer.validated_data.get('declared_value')
 
         results = TariffCalculator.calculate(
             weight, 
@@ -55,7 +56,8 @@ class CalculatePriceView(generics.GenericAPIView):
             from_address=from_address,
             to_address=to_address,
             courier_pickup=courier_pickup,
-            courier_delivery=courier_delivery
+            courier_delivery=courier_delivery,
+            declared_value=float(declared_value) if declared_value else None
         )
 
         return Response({

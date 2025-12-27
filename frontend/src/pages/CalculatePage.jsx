@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import CityInput from '../components/CityInput'
 import CityForm from '../components/CityForm'
@@ -29,7 +29,37 @@ function CalculatePage() {
   const [codeError, setCodeError] = useState('')
   const [verifyLoading, setVerifyLoading] = useState(false)
   const [telegramSent, setTelegramSent] = useState(false)
-  const isAuthenticated = !!localStorage.getItem('access_token')
+  const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('access_token'))
+  
+  useEffect(() => {
+    const checkAuth = () => {
+      setIsAuthenticated(!!localStorage.getItem('access_token'))
+    }
+    
+    checkAuth()
+    
+    const handleStorageChange = (e) => {
+      if (e.key === 'access_token' || !e.key) {
+        checkAuth()
+      }
+    }
+    
+    window.addEventListener('storage', handleStorageChange)
+    window.addEventListener('focus', checkAuth)
+    
+    const handleCustomAuthChange = () => checkAuth()
+    window.addEventListener('authChange', handleCustomAuthChange)
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('focus', checkAuth)
+      window.removeEventListener('authChange', handleCustomAuthChange)
+    }
+  }, [])
+  
+  useEffect(() => {
+    setIsAuthenticated(!!localStorage.getItem('access_token'))
+  }, [location.pathname])
   
   const handleSendCode = async (method = 'telegram') => {
     if (!phone) {
@@ -70,16 +100,24 @@ function CalculatePage() {
     setVerifyLoading(true)
     setCodeError('')
     try {
+      console.log('🔐 [CalculatePage] Начало верификации кода для телефона:', phone)
       const response = await authAPI.verifyCode(phone, codeToVerify)
-      
+      console.log('🔐 [CalculatePage] Ответ от API верификации:', response.data)
       if (response.data && response.data.tokens) {
+        console.log('✅ [CalculatePage] Токены получены:', {
+          access: response.data.tokens.access ? 'есть' : 'нет',
+          refresh: response.data.tokens.refresh ? 'есть' : 'нет'
+        })
         localStorage.setItem('access_token', response.data.tokens.access)
         localStorage.setItem('refresh_token', response.data.tokens.refresh)
+        const savedToken = localStorage.getItem('access_token')
+        console.log('💾 [CalculatePage] Токен сохранен в localStorage:', savedToken ? 'ДА (длина: ' + savedToken.length + ')' : 'НЕТ')
+        setIsAuthenticated(true)
+        window.dispatchEvent(new CustomEvent('authChange'))
         setShowLoginPopup(false)
         setPhone('')
         setSmsCode('')
         setCodeSent(false)
-        window.location.reload()
       } else if (response.data && !response.data.user_exists) {
         setCodeError('Пользователь не найден. Пожалуйста, зарегистрируйтесь.')
       }

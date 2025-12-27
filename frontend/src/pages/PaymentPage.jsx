@@ -1,7 +1,24 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import logoSvg from '../assets/whitelogo.svg'
+import cdekIcon from '../assets/images/cdek.svg'
 import { ordersAPI } from '../api'
+
+const API_URL = import.meta.env.VITE_API_URL || '/api'
+const getMediaUrl = (path) => {
+  if (path.startsWith('http')) return path
+  if (path.startsWith('/media')) {
+    if (API_URL.startsWith('http')) {
+      return `${API_URL.replace('/api', '')}${path}`
+    }
+    const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    if (isLocalDev && window.location.port !== '8000') {
+      return `http://127.0.0.1:8000${path}`
+    }
+    return `${window.location.origin}${path}`
+  }
+  return path
+}
 
 function PaymentPage() {
   const location = useLocation()
@@ -9,19 +26,29 @@ function PaymentPage() {
   const orderData = location.state || {}
   
   const wizardData = orderData.wizardData || {}
-  console.log('PaymentPage wizardData:', {
-    ...wizardData,
-    photoUrl: wizardData.photoUrl || 'НЕТ URL'
-  })
   const offer = {
     company_id: orderData.company,
     company_name: orderData.companyName || 'CDEK',
     company_code: orderData.companyCode || 'cdek',
+    company_logo: orderData.companyLogo || null,
     price: orderData.price || 0,
     tariff_code: orderData.tariffCode,
     tariff_name: orderData.tariffName,
     delivery_time: orderData.deliveryTime,
+    insurance_cost: orderData.insuranceCost || null,
   }
+  
+  console.log('PaymentPage wizardData:', {
+    ...wizardData,
+    photoUrl: wizardData.photoUrl || 'НЕТ URL',
+    needsPackaging: wizardData.needsPackaging
+  })
+  console.log('PaymentPage offer:', {
+    ...offer,
+    insurance_cost: offer.insurance_cost
+  })
+
+  const isCDEK = offer.company_code?.toLowerCase() === 'cdek' || offer.company_name?.toLowerCase().includes('сдэк')
 
   const dimensions = wizardData.length && wizardData.width && wizardData.height
     ? `${wizardData.length} см х ${wizardData.width} см х ${wizardData.height} см`
@@ -29,12 +56,38 @@ function PaymentPage() {
   const weight = `${wizardData.weight || 1} кг`
   
   const deliveryPrice = offer.price || 0
-  const packagingPrice = 50
-  const storagePrice = 50
-  const insurancePrice = 10
-  const totalPrice = deliveryPrice + packagingPrice + storagePrice + insurancePrice
-
+  const needsPackaging = wizardData.needsPackaging === true
+  
+  const [settings, setSettings] = useState({
+    packaging_price: 50,
+    pochtahub_commission: 0,
+    acquiring_percent: 3.0,
+    insurance_price: 10
+  })
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await fetch(`${API_URL}/orders/settings/`)
+        if (response.ok) {
+          const data = await response.json()
+          setSettings(data)
+        }
+      } catch (error) {
+        console.error('Ошибка загрузки настроек:', error)
+      }
+    }
+    fetchSettings()
+  }, [])
+
+  const packagingPrice = needsPackaging ? settings.packaging_price : 0
+  const pochtahubCommission = settings.pochtahub_commission
+  const subtotal = deliveryPrice + packagingPrice + pochtahubCommission
+  const acquiringPrice = subtotal * (settings.acquiring_percent / 100)
+  // Используем insurance_cost из CDEK, если есть и больше 0, иначе из настроек (только если есть estimatedValue)
+  const insurancePrice = (offer.insurance_cost && offer.insurance_cost > 0) ? offer.insurance_cost : (wizardData.estimatedValue && parseFloat(wizardData.estimatedValue) > 0 ? settings.insurance_price : 0)
+  const totalPrice = subtotal + acquiringPrice + insurancePrice
 
   const getCompanyInitial = (name) => {
     if (!name) return 'C'
@@ -94,9 +147,11 @@ function PaymentPage() {
 
     setLoading(true)
     try {
+      const userEmail = wizardData.email || null
       const orderData = {
         sender_name: senderName,
         sender_phone: senderPhone,
+        sender_email: selectedRole === 'sender' ? userEmail : null,
         sender_address: wizardData.senderAddress || wizardData.fromCity,
         sender_city: wizardData.fromCity,
         sender_company: wizardData.senderCompany || null,
@@ -104,6 +159,7 @@ function PaymentPage() {
         sender_contragent_type: wizardData.senderContragentType || null,
         recipient_name: recipientName,
         recipient_phone: recipientPhone,
+        recipient_email: selectedRole === 'recipient' ? userEmail : null,
         recipient_address: wizardData.deliveryAddress || wizardData.recipientAddress || wizardData.toCity,
         recipient_city: wizardData.toCity,
         recipient_delivery_point_code: wizardData.recipientDeliveryPointCode || null,
@@ -119,14 +175,26 @@ function PaymentPage() {
         tariff_code: offer.tariff_code,
         tariff_name: offer.tariff_name,
         selected_role: selectedRole,
+        needs_packaging: needsPackaging,
       }
+      
+      console.log('📦 Создание заказа с needs_packaging:', needsPackaging)
       
       console.log('Создание заказа с данными:', {
         ...orderData,
         package_image: orderData.package_image ? 'URL присутствует' : 'URL отсутствует'
       })
       
-      const response = await ordersAPI.createOrder(orderData)
+      const orderDataWithPrices = {
+        ...orderData,
+        packaging_price: packagingPrice,
+        insurance_price: insurancePrice,
+        pochtahub_commission: pochtahubCommission,
+        acquiring_price: acquiringPrice,
+        total_price: totalPrice,
+      }
+      
+      const response = await ordersAPI.createOrder(orderDataWithPrices)
       const orderId = response.data?.id || response.data?.pk
       
       if (orderId) {
@@ -225,9 +293,19 @@ function PaymentPage() {
               <h2 className="text-lg font-semibold text-[#2D2D2D] mb-4">Ожидает оплаты</h2>
               
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center text-white text-lg font-bold">
-                  {getCompanyInitial(offer.company_name)}
-                </div>
+                {offer.company_logo ? (
+                  <img 
+                    src={getMediaUrl(offer.company_logo)} 
+                    alt={offer.company_name} 
+                    className="w-12 h-12 object-contain" 
+                  />
+                ) : isCDEK ? (
+                  <img src={cdekIcon} alt="CDEK" className="w-12 h-12" />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center text-white text-lg font-bold">
+                    {getCompanyInitial(offer.company_name)}
+                  </div>
+                )}
                 <span className="text-lg font-semibold text-[#2D2D2D]">
                   {offer.company_name}
                 </span>
@@ -240,24 +318,38 @@ function PaymentPage() {
                     {deliveryPrice.toLocaleString('ru-RU')}₽
                   </span>
                 </div>
-                <div className="flex justify-between items-center py-3 border-b border-dashed border-[#E5E5E5]">
-                  <span className="text-base text-[#858585]">Стоимость упаковки</span>
-                  <span className="text-base font-semibold text-[#2D2D2D]">
-                    {packagingPrice.toLocaleString('ru-RU')}₽
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-3 border-b border-dashed border-[#E5E5E5]">
-                  <span className="text-base text-[#858585]">Стоимость хранения</span>
-                  <span className="text-base font-semibold text-[#2D2D2D]">
-                    {storagePrice.toLocaleString('ru-RU')}₽
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-3">
-                  <span className="text-base text-[#858585]">Страховка</span>
-                  <span className="text-base font-semibold text-[#2D2D2D]">
-                    {insurancePrice.toLocaleString('ru-RU')}₽
-                  </span>
-                </div>
+                {needsPackaging && (
+                  <div className="flex justify-between items-center py-3 border-b border-dashed border-[#E5E5E5]">
+                    <span className="text-base text-[#858585]">Стоимость упаковки</span>
+                    <span className="text-base font-semibold text-[#2D2D2D]">
+                      {packagingPrice.toLocaleString('ru-RU')}₽
+                    </span>
+                  </div>
+                )}
+                {pochtahubCommission > 0 && (
+                  <div className="flex justify-between items-center py-3 border-b border-dashed border-[#E5E5E5]">
+                    <span className="text-base text-[#858585]">Комиссия PochtaHub</span>
+                    <span className="text-base font-semibold text-[#2D2D2D]">
+                      {pochtahubCommission.toLocaleString('ru-RU')}₽
+                    </span>
+                  </div>
+                )}
+                {acquiringPrice > 0 && (
+                  <div className="flex justify-between items-center py-3 border-b border-dashed border-[#E5E5E5]">
+                    <span className="text-base text-[#858585]">Эквайринг</span>
+                    <span className="text-base font-semibold text-[#2D2D2D]">
+                      {acquiringPrice.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}₽
+                    </span>
+                  </div>
+                )}
+                {insurancePrice > 0 && (
+                  <div className="flex justify-between items-center py-3">
+                    <span className="text-base text-[#858585]">Страховка</span>
+                    <span className="text-base font-semibold text-[#2D2D2D]">
+                      {insurancePrice.toLocaleString('ru-RU')}₽
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-between items-end pt-4 border-t border-[#E5E5E5]">
@@ -286,7 +378,38 @@ function PaymentPage() {
           <div className="text-center mt-6">
             <Link
               to="/offers"
-              state={{ wizardData }}
+              state={{ 
+                wizardData: {
+                  ...wizardData,
+                  selectedOffer: wizardData.selectedOffer || {
+                    company_id: offer.company_id,
+                    company_name: offer.company_name,
+                    company_code: offer.company_code,
+                    company_logo: offer.company_logo,
+                    price: offer.price,
+                    tariff_code: offer.tariff_code,
+                    tariff_name: offer.tariff_name,
+                    delivery_time: offer.delivery_time,
+                  },
+                  returnToPayment: true
+                }
+              }}
+              onClick={(e) => {
+                console.log('🔗 Переход на /offers с PaymentPage:', {
+                  wizardDataSelectedOffer: wizardData.selectedOffer,
+                  offerFromOrderData: offer,
+                  finalSelectedOffer: wizardData.selectedOffer || {
+                    company_id: offer.company_id,
+                    company_name: offer.company_name,
+                    company_code: offer.company_code,
+                    company_logo: offer.company_logo,
+                    price: offer.price,
+                    tariff_code: offer.tariff_code,
+                    tariff_name: offer.tariff_name,
+                    delivery_time: offer.delivery_time,
+                  }
+                })
+              }}
               className="text-sm text-[#858585] hover:text-[#2D2D2D] transition-colors"
             >
               ← Выбрать другую службу доставки

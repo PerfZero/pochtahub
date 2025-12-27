@@ -11,6 +11,9 @@ function RecipientFIOStep({
       <h1 className="text-xl md:text-3xl font-bold text-[#2D2D2D] mb-2 text-center px-2">
         Укажите ваши данные
       </h1>
+      <p className="text-sm md:text-base text-[#2D2D2D] mb-6 md:mb-8 text-center px-2">
+        ФИО необходимо для получения посылки
+      </p>
       <div className="mb-6">
         <div className="relative">
           <div className={`relative border rounded-xl ${

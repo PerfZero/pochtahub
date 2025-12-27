@@ -1,7 +1,7 @@
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
-from .models import Order, OrderEvent
+from .models import Order, OrderEvent, AppSettings
 from .serializers import OrderSerializer, OrderCreateSerializer, OrderStatusUpdateSerializer
 import logging
 from django.core.files.storage import default_storage
@@ -27,12 +27,17 @@ class OrderListView(generics.ListCreateAPIView):
         if self.request.method == 'POST':
             return OrderCreateSerializer
         return OrderSerializer
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
     
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         order = serializer.save()
-        return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
+        return Response(OrderSerializer(order, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
 
 class OrderDetailView(generics.RetrieveUpdateAPIView):
@@ -67,7 +72,7 @@ class OrderDetailView(generics.RetrieveUpdateAPIView):
             metadata={'old_status': old_status, 'new_status': new_status}
         )
 
-        return Response(OrderSerializer(instance).data)
+        return Response(OrderSerializer(instance, context={'request': request}).data)
 
 
 def map_cdek_status_to_order_status(cdek_status_code: str) -> str:
@@ -308,3 +313,24 @@ def upload_package_image(request):
     except Exception as e:
         logger.error(f'Ошибка загрузки изображения: {str(e)}', exc_info=True)
         return Response({'error': f'Ошибка загрузки изображения: {str(e)}'}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def get_app_settings(request):
+    try:
+        settings = AppSettings.load()
+        return Response({
+            'packaging_price': float(settings.packaging_price),
+            'pochtahub_commission': float(settings.pochtahub_commission),
+            'acquiring_percent': float(settings.acquiring_percent),
+            'insurance_price': float(settings.insurance_price),
+        })
+    except Exception as e:
+        logger.error(f'Ошибка получения настроек: {str(e)}', exc_info=True)
+        return Response({
+            'packaging_price': 50.0,
+            'pochtahub_commission': 0.0,
+            'acquiring_percent': 3.0,
+            'insurance_price': 10.0,
+        })

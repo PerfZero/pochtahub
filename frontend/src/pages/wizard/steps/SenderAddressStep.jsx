@@ -11,11 +11,19 @@ function SenderAddressStep({
   fromCity,
   onContinue
 }) {
+  const trimmedAddress = senderAddress?.trim() || ''
+  const hasHouseNumber = /\d/.test(trimmedAddress)
+  const isAddressValid = trimmedAddress && hasHouseNumber
+  const isDisabled = !isAddressValid || !senderFIO
+
   return (
     <div className="mb-8">
       <h1 className="text-xl md:text-3xl font-bold text-[#2D2D2D] mb-2 text-center px-2">
         Пожалуйста, укажите адрес отправителя и ФИО
       </h1>
+      <p className="text-sm md:text-base text-[#2D2D2D] mb-6 md:mb-8 text-center px-2">
+        Укажите точный адрес отправителя с номером дома и ваше полное имя
+      </p>
       <div className="mb-6">
         <AddressInput
           value={senderAddress}
@@ -23,6 +31,9 @@ function SenderAddressStep({
           label="Адрес"
           city={fromCity}
         />
+        {trimmedAddress && !hasHouseNumber && (
+          <p className="text-red-500 text-sm mt-2">Укажите номер дома в адресе</p>
+        )}
       </div>
       <div className="mb-6">
         <div className="relative">
@@ -48,7 +59,8 @@ function SenderAddressStep({
       </div>
       <button 
         onClick={onContinue}
-        className="w-full bg-[#0077FE] text-white px-6 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold"
+        disabled={isDisabled}
+        className="w-full bg-[#0077FE] text-white px-6 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold hover:bg-[#0066CC] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Продолжить
       </button>

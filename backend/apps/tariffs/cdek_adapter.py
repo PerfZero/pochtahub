@@ -141,7 +141,7 @@ class CDEKAdapter:
                         from_postal: str = None, to_postal: str = None,
                         length: Optional[float] = None, width: Optional[float] = None, 
                         height: Optional[float] = None, tariff_code: Optional[int] = None,
-                        packages: Optional[List[Dict]] = None) -> List[Dict]:
+                        packages: Optional[List[Dict]] = None, declared_value: Optional[float] = None) -> List[Dict]:
         logger.info(f'Расчет стоимости CDEK: {from_city} -> {to_city}, вес: {weight}кг')
         
         from_code = self._get_city_code(city_name=from_city, city_fias=from_fias, postal_code=from_postal)
@@ -153,12 +153,22 @@ class CDEKAdapter:
             raise Exception(f'Город назначения не найден')
         
         if not packages:
-            packages = [{
+            package_data = {
                 'weight': int(weight * 1000),
                 'length': int(length) if length else 10,
                 'width': int(width) if width else 10,
                 'height': int(height) if height else 10
-            }]
+            }
+            # Добавляем объявленную стоимость в пакет, если указана
+            if declared_value and declared_value > 0:
+                package_data['declared_value'] = int(declared_value)
+                logger.info(f'Добавлена объявленная стоимость в пакет: {declared_value} руб.')
+            packages = [package_data]
+        else:
+            # Если packages уже есть, добавляем declared_value в первый пакет
+            if declared_value and declared_value > 0 and len(packages) > 0:
+                packages[0]['declared_value'] = int(declared_value)
+                logger.info(f'Добавлена объявленная стоимость в существующий пакет: {declared_value} руб.')
         
         data = {
             'type': 1,
@@ -173,6 +183,18 @@ class CDEKAdapter:
             },
             'packages': packages
         }
+        
+        # Если есть declared_value, добавляем услугу страховки явно с параметром
+        if declared_value and declared_value > 0:
+            if 'services' not in data:
+                data['services'] = []
+            # Добавляем услугу страховки с объявленной стоимостью в параметре
+            # CDEK требует передавать declared_value в параметре услуги
+            data['services'].append({
+                'code': 'INSURANCE',
+                'parameter': str(int(declared_value))  # Объявленная стоимость в параметре
+            })
+            logger.info(f'Добавлена услуга страховки с объявленной стоимостью {declared_value} руб. в параметре')
         
         if tariff_code:
             data['tariff_code'] = tariff_code
@@ -195,42 +217,143 @@ class CDEKAdapter:
                     pass
                 raise Exception(f'Ошибка расчета CDEK (код {response.status_code}): {error_detail}')
             result = response.json()
-            logger.info(f'Получен результат расчета: {len(result) if isinstance(result, list) else "объект"}')
+            logger.info(f'Получен результат расчета CDEK (полный ответ): {json.dumps(result, indent=2, ensure_ascii=False)}')
             
             options = []
             if isinstance(result, list):
                 for tariff in result:
                     if 'tariff_codes' in tariff:
                         for tariff_code_item in tariff['tariff_codes']:
+                            tariff_code_for_insurance = tariff_code_item.get('tariff_code')
+                            insurance_cost = 0
+                            
+                            # Если есть declared_value, делаем дополнительный запрос для получения страховки
+                            if declared_value and declared_value > 0 and tariff_code_for_insurance:
+                                try:
+                                    insurance_data = {
+                                        'type': 1,
+                                        'date': datetime.now().replace(microsecond=0).isoformat() + '+0400',
+                                        'currency': 1,
+                                        'lang': 'rus',
+                                        'tariff_code': tariff_code_for_insurance,
+                                        'from_location': {
+                                            'code': from_code
+                                        },
+                                        'to_location': {
+                                            'code': to_code
+                                        },
+                                        'packages': packages,
+                                        'services': [{
+                                            'code': 'INSURANCE',
+                                            'parameter': str(int(declared_value))
+                                        }]
+                                    }
+                                    
+                                    insurance_response = self._make_request('POST', 'calculator/tariff', data=insurance_data)
+                                    if insurance_response.status_code == 200:
+                                        insurance_result = insurance_response.json()
+                                        if 'services' in insurance_result and isinstance(insurance_result['services'], list):
+                                            for service in insurance_result['services']:
+                                                service_code = service.get('code', '').upper()
+                                                if 'INSURANCE' in service_code or 'СТРАХ' in service.get('name', '').upper():
+                                                    insurance_cost = float(service.get('sum', 0))
+                                                    logger.info(f'Найдена страховка для тарифа {tariff_code_for_insurance}: {insurance_cost}')
+                                                    break
+                                except Exception as e:
+                                    logger.warning(f'Ошибка получения страховки для тарифа {tariff_code_for_insurance}: {str(e)}')
+                            
                             options.append({
                                 'company_id': None,
                                 'company_name': 'CDEK',
                                 'company_code': 'cdek',
                                 'price': float(tariff_code_item.get('delivery_sum', 0)),
                                 'tariff_name': tariff_code_item.get('tariff_name', ''),
-                                'tariff_code': tariff_code_item.get('tariff_code'),
-                                'delivery_time': tariff_code_item.get('period_max', 0)
+                                'tariff_code': tariff_code_for_insurance,
+                                'delivery_time': tariff_code_item.get('period_max', 0),
+                                'insurance_cost': insurance_cost
                             })
             elif 'tariff_codes' in result:
+                # Ответ от calculator/tarifflist - нет массива services
+                # Делаем отдельный запрос calculator/tariff для каждого тарифа с declared_value
                 for tariff_code_item in result['tariff_codes']:
+                    tariff_code_for_insurance = tariff_code_item.get('tariff_code')
+                    insurance_cost = 0
+                    
+                    # Если есть declared_value, делаем дополнительный запрос для получения страховки
+                    if declared_value and declared_value > 0 and tariff_code_for_insurance:
+                        try:
+                            # Делаем запрос calculator/tariff для конкретного тарифа
+                            insurance_data = {
+                                'type': 1,
+                                'date': datetime.now().replace(microsecond=0).isoformat() + '+0400',
+                                'currency': 1,
+                                'lang': 'rus',
+                                'tariff_code': tariff_code_for_insurance,
+                                'from_location': {
+                                    'code': from_code
+                                },
+                                'to_location': {
+                                    'code': to_code
+                                },
+                                'packages': packages,
+                                'services': [{
+                                    'code': 'INSURANCE',
+                                    'parameter': str(int(declared_value))
+                                }]
+                            }
+                            
+                            insurance_response = self._make_request('POST', 'calculator/tariff', data=insurance_data)
+                            if insurance_response.status_code == 200:
+                                insurance_result = insurance_response.json()
+                                logger.info(f'Ответ calculator/tariff для страховки (тариф {tariff_code_for_insurance}): {json.dumps(insurance_result, indent=2, ensure_ascii=False)}')
+                                
+                                # Ищем страховку в массиве services
+                                if 'services' in insurance_result and isinstance(insurance_result['services'], list):
+                                    for service in insurance_result['services']:
+                                        service_code = service.get('code', '').upper()
+                                        if 'INSURANCE' in service_code or 'СТРАХ' in service.get('name', '').upper():
+                                            insurance_cost = float(service.get('sum', 0))
+                                            logger.info(f'Найдена страховка для тарифа {tariff_code_for_insurance}: code={service.get("code")}, sum={insurance_cost}')
+                                            break
+                        except Exception as e:
+                            logger.warning(f'Ошибка получения страховки для тарифа {tariff_code_for_insurance}: {str(e)}')
+                    
                     options.append({
                         'company_id': None,
                         'company_name': 'CDEK',
                         'company_code': 'cdek',
                         'price': float(tariff_code_item.get('delivery_sum', 0)),
                         'tariff_name': tariff_code_item.get('tariff_name', ''),
-                        'tariff_code': tariff_code_item.get('tariff_code'),
-                        'delivery_time': tariff_code_item.get('period_max', 0)
+                        'tariff_code': tariff_code_for_insurance,
+                        'delivery_time': tariff_code_item.get('period_max', 0),
+                        'insurance_cost': insurance_cost
                     })
-            elif 'total_sum' in result:
+            elif 'total_sum' in result or 'delivery_sum' in result:
+                # Ответ от calculator/tariff (с конкретным tariff_code) - есть массив services
+                logger.info(f'Структура result (calculator/tariff): {json.dumps(result, indent=2, ensure_ascii=False)}')
+                
+                insurance_cost = 0
+                # Ищем страховку в массиве services
+                if 'services' in result and isinstance(result['services'], list):
+                    for service in result['services']:
+                        service_code = service.get('code', '').upper()
+                        # CDEK может использовать разные коды для страховки
+                        if 'INSURANCE' in service_code or 'СТРАХ' in service.get('name', '').upper():
+                            insurance_cost = float(service.get('sum', 0))
+                            logger.info(f'Найдена страховка: code={service.get("code")}, sum={insurance_cost}')
+                            break
+                
+                delivery_sum = float(result.get('delivery_sum', result.get('total_sum', 0)))
+                
                 options.append({
                     'company_id': None,
                     'company_name': 'CDEK',
                     'company_code': 'cdek',
-                    'price': float(result.get('total_sum', 0)),
+                    'price': delivery_sum,
                     'tariff_name': result.get('tariff_name', ''),
                     'tariff_code': result.get('tariff_code') or tariff_code,
-                    'delivery_time': result.get('period_max', 0)
+                    'delivery_time': result.get('period_max', 0),
+                    'insurance_cost': insurance_cost
                 })
             
             return sorted(options, key=lambda x: x['price'])

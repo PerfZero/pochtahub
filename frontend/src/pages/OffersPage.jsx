@@ -92,8 +92,10 @@ function OffersPage() {
   const [isThinking, setIsThinking] = useState(true)
   const [showPackagePopup, setShowPackagePopup] = useState(false)
   const [packageOption, setPackageOption] = useState(null)
-  const [selectedPackageOption, setSelectedPackageOption] = useState(null)
+  const [selectedPackageOption, setSelectedPackageOption] = useState(wizardData.packageOption || null)
   const [recalculating, setRecalculating] = useState(false)
+  const [showPackagingPopup, setShowPackagingPopup] = useState(false)
+  const [pendingOfferNavigation, setPendingOfferNavigation] = useState(null)
   const [photoFile, setPhotoFile] = useState(null)
   const [photoPreview, setPhotoPreview] = useState(null)
   const [photoUrl, setPhotoUrl] = useState(wizardData.photoUrl || null)
@@ -104,7 +106,7 @@ function OffersPage() {
   const [width, setWidth] = useState('')
   const [height, setHeight] = useState('')
   const [weight, setWeight] = useState('')
-  const [estimatedValue, setEstimatedValue] = useState('')
+  const [estimatedValue, setEstimatedValue] = useState(wizardData.estimatedValue || '10')
   const [selectedSize, setSelectedSize] = useState(null)
   const [deliveryName, setDeliveryName] = useState(wizardData.deliveryName || '')
   
@@ -210,6 +212,7 @@ function OffersPage() {
           to_address: updatedWizardData.deliveryAddress || updatedWizardData.toCity,
           courier_pickup: filterCourierPickup,
           courier_delivery: filterCourierDelivery,
+          declared_value: estimatedValue && estimatedValue.trim() ? parseFloat(estimatedValue) : 10,
         })
         
         if (response.data && response.data.options) {
@@ -250,6 +253,7 @@ function OffersPage() {
           to_address: updatedWizardData.deliveryAddress || updatedWizardData.toCity,
           courier_pickup: filterCourierPickup,
           courier_delivery: filterCourierDelivery,
+          declared_value: estimatedValue && estimatedValue.trim() ? parseFloat(estimatedValue) : 10,
         })
         
         if (response.data && response.data.options) {
@@ -308,6 +312,7 @@ function OffersPage() {
           to_address: updatedWizardData.deliveryAddress || updatedWizardData.toCity,
           courier_pickup: filterCourierPickup,
           courier_delivery: filterCourierDelivery,
+          declared_value: estimatedValue && estimatedValue.trim() ? parseFloat(estimatedValue) : 10,
         })
         
         if (response.data && response.data.options) {
@@ -377,6 +382,10 @@ function OffersPage() {
       setFromCity(currentWizardData.fromCity || '')
       setToCity(currentWizardData.toCity || '')
       setDeliveryName(currentWizardData.deliveryName || '')
+      setEstimatedValue(currentWizardData.estimatedValue || '10')
+      if (currentWizardData.packageOption) {
+        setSelectedPackageOption(currentWizardData.packageOption)
+      }
       setFilterCourierPickup(true)
       if (currentWizardData.filterCourierDelivery !== undefined) {
         const value = currentWizardData.filterCourierDelivery
@@ -401,6 +410,9 @@ function OffersPage() {
         setFromCity(urlData.fromCity || '')
         setToCity(urlData.toCity || '')
         setDeliveryName(urlData.deliveryName || '')
+        if (urlData.packageOption) {
+          setSelectedPackageOption(urlData.packageOption)
+        }
         setFilterCourierPickup(true)
         if (urlData.filterCourierDelivery !== undefined) {
           const value = urlData.filterCourierDelivery
@@ -457,6 +469,7 @@ function OffersPage() {
           to_address: currentWizardData.deliveryAddress || currentWizardData.toCity,
           courier_pickup: filterCourierPickup,
           courier_delivery: filterCourierDelivery,
+          declared_value: (currentWizardData.estimatedValue && currentWizardData.estimatedValue.trim()) ? parseFloat(currentWizardData.estimatedValue) : 10,
         })
         
         if (response.data && response.data.options) {
@@ -481,8 +494,9 @@ function OffersPage() {
                              !location.state?.inviteRecipient && 
                              location.state?.wizardData &&
                              !isFromUrlCheck
-    setShowAssistant(!skippedAssistant)
-  }, [wizardData, location.state, location.search])
+    const hasPackageOption = selectedPackageOption !== null
+    setShowAssistant(!skippedAssistant && !hasPackageOption)
+  }, [wizardData, location.state, location.search, selectedPackageOption])
   
   // Обновляем recipientNotified при возврате с WizardPage
   useEffect(() => {
@@ -490,12 +504,22 @@ function OffersPage() {
       setRecipientNotified(true)
     }
     if (location.state?.wizardData) {
-      setWizardData(location.state.wizardData)
-      if (location.state.wizardData.recipientPhone) {
+      const newWizardData = location.state.wizardData
+      setWizardData(newWizardData)
+      if (newWizardData.recipientPhone) {
         setRecipientNotified(true)
       }
+      if (newWizardData.packageOption) {
+        setSelectedPackageOption(newWizardData.packageOption)
+      }
+      console.log('📦 Обновление wizardData из location.state:', {
+        hasSelectedOffer: !!newWizardData.selectedOffer,
+        selectedOffer: newWizardData.selectedOffer,
+        returnToPayment: newWizardData.returnToPayment
+      })
     }
   }, [location.state])
+
 
   const getCompanyInitial = (name) => {
     if (!name) return '?'
@@ -595,14 +619,17 @@ function OffersPage() {
       toCity: wizardData.toCity || toCity,
       deliveryName: deliveryName,
       packageDataCompleted: true,
+      estimatedValue: estimatedValue || wizardData.estimatedValue || '10', // Сохраняем estimatedValue
       selectedOffer: {
         company_id: offer.company_id,
         company_name: offer.company_name,
         company_code: offer.company_code,
+        company_logo: offer.company_logo,
         price: offer.price,
         tariff_code: offer.tariff_code,
         tariff_name: offer.tariff_name,
         delivery_time: offer.delivery_time,
+        insurance_cost: offer.insurance_cost || null,
       },
       returnToPayment: wizardData.returnToPayment || false,
       filterCourierDelivery: filterCourierDelivery,
@@ -618,10 +645,12 @@ function OffersPage() {
       company_id: offer.company_id,
       company_name: offer.company_name,
       company_code: offer.company_code,
+      company_logo: offer.company_logo,
       price: offer.price,
       tariff_code: offer.tariff_code,
       tariff_name: offer.tariff_name,
       delivery_time: offer.delivery_time,
+      insurance_cost: offer.insurance_cost || null,
     }
     
     const navigateState = {
@@ -629,19 +658,58 @@ function OffersPage() {
       selectedOffer: selectedOfferData
     }
     
+    let navigationPath = ''
+    let navigationState = navigateState
+    
     if (isAssistantFlow) {
-      navigateState.inviteRecipient = true
-      navigateState.selectedRole = 'sender'
-      navigate('/wizard?step=pickupAddress', { state: navigateState })
+      navigationState.inviteRecipient = true
+      navigationState.selectedRole = 'sender'
+      navigationPath = '/wizard?step=pickupAddress'
     } else if (hasCompletedFlow) {
       const needsPvz = needsPvzSelection(selectedOfferData, filterCourierDelivery)
       if (needsPvz) {
-        navigate('/wizard?step=selectPvz', { state: navigateState })
+        navigationPath = '/wizard?step=selectPvz'
       } else {
-        navigate('/wizard?step=email', { state: navigateState })
+        navigationPath = '/wizard?step=email'
       }
     } else {
-      navigate('/wizard?step=role', { state: navigateState })
+      navigationPath = '/wizard?step=role'
+    }
+    
+    const shouldShowPackagingPopup = hasCompletedFlow || wizardData.returnToPayment === true
+    
+    if (shouldShowPackagingPopup) {
+      setPendingOfferNavigation({ path: navigationPath, state: navigationState })
+      setShowPackagingPopup(true)
+    } else {
+      navigate(navigationPath, { state: navigationState })
+    }
+  }
+
+  const handlePackagingChoice = (needsPackaging) => {
+    setShowPackagingPopup(false)
+    if (pendingOfferNavigation) {
+      const updatedWizardData = {
+        ...pendingOfferNavigation.state.wizardData,
+        needsPackaging: needsPackaging === true,
+        packagingPopupShown: true,
+        estimatedValue: estimatedValue || pendingOfferNavigation.state.wizardData.estimatedValue || '10' // Сохраняем estimatedValue
+      }
+      console.log('📦 handlePackagingChoice:', {
+        needsPackaging,
+        updatedWizardData: {
+          ...updatedWizardData,
+          needsPackaging: updatedWizardData.needsPackaging
+        },
+        navigationPath: pendingOfferNavigation.path
+      })
+      navigate(pendingOfferNavigation.path, {
+        state: {
+          ...pendingOfferNavigation.state,
+          wizardData: updatedWizardData
+        }
+      })
+      setPendingOfferNavigation(null)
     }
   }
 
@@ -658,6 +726,7 @@ function OffersPage() {
         ...wizardData,
         fromCity,
         toCity,
+        estimatedValue: estimatedValue, // Сохраняем estimatedValue в wizardData
       }
 
       setWizardData(updatedWizardData)
@@ -677,6 +746,7 @@ function OffersPage() {
         to_address: updatedWizardData.deliveryAddress || toCity,
         courier_pickup: filterCourierPickup,
         courier_delivery: filterCourierDelivery,
+        declared_value: estimatedValue && estimatedValue.trim() ? parseFloat(estimatedValue) : null,
       })
       
       if (response.data && response.data.options) {
@@ -717,6 +787,7 @@ function OffersPage() {
           to_address: wizardData.deliveryAddress || toCity,
           courier_pickup: filterCourierPickup,
           courier_delivery: filterCourierDelivery,
+          declared_value: estimatedValue && estimatedValue.trim() ? parseFloat(estimatedValue) : 10,
         })
 
         if (response.data && response.data.options) {
@@ -799,6 +870,52 @@ function OffersPage() {
           </button>
         </div>
       </header>
+
+      {showPackagingPopup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 md:p-6">
+          <div className="bg-white rounded-2xl max-w-[468px] w-full relative">
+            <button
+              onClick={() => {
+                if (pendingOfferNavigation) {
+                  handlePackagingChoice(false)
+                } else {
+                  setShowPackagingPopup(false)
+                  const updatedWizardData = {
+                    ...wizardData,
+                    packagingPopupShown: true
+                  }
+                  setWizardData(updatedWizardData)
+                }
+              }}
+              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center text-[#2D2D2D] hover:bg-[#F5F5F5] rounded-full transition-colors"
+            >
+              <span className="text-2xl">×</span>
+            </button>
+            <div className="p-4 md:p-8">
+              <h2 className="text-2xl md:text-3xl font-bold text-[#2D2D2D] mb-4 md:mb-6 text-center">
+                Добавим упаковку?
+              </h2>
+              <p className="text-sm md:text-base text-[#2D2D2D] mb-6 md:mb-8 text-center">
+                Мы заметили вам понадобится упаковка
+              </p>
+              <div className="flex flex-col gap-3 md:gap-4">
+                <button
+                  onClick={() => handlePackagingChoice(false)}
+                  className="w-full bg-[#F5F5F5] text-[#2D2D2D] px-6 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold hover:bg-[#E5E5E5] transition-colors"
+                >
+                  Упакую сам
+                </button>
+                <button
+                  onClick={() => handlePackagingChoice(true)}
+                  className="w-full bg-[#0077FE] text-white px-6 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold hover:bg-[#0066CC] transition-colors"
+                >
+                  Добавить
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showPackagePopup && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 md:p-6">
@@ -1090,7 +1207,15 @@ function OffersPage() {
                   <div className="mb-6">
                     <NumberInput
                       value={estimatedValue}
-                      onChange={(e) => setEstimatedValue(e.target.value)}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        setEstimatedValue(value)
+                        // Сохраняем в wizardData при изменении
+                        setWizardData({
+                          ...wizardData,
+                          estimatedValue: value
+                        })
+                      }}
                       label="Оценочная стоимость"
                     />
                   </div>
@@ -1154,7 +1279,15 @@ function OffersPage() {
                   <div className="mb-6">
                     <NumberInput
                       value={estimatedValue}
-                      onChange={(e) => setEstimatedValue(e.target.value)}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        setEstimatedValue(value)
+                        // Сохраняем в wizardData при изменении
+                        setWizardData({
+                          ...wizardData,
+                          estimatedValue: value
+                        })
+                      }}
                       label="Оценочная стоимость"
                     />
                   </div>
@@ -1240,8 +1373,7 @@ function OffersPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        setAssistantStep('second')
-                        setTypedText('')
+                        handleNavigateToRecipientPhone()
                       }}
                       className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[8px] rounded-br-[8px] md:rounded-bl-[8px] md:rounded-br-[12px] px-2 md:px-3 py-2 text-sm md:text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
                     >
