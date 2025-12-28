@@ -84,10 +84,9 @@ function PaymentPage() {
   const packagingPrice = needsPackaging ? settings.packaging_price : 0
   const pochtahubCommission = settings.pochtahub_commission
   const subtotal = deliveryPrice + packagingPrice + pochtahubCommission
-  const acquiringPrice = subtotal * (settings.acquiring_percent / 100)
-  // Используем insurance_cost из CDEK, если есть и больше 0, иначе из настроек (только если есть estimatedValue)
+  const acquiringPrice = parseFloat((subtotal * (settings.acquiring_percent / 100)).toFixed(2))
   const insurancePrice = (offer.insurance_cost && offer.insurance_cost > 0) ? offer.insurance_cost : (wizardData.estimatedValue && parseFloat(wizardData.estimatedValue) > 0 ? settings.insurance_price : 0)
-  const totalPrice = subtotal + acquiringPrice + insurancePrice
+  const totalPrice = parseFloat((subtotal + acquiringPrice + insurancePrice).toFixed(2))
 
   const getCompanyInitial = (name) => {
     if (!name) return 'C'
@@ -187,9 +186,9 @@ function PaymentPage() {
       
       const orderDataWithPrices = {
         ...orderData,
-        packaging_price: packagingPrice,
-        insurance_price: insurancePrice,
-        pochtahub_commission: pochtahubCommission,
+        packaging_price: parseFloat(packagingPrice.toFixed(2)),
+        insurance_price: parseFloat(insurancePrice.toFixed(2)),
+        pochtahub_commission: parseFloat(pochtahubCommission.toFixed(2)),
         acquiring_price: acquiringPrice,
         total_price: totalPrice,
       }
