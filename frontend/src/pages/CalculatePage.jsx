@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import CityInput from '../components/CityInput'
 import CityForm from '../components/CityForm'
@@ -14,11 +14,12 @@ import heroConcept from '../assets/images/hero-concept.svg'
 import logosStrip from '../assets/images/logos-strip.svg'
 import iconCheckCircle from '../assets/images/icon-check-circle.svg'
 import aboutPic from '../assets/images/about_pic.png'
-import qrCode from '../assets/images/qr-code.svg'
+import qrCode from '../assets/images/qr-code.jpg'
 
 function CalculatePage() {
   const location = useLocation()
   const navigate = useNavigate()
+  const fromCityInputRef = useRef(null)
   const [fromCity, setFromCity] = useState('')
   const [toCity, setToCity] = useState('')
   const [showLoginPopup, setShowLoginPopup] = useState(false)
@@ -174,6 +175,20 @@ function CalculatePage() {
         toCity
       }
     })
+  }
+
+  const handleRecipientDelivery = () => {
+    // Находим форму hero (первая форма на странице)
+    const heroForm = document.querySelector('form')
+    if (heroForm) {
+      heroForm.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      // Небольшая задержка чтобы скролл завершился перед установкой фокуса
+      setTimeout(() => {
+        if (fromCityInputRef.current) {
+          fromCityInputRef.current.focus()
+        }
+      }, 800)
+    }
   }
 
   return (
@@ -346,7 +361,7 @@ function CalculatePage() {
       </header>
 
       {/* Hero */}
-      <section className="w-full flex justify-center px-4 md:px-6">
+      <section id="calculate-form" className="w-full flex justify-center px-4 md:px-6">
         <div className="w-full max-w-[1128px] border-[0.5px] border-[#C8C7CC] rounded-2xl">
           <div className="bg-[#EEE5D3] py-2 flex items-center justify-center border-[0.5px] border-[#C8C7CC] rounded-t-2xl">
             <img src={logosStrip} alt="" className="w-full max-w-full h-auto" />
@@ -368,6 +383,7 @@ function CalculatePage() {
             onSubmit={handleCalculate}
             buttonText="Рассчитать и оформить"
             variant="hero"
+            fromCityInputRef={fromCityInputRef}
           />
           <div className="bg-[#F9F6F0] px-6 py-4 flex items-center justify-center rounded-b-2xl">
             <p className="text-sm text-[#2D2D2D]">Начать оформление может как отправитель, так и получатель</p>
@@ -431,7 +447,7 @@ function CalculatePage() {
                   <p><span className="font-semibold">Получатель</span> сам выбирает транспортную компанию, сроки и стоимость, и оплачивает доставку онлайн.</p>
                 </div>
               </div>
-              <button className="w-full md:w-fit px-6 py-4 rounded-[10px] text-base font-semibold bg-[#0077FE] text-white">Я получатель — хочу оформить доставку</button>
+              <button onClick={handleRecipientDelivery} className="w-full md:w-fit px-6 py-4 rounded-[10px] text-base font-semibold bg-[#0077FE] text-white">Я получатель — хочу оформить доставку</button>
             </div>
             <div className="flex-1 flex items-center justify-center mt-6 md:mt-0">
               <img src={aboutPic} alt="" className="max-w-full h-auto md:absolute md:right-[85px] md:bottom-0" />
@@ -488,9 +504,9 @@ function CalculatePage() {
         <div className="w-full max-w-[1128px] flex flex-col gap-6 md:gap-8">
           <div className="flex flex-col gap-4 md:gap-6">
             <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-4">
-              <span className="text-sm text-[#2D2D2D] cursor-pointer">Рассчитать доставку</span>
+              <a href="#calculate-form" className="text-sm text-[#2D2D2D] hover:text-[#0077FE] transition-colors">Рассчитать доставку</a>
               <div className="hidden md:block w-px h-4 bg-[#C8C7CC]"></div>
-              <span className="text-sm text-[#2D2D2D] cursor-pointer">Рассчитать в Telegram-боте</span>
+              <a href="https://t.me/pochtahub_bot" target="_blank" rel="noopener noreferrer" className="text-sm text-[#2D2D2D] hover:text-[#0077FE] transition-colors">Рассчитать в Telegram-боте</a>
             </div>
             <div className="flex flex-col md:flex-row gap-6 md:gap-12">
               <div className="flex flex-col gap-2">
@@ -505,7 +521,7 @@ function CalculatePage() {
                 <span className="text-sm text-[#2D2D2D]">Байкал Сервис</span>
                 <span className="text-sm text-[#2D2D2D]">Boxberry</span>
               </div>
-              <div className="md:ml-auto bg-white border border-[#C8C7CC] rounded-xl p-3 flex items-center gap-3 w-full md:w-auto justify-center md:justify-start">
+              <div className="md:ml-auto bg-white border border-[#C8C7CC] rounded-xl p-2 flex items-center gap-3 w-full md:w-auto justify-center md:justify-start">
                 <img src={qrCode} alt="" className="w-12 h-12" />
                 <div className="flex flex-col gap-1">
                   <span className="text-sm font-semibold text-[#2D2D2D]">@pochtahub_bot</span>
@@ -540,17 +556,22 @@ function CalculatePage() {
           </div>
           <div className="flex flex-col md:flex-row gap-6 md:gap-12 pt-6 border-t border-[#C8C7CC]">
             <div className="flex flex-col gap-2">
-              <a href="#" className="text-xs text-[#858585]">Политика конфиденциальности и обработки ПД</a>
-              <a href="#" className="text-xs text-[#858585]">Согласие на обработку ПД</a>
-              <a href="#" className="text-xs text-[#858585]">Согласие на рассылку</a>
+              <a href="#" className="text-xs text-[#858585] hover:text-[#0077FE] transition-colors">Стоимость сервиса PochtHub — 50 ₽.</a>
+              <a href="#" className="text-xs text-[#858585] hover:text-[#0077FE] transition-colors">Все расценки транспортных компаний<br className="hidden md:block"/>отображаются без наценок.</a>
             </div>
             <div className="flex flex-col gap-2">
-              <a href="#" className="text-xs text-[#858585]">Пользовательское соглашение</a>
-              <a href="#" className="text-xs text-[#858585]">Политика cookie</a>
+              <a href="/pochtahub.ru:privacy.docx" className="text-xs text-[#858585] hover:text-[#0077FE] transition-colors">Политика конфиденциальности и обработки ПД</a>
+              <a href="/pochtahub.ru:privacy.docx" className="text-xs text-[#858585] hover:text-[#0077FE] transition-colors">Согласие на обработку ПД</a>
+              <a href="/pochtahub.ru:privacy.docx" className="text-xs text-[#858585] hover:text-[#0077FE] transition-colors">Согласие на рассылку</a>
             </div>
-            <div className="md:ml-auto flex items-center gap-2 cursor-pointer justify-center md:justify-start">
+            <div className="flex flex-col gap-2">
+              <a href="/pochtahub.ru:terms.docx" className="text-xs text-[#858585] hover:text-[#0077FE] transition-colors">Пользовательское соглашение</a>
+              <a href="/pochtahub.ru:privacy.docx" className="text-xs text-[#858585] hover:text-[#0077FE] transition-colors">Политика cookie</a>
+            </div>
+            <div className="md:ml-auto flex items-center gap-2 cursor-pointer justify-center md:justify-start hover:bg-[#F4EEE2] rounded-lg px-3 py-2 transition-colors"
+                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
               <span className="text-sm text-[#2D2D2D]">Наверх</span>
-              <div className="w-10 h-10 rounded-full bg-[#F4F2F3] flex items-center justify-center text-base">↑</div>
+              <div className="w-8 h-8 rounded-full bg-[#F4F2F3] flex items-center justify-center text-base hover:bg-[#0077FE] hover:text-white transition-colors">↑</div>
             </div>
           </div>
         </div>

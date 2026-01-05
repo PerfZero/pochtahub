@@ -1504,26 +1504,29 @@ function OffersPage() {
             Выберите наиболее подходящий вариант доставки 👇
             </p>
 
-            <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4 mb-4 md:mb-6">
+            <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4 mb-4 md:mb-2">
               <div className="grid grid-cols-2 gap-3 md:flex md:gap-4">
-                <label className="flex items-center justify-between md:justify-start gap-3 cursor-not-allowed bg-white border border-[#C8C7CC] rounded-full px-4 py-2 transition-shadow opacity-30  select-none" style={{ cursor: 'not-allowed' }}>
-                  <span className="text-xs md:text-sm text-[#2D2D2D] flex items-center gap-1">
-                    
-                    Курьер забирает
-                  </span>
-                  <div className="relative">
-                    <input
-                      type="checkbox"
-                      checked={true}
-                      disabled={true}
-                      readOnly={true}
-                      className="sr-only"
-                    />
-                    <div className="w-11 h-6 rounded-full transition-colors duration-200 bg-[#0077FE]">
-                      <div className="w-5 h-5 bg-white rounded-full transition-transform duration-200 mt-0.5 translate-y-0.5 translate-x-5"></div>
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center justify-between md:justify-start gap-3 cursor-not-allowed bg-white border border-[#C8C7CC] rounded-full px-4 py-2 transition-shadow opacity-30  select-none" style={{ cursor: 'not-allowed' }}>
+                    <span className="text-xs md:text-sm text-[#2D2D2D] flex items-center gap-1">
+                      
+                      Курьер забирает
+                    </span>
+                    <div className="relative">
+                      <input
+                        type="checkbox"
+                        checked={true}
+                        disabled={true}
+                        readOnly={true}
+                        className="sr-only"
+                      />
+                      <div className="w-11 h-6 rounded-full transition-colors duration-200 bg-[#0077FE]">
+                        <div className="w-5 h-5 bg-white rounded-full transition-transform duration-200 mt-0.5 translate-y-0.5 translate-x-5"></div>
+                      </div>
                     </div>
-                  </div>
-                </label>
+                  </label>
+                 
+                </div>
                 <label className="flex items-center justify-between md:justify-start gap-3 cursor-pointer bg-white border border-[#C8C7CC] rounded-full px-4 py-2 transition-shadow">
                   <span className="text-xs md:text-sm text-[#2D2D2D]">Курьер привезет</span>
                   <div className="relative">
@@ -1568,6 +1571,10 @@ function OffersPage() {
                 <option value="delivery_time">По скорости доставки</option>
               </select>
             </div>
+             <div className="bg-white border border-[#E5E5E5] rounded-2xl px-4 py-3 text-[#2D2D2D]">
+                    <div className="text-xs md:text-sm font-semibold">🚚 Курьер заберёт посылку бесплатно</div>
+                    <div className="text-xs md:text-sm text-[#858585]">от двери отправителя — включено в Pochtahub</div>
+                  </div>
 
             {loading && (
               <div className="space-y-4">

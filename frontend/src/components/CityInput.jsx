@@ -4,13 +4,16 @@ import axios from 'axios'
 const DADATA_API_URL = 'https://suggestions.dadata.ru/suggestions/api/4_1/rs/suggest/address'
 const DADATA_TOKEN = import.meta.env.VITE_DADATA_TOKEN || ''
 
-function CityInput({ value = '', onChange, label = 'Город', required = false, variant = 'default' }) {
+function CityInput({ value = '', onChange, label = 'Город', required = false, variant = 'default', inputRef = null }) {
   const [options, setOptions] = useState([])
   const [loading, setLoading] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
   const [isFocused, setIsFocused] = useState(false)
   const wrapperRef = useRef(null)
-  const inputRef = useRef(null)
+  const internalInputRef = useRef(null)
+  
+  // Используем переданный ref или внутренний
+  const currentInputRef = inputRef || internalInputRef
 
   const hasValue = value && value.length > 0
   const isFloating = isFocused || hasValue
@@ -102,7 +105,7 @@ function CityInput({ value = '', onChange, label = 'Город', required = fals
       <div ref={wrapperRef} className="relative w-full">
         <div 
           className="relative cursor-text"
-          onClick={() => inputRef.current?.focus()}
+          onClick={() => currentInputRef.current?.focus()}
         >
           <label 
             className={`absolute left-0 transition-all duration-200 pointer-events-none ${
@@ -114,7 +117,7 @@ function CityInput({ value = '', onChange, label = 'Город', required = fals
             {label}
           </label>
           <input
-            ref={inputRef}
+            ref={currentInputRef}
             type="text"
             value={value}
             onChange={handleInputChange}
@@ -146,7 +149,7 @@ function CityInput({ value = '', onChange, label = 'Город', required = fals
     <div ref={wrapperRef} className="relative w-full">
       <div className="relative">
         <input
-          ref={inputRef}
+          ref={currentInputRef}
           type="text"
           value={value}
           onChange={handleInputChange}

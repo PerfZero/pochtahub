@@ -1,0 +1,9 @@
+/* Плавная прокрутка для якорных ссылок */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Сброс стилей для якорных ссылок */
+a[href^="#"] {
+  text-decoration: none;
+}

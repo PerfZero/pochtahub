@@ -9,7 +9,8 @@ function CityForm({
   buttonText = 'Рассчитать и оформить',
   variant = 'default',
   className = '',
-  buttonClassName = ''
+  buttonClassName = '',
+  fromCityInputRef = null
 }) {
   const isHero = variant === 'hero'
   
@@ -26,6 +27,7 @@ function CityForm({
             onChange={onFromCityChange}
             variant="hero"
             label="Откуда"
+            inputRef={fromCityInputRef}
           />
         </div>
         <div className="flex-1 border-t md:border-t-0 md:border-l-[0.5px] border-[#C8C7CC] px-4 md:px-6 py-2 h-[52px]">

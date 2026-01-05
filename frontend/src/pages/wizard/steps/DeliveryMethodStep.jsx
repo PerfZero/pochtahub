@@ -8,6 +8,10 @@ function DeliveryMethodStep({
   fromCity,
   onContinue
 }) {
+  const trimmedAddress = senderAddress?.trim() || ''
+  const hasHouseNumber = /\d/.test(trimmedAddress)
+  const isCourierAddressInvalid = deliveryMethod === 'courier' && trimmedAddress && !hasHouseNumber
+  const isDisabled = !deliveryMethod || (deliveryMethod === 'courier' && (!trimmedAddress || !hasHouseNumber))
   return (
     <div className="mb-8">
       <h1 className="text-xl md:text-3xl font-bold text-[#2D2D2D] mb-2 text-center px-2">
@@ -56,6 +60,9 @@ function DeliveryMethodStep({
             label="Адрес"
             city={fromCity}
           />
+          {isCourierAddressInvalid && (
+            <p className="text-red-500 text-sm mt-2">Укажите номер дома в адресе</p>
+          )}
         </div>
       )}
       {deliveryMethod === 'pickup' && (
@@ -70,7 +77,7 @@ function DeliveryMethodStep({
       )}
       <button 
         onClick={onContinue}
-        disabled={!deliveryMethod || (deliveryMethod === 'courier' && !senderAddress)}
+        disabled={isDisabled}
         className="w-full bg-[#0077FE] text-white px-6 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Продолжить
@@ -80,4 +87,3 @@ function DeliveryMethodStep({
 }
 
 export default DeliveryMethodStep
-

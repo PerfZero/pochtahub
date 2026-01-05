@@ -72,6 +72,13 @@ function OrderPage() {
   const [recipientCity, setRecipientCity] = useState(toCity)
   const [recipientDeliveryPointCode, setRecipientDeliveryPointCode] = useState('')
   const [senderDeliveryPointCode, setSenderDeliveryPointCode] = useState('')
+
+  const trimmedSenderAddress = (senderAddress || '').trim()
+  const trimmedRecipientAddress = (recipientAddress || '').trim()
+  const senderHasHouseNumber = /\d/.test(trimmedSenderAddress)
+  const recipientHasHouseNumber = /\d/.test(trimmedRecipientAddress)
+  const isSenderHouseInvalid = trimmedSenderAddress && !senderHasHouseNumber
+  const isRecipientHouseInvalid = trimmedRecipientAddress && !recipientHasHouseNumber
   
   const [loading, setLoading] = useState(false)
   const [checkingAuth, setCheckingAuth] = useState(true)
@@ -239,6 +246,9 @@ function OrderPage() {
                   label="Адрес"
                   required
                 />
+                {isSenderHouseInvalid && (
+                  <p className="text-red-500 text-sm mt-2">Укажите номер дома в адресе</p>
+                )}
 
                 {!courierPickup && ((location.state?.orderData?.company || company)?.company_code === 'cdek' || (location.state?.orderData?.company || company)?.company_name?.toLowerCase().includes('cdek')) && (
                   <DeliveryPointInput
@@ -344,6 +354,9 @@ function OrderPage() {
                   label="Адрес"
                   required
                 />
+                {isRecipientHouseInvalid && (
+                  <p className="text-red-500 text-sm mt-2">Укажите номер дома в адресе</p>
+                )}
 
                 {!courierDelivery && ((location.state?.orderData?.company || company)?.company_code === 'cdek' || (location.state?.orderData?.company || company)?.company_name?.toLowerCase().includes('cdek')) && (
                   <DeliveryPointInput
@@ -363,7 +376,7 @@ function OrderPage() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !trimmedSenderAddress || !senderHasHouseNumber || !trimmedRecipientAddress || !recipientHasHouseNumber}
             className="w-full py-4 rounded-xl text-base font-semibold bg-[#0077FE] text-white disabled:opacity-50"
           >
             {loading ? 'Создание заказа...' : 'Создать заказ'}

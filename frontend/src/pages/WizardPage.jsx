@@ -751,7 +751,6 @@ function WizardPage() {
     if (paymentPayer === 'recipient') {
       const inviteRecipient = location.state?.inviteRecipient || location.state?.wizardData?.inviteRecipient || false
       const existingWizardData = location.state?.wizardData || {}
-      const filterCourierDelivery = existingWizardData.filterCourierDelivery || false
       
       const updatedWizardData = {
         ...existingWizardData,
@@ -761,7 +760,6 @@ function WizardPage() {
       console.log('📊 handlePaymentContinue:', {
         paymentPayer,
         inviteRecipient,
-        filterCourierDelivery,
         needsPackaging: updatedWizardData.needsPackaging,
         selectedOffer: selectedOffer ? {
           company_name: selectedOffer.company_name,
@@ -769,36 +767,14 @@ function WizardPage() {
         } : null
       })
       
-      if (inviteRecipient) {
-        console.log('🚀 Переход на orderComplete (inviteRecipient)')
-        navigate('/wizard?step=orderComplete', { 
-          state: { 
-            ...location.state, 
-            wizardData: updatedWizardData,
-            inviteRecipient: true 
-          } 
-        })
-      } else {
-        const needsPvz = selectedOffer && needsPvzSelection(selectedOffer, filterCourierDelivery)
-        console.log('📊 needsPvz result:', needsPvz)
-        if (needsPvz) {
-          console.log('🚀 Переход на selectPvz')
-          navigate('/wizard?step=selectPvz', { 
-            state: { 
-              ...location.state,
-              wizardData: updatedWizardData
-            } 
-          })
-        } else {
-          console.log('🚀 Переход на orderComplete')
-          navigate('/wizard?step=orderComplete', { 
-            state: { 
-              ...location.state,
-              wizardData: updatedWizardData
-            } 
-          })
+      // Когда получатель платит - сразу переходим к завершению, без выбора ПВЗ
+      console.log('🚀 Переход на orderComplete (recipient payer)')
+      navigate('/wizard?step=orderComplete', { 
+        state: { 
+          ...location.state,
+          wizardData: updatedWizardData
         }
-      }
+      })
     } else if (paymentPayer === 'me') {
       const existingWizardData = location.state?.wizardData || {}
       const updatedWizardData = {
@@ -879,6 +855,18 @@ function WizardPage() {
   }
 
   const handleEmailContinue = () => {
+    // Валидация email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!email || !emailRegex.test(email)) {
+      alert('Пожалуйста, введите корректный email адрес')
+      return
+    }
+    
+    if (!agreePersonalData) {
+      alert('Пожалуйста, согласитесь с условиями обработки персональных данных')
+      return
+    }
+
     const existingWizardData = location.state?.wizardData || {}
     const existingWizardDataForPayment = {
       ...existingWizardData,
@@ -1398,7 +1386,7 @@ function WizardPage() {
           toCity={toCity}
           onContinue={handleRecipientAddressContinue}
         />
-      ) : currentStep === 'selectPvz' && selectedOffer && needsPvzSelection(selectedOffer, location.state?.wizardData?.filterCourierDelivery || false) ? (
+      ) : currentStep === 'selectPvz' && selectedOffer && needsPvzSelection(selectedOffer, location.state?.wizardData?.filterCourierDelivery || false) && paymentPayer !== 'recipient' ? (
         <SelectPvzStep
           toCity={toCity}
           fromCity={fromCity}
@@ -1435,6 +1423,10 @@ function WizardPage() {
           const inviteRecipient = location.state?.inviteRecipient || location.state?.wizardData?.inviteRecipient || false
           const filterCourierDelivery = location.state?.wizardData?.filterCourierDelivery || false
           if (inviteRecipient) {
+            return <OrderCompleteStep />
+          }
+          // Если получатель платит - не показываем выбор ПВЗ, сразу завершение
+          if (paymentPayer === 'recipient') {
             return <OrderCompleteStep />
           }
           if (selectedOffer && needsPvzSelection(selectedOffer, filterCourierDelivery)) {

@@ -11,6 +11,15 @@ function EmailStep({
   loadingOffers,
   onContinue
 }) {
+  // Валидация email
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    return emailRegex.test(email)
+  }
+
+  const isEmailValid = email ? validateEmail(email) : false
+  const showEmailError = email && !isEmailValid
+
   return (
     <div className="mb-8">
       <h1 className="text-xl md:text-3xl font-bold text-[#2D2D2D] mb-2 text-center px-2">
@@ -22,7 +31,7 @@ function EmailStep({
       <div className="mb-6">
         <div className="relative">
           <div className={`relative border rounded-xl ${
-            emailFocused ? 'border-[#0077FE]' : 'border-[#C8C7CC]'
+            showEmailError ? 'border-red-500' : emailFocused ? 'border-[#0077FE]' : 'border-[#C8C7CC]'
           }`}>
             <input
               type="email"
@@ -31,14 +40,21 @@ function EmailStep({
               onFocus={onEmailFocus}
               onBlur={onEmailBlur}
               placeholder=" "
-              className="w-full px-4 pt-6 pb-2 border-0 bg-transparent rounded-xl text-base text-[#2D2D2D] focus:outline-none"
+              className={`w-full px-4 pt-6 pb-2 border-0 bg-transparent rounded-xl text-base focus:outline-none ${
+                showEmailError ? 'text-red-500' : 'text-[#2D2D2D]'
+              }`}
             />
             <label className={`absolute left-4 transition-all duration-200 pointer-events-none ${
               email || emailFocused ? 'top-2 text-xs' : 'top-1/2 -translate-y-1/2 text-base'
-            } ${emailFocused ? 'text-[#0077FE]' : 'text-[#858585]'}`}>
+            } ${showEmailError ? 'text-red-500' : emailFocused ? 'text-[#0077FE]' : 'text-[#858585]'}`}>
               Электронный адрес
             </label>
           </div>
+          {showEmailError && (
+            <p className="mt-2 text-sm text-red-500">
+              Введите корректный email адрес (например: example@mail.com)
+            </p>
+          )}
         </div>
       </div>
       <div className="mb-6 space-y-4">
@@ -67,7 +83,7 @@ function EmailStep({
       </div>
       <button 
         onClick={onContinue}
-        disabled={!email || !agreePersonalData || loadingOffers}
+        disabled={!isEmailValid || !agreePersonalData || loadingOffers}
         className="w-full bg-[#0077FE] text-white px-6 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loadingOffers ? 'Загрузка...' : 'Продолжить'}
