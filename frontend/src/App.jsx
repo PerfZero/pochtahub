@@ -9,6 +9,7 @@ import ConfirmationPage from './pages/ConfirmationPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import CabinetPage from './pages/CabinetPage'
+import TestPage from './pages/TestPage'
 import NotFoundPage from './pages/NotFoundPage'
 import './App.css'
 
@@ -36,6 +37,7 @@ function App() {
         <Route path="/payment" element={<PaymentPage />} />
         <Route path="/order" element={<OrderPage />} />
         <Route path="/confirmation/:orderId" element={<ConfirmationPage />} />
+        <Route path="/test" element={<TestPage />} />
         <Route 
           path="/cabinet" 
           element={isAuthenticated ? <CabinetPage /> : <Navigate to="/calculate" />} 

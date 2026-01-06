@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import AddressInput from '../../../components/AddressInput'
 
 function SenderAddressStep({
@@ -11,10 +12,16 @@ function SenderAddressStep({
   fromCity,
   onContinue
 }) {
+  const [hasHouseFromDadata, setHasHouseFromDadata] = useState(false)
+  
   const trimmedAddress = senderAddress?.trim() || ''
   const hasHouseNumber = /\d/.test(trimmedAddress)
-  const isAddressValid = trimmedAddress && hasHouseNumber
+  const isAddressValid = trimmedAddress && (hasHouseFromDadata || hasHouseNumber)
   const isDisabled = !isAddressValid || !senderFIO
+
+  const handleHouseValidation = (hasHouse) => {
+    setHasHouseFromDadata(hasHouse)
+  }
 
   return (
     <div className="mb-8">
@@ -28,10 +35,11 @@ function SenderAddressStep({
         <AddressInput
           value={senderAddress}
           onChange={onSenderAddressChange}
+          onHouseValidation={handleHouseValidation}
           label="Адрес"
           city={fromCity}
         />
-        {trimmedAddress && !hasHouseNumber && (
+        {trimmedAddress && !hasHouseFromDadata && !hasHouseNumber && (
           <p className="text-red-500 text-sm mt-2">Укажите номер дома в адресе</p>
         )}
       </div>

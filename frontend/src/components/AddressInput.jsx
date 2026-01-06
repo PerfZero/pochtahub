@@ -4,7 +4,7 @@ import axios from 'axios'
 const DADATA_API_URL = 'https://suggestions.dadata.ru/suggestions/api/4_1/rs/suggest/address'
 const DADATA_TOKEN = import.meta.env.VITE_DADATA_TOKEN || ''
 
-function AddressInput({ value = '', onChange, onCityChange, label = 'Адрес', required = false, city = null }) {
+function AddressInput({ value = '', onChange, onCityChange, label = 'Адрес', required = false, city = null, onHouseValidation }) {
   const [options, setOptions] = useState([])
   const [loading, setLoading] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
@@ -81,6 +81,9 @@ function AddressInput({ value = '', onChange, onCityChange, label = 'Адрес'
           fullValue: fullAddress,
           label: addressWithoutCity,
           city: item.data.city || item.data.settlement || '',
+          house: item.data.house || '',
+          street: item.data.street || '',
+          hasHouse: !!item.data.house,
         }
       })
 
@@ -107,6 +110,11 @@ function AddressInput({ value = '', onChange, onCityChange, label = 'Адрес'
       setOptions([])
       setIsOpen(false)
     }
+    
+    // Если пользователь вводит вручную, сбрасываем валидацию DaData
+    if (onHouseValidation) {
+      onHouseValidation(false)
+    }
   }
 
   const handleSelect = (option) => {
@@ -114,6 +122,10 @@ function AddressInput({ value = '', onChange, onCityChange, label = 'Адрес'
     onChange({ target: { value: option.value } })
     if (onCityChange && option.city && !city) {
       onCityChange({ target: { value: option.city } })
+    }
+    if (onHouseValidation) {
+      // Проверяем наличие дома в выбранной опции
+      onHouseValidation(option.hasHouse)
     }
     setIsOpen(false)
     setOptions([])
