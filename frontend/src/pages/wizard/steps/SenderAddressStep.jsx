@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import AddressInput from '../../../components/AddressInput'
+import SeparatedAddressInput from '../../../components/SeparatedAddressInput'
 
 function SenderAddressStep({
   senderAddress,
@@ -12,15 +12,58 @@ function SenderAddressStep({
   fromCity,
   onContinue
 }) {
-  const [hasHouseFromDadata, setHasHouseFromDadata] = useState(false)
+  // Простая функция для базового разделения адреса (только для ручного ввода)
+  const parseAddress = (address) => {
+    if (!address) return { street: address || '', house: '', apartment: '' }
+    
+    // Если есть запятые, пытаемся разделить
+    const parts = address.split(',')
+    
+    if (parts.length === 1) {
+      // Простая улица без дома и квартиры
+      return { street: address.trim(), house: '', apartment: '' }
+    }
+    
+    // Ищем квартиру
+    let apartment = ''
+    let streetAndHouse = parts.slice(0, -1).join(',')
+    
+    const lastPart = parts[parts.length - 1].trim()
+    if (lastPart.match(/^(кв|квартира|офис|оф)\s*/i)) {
+      apartment = lastPart.replace(/^(кв|квартира|офис|оф)\s*/i, '').trim()
+    } else {
+      streetAndHouse = address
+    }
+    
+    // Ищем дом в streetAndHouse
+    const houseMatch = streetAndHouse.match(/,\s*(?:д|дом|влд|владение|стр|строение)\s*([0-9а-яА-Я\/-]+)/i)
+    const house = houseMatch ? houseMatch[1] : ''
+    const street = houseMatch ? streetAndHouse.replace(/,\s*(?:д|дом|влд|владение|стр|строение)\s*[0-9а-яА-Я\/-]+/i, '').trim() : streetAndHouse.trim()
+    
+    return { street, house, apartment }
+  }
   
-  const trimmedAddress = senderAddress?.trim() || ''
-  const hasHouseNumber = /\d/.test(trimmedAddress)
-  const isAddressValid = trimmedAddress && (hasHouseFromDadata || hasHouseNumber)
+  const { street, house, apartment } = parseAddress(senderAddress)
+  
+  const isAddressValid = street.trim()
   const isDisabled = !isAddressValid || !senderFIO
 
-  const handleHouseValidation = (hasHouse) => {
-    setHasHouseFromDadata(hasHouse)
+  const handleStreetChange = (e) => {
+    const newStreet = e.target.value
+    const newAddress = `${newStreet}${house ? `, д ${house}` : ''}${apartment ? `, кв ${apartment}` : ''}`
+    onSenderAddressChange({ target: { value: newAddress } })
+  }
+
+  const handleHouseChange = (e) => {
+    const newHouse = e.target.value
+    const newAddress = `${street}${newHouse ? `, д ${newHouse}` : ''}${apartment ? `, кв ${apartment}` : ''}`
+    onSenderAddressChange({ target: { value: newAddress } })
+  }
+
+  const handleApartmentChange = (e) => {
+    const newApartment = e.target.value
+    const newAddress = `${street}${house ? `, д ${house}` : ''}${newApartment ? `, кв ${newApartment}` : ''}`
+    onSenderAddressChange({ target: { value: newAddress } })
   }
 
   return (
@@ -32,15 +75,18 @@ function SenderAddressStep({
         Укажите точный адрес отправителя с номером дома и ваше полное имя
       </p>
       <div className="mb-6">
-        <AddressInput
-          value={senderAddress}
-          onChange={onSenderAddressChange}
-          onHouseValidation={handleHouseValidation}
+        <SeparatedAddressInput
+          street={street}
+          house={house}
+          apartment={apartment}
+          onStreetChange={handleStreetChange}
+          onHouseChange={handleHouseChange}
+          onApartmentChange={handleApartmentChange}
           label="Адрес"
           city={fromCity}
         />
-        {trimmedAddress && !hasHouseFromDadata && !hasHouseNumber && (
-          <p className="text-red-500 text-sm mt-2">Укажите номер дома в адресе</p>
+        {street && !house && (
+          <p className="text-yellow-600 text-sm mt-2">Укажите номер дома для более точного адреса</p>
         )}
       </div>
       <div className="mb-6">
