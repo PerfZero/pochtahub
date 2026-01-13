@@ -554,24 +554,42 @@ function CalculatePage() {
               <button className="px-3 md:px-4 py-2 md:py-2.5 rounded-lg text-xs md:text-sm font-semibold bg-[#0077FE] text-white">Рассчитать</button>
             </div>
           </div>
-          <div className="flex flex-col md:flex-row gap-6 md:gap-12 pt-6 border-t border-[#C8C7CC]">
-            <div className="flex flex-col gap-2">
-              <a href="#" className="text-xs text-[#858585] hover:text-[#0077FE] transition-colors">Стоимость сервиса PochtHub — 50 ₽.</a>
-              <a href="#" className="text-xs text-[#858585] hover:text-[#0077FE] transition-colors">Все расценки транспортных компаний<br className="hidden md:block"/>отображаются без наценок.</a>
+          <div className="pt-6 border-t border-[#C8C7CC]">
+            {/* Первая строка - основная информация */}
+            <div className="flex flex-col lg:flex-row gap-6 lg:gap-12 mb-6">
+              <div className="flex flex-col md:flex-row gap-6 md:gap-12">
+                <div className="flex flex-col gap-2">
+                  <span className="text-sm font-semibold text-[#2D2D2D]">PochtHub — агрегатор транспортных компаний</span>
+                  <a href="#" className="text-xs text-[#858585] hover:text-[#0077FE] transition-colors">Стоимость услуг сервиса PochtHub — 30 ₽.</a>
+                  <a href="#" className="text-xs text-[#858585] hover:text-[#0077FE] transition-colors">Стоимость доставки зависит от условий выбранной транспортной компании и указывается при оформлении заказа.</a>
+                </div>
+                <div className="flex shrink-0 flex-col gap-2">
+                  <span className="text-xs text-[#858585]">Самозанятый Кудрявцев Алексей Алексеевич</span>
+                  <span className="text-xs text-[#858585]">ИНН: 636702832454</span>
+                  <a href="mailto:info@pochtahub.ru" className="text-xs text-[#858585] hover:text-[#0077FE] transition-colors">Email: info@pochtahub.ru</a>
+                  <a href="mailto:support@pochtahub.ru" className="text-xs text-[#858585] hover:text-[#0077FE] transition-colors">Поддержка: support@pochtahub.ru</a>
+                  <a href="tel:+79277272680" className="text-xs text-[#858585] hover:text-[#0077FE] transition-colors">Телефон: +7 (927) 727-26-80</a>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <span className="text-xs text-[#858585]">Онлайн-оплата осуществляется с использованием платёжного сервиса ЮKassa</span>
+                  <span className="text-xs text-[#858585]">VISA · MasterCard · МИР · СБП</span>
+                </div>
+              </div>
             </div>
-            <div className="flex flex-col gap-2">
-              <a href="/pochtahub.ru:privacy.docx" className="text-xs text-[#858585] hover:text-[#0077FE] transition-colors">Политика конфиденциальности и обработки ПД</a>
-              <a href="/pochtahub.ru:privacy.docx" className="text-xs text-[#858585] hover:text-[#0077FE] transition-colors">Согласие на обработку ПД</a>
-              <a href="/pochtahub.ru:privacy.docx" className="text-xs text-[#858585] hover:text-[#0077FE] transition-colors">Согласие на рассылку</a>
-            </div>
-            <div className="flex flex-col gap-2">
-              <a href="/pochtahub.ru:terms.docx" className="text-xs text-[#858585] hover:text-[#0077FE] transition-colors">Пользовательское соглашение</a>
-              <a href="/pochtahub.ru:privacy.docx" className="text-xs text-[#858585] hover:text-[#0077FE] transition-colors">Политика cookie</a>
-            </div>
-            <div className="md:ml-auto flex items-center gap-2 cursor-pointer justify-center md:justify-start hover:bg-[#F4EEE2] rounded-lg px-3 py-2 transition-colors"
-                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-              <span className="text-sm text-[#2D2D2D]">Наверх</span>
-              <div className="w-8 h-8 rounded-full bg-[#F4F2F3] flex items-center justify-center text-base hover:bg-[#0077FE] hover:text-white transition-colors">↑</div>
+            {/* Вторая строка - ссылки и наверх */}
+            <div className="flex flex-col lg:flex-row gap-6 lg:gap-12 items-start lg:items-center">
+              <div className="flex flex-col md:flex-row gap-6 md:gap-12">
+                <div className="flex flex-col gap-2">
+                  <a href="/pochtahub.ru:privacy.docx" className="text-xs text-[#858585] hover:text-[#0077FE] transition-colors">Политика конфиденциальности</a>
+                  <a href="/pochtahub.ru:terms.docx" className="text-xs text-[#858585] hover:text-[#0077FE] transition-colors">Публичная оферта / Пользовательское соглашение</a>
+                  <a href="/pochtahub.ru:privacy.docx" className="text-xs text-[#858585] hover:text-[#0077FE] transition-colors">Политика cookie</a>
+                </div>
+              </div>
+              <div className="lg:ml-auto flex items-center gap-2 cursor-pointer justify-center lg:justify-start hover:bg-[#F4EEE2] rounded-lg px-3 py-2 transition-colors"
+                   onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+                <span className="text-sm text-[#2D2D2D]">Наверх</span>
+                <div className="w-8 h-8 rounded-full bg-[#F4F2F3] flex items-center justify-center text-base hover:bg-[#0077FE] hover:text-white transition-colors">↑</div>
+              </div>
             </div>
           </div>
         </div>

@@ -66,7 +66,7 @@ function EmailStep({
             className="mt-1 w-5 h-5 rounded border-[#C8C7CC] text-[#0077FE] focus:ring-[#0077FE]"
           />
           <span className="text-sm text-[#2D2D2D]">
-            Я согласен с <a href="#" className="text-[#0077FE] hover:underline">Условиями обработки моих персональных данных</a>, а также даю <a href="#" className="text-[#0077FE] hover:underline">Согласие на обработку моих ПД</a>
+            Нажимая кнопку «Продолжить», вы соглашаетесь с <a href="/pochtahub.ru:privacy.docx" className="text-[#0077FE] hover:underline">Политикой конфиденциальности</a>
           </span>
         </label>
         <label className="flex items-start gap-3 cursor-pointer">
@@ -77,7 +77,7 @@ function EmailStep({
             className="mt-1 w-5 h-5 rounded border-[#C8C7CC] text-[#0077FE] focus:ring-[#0077FE]"
           />
           <span className="text-sm text-[#2D2D2D]">
-            Даю <a href="#" className="text-[#0077FE] hover:underline">Согласие для направления информационных сообщений</a>. Отписаться от рассылки можно в любое время.
+            Я согласен получать информационные сообщения от PochtHub (можно отказаться в любой момент)
           </span>
         </label>
       </div>
