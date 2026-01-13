@@ -400,22 +400,22 @@ function CalculatePage() {
               <div className="pt-0 md:pt-6">
                 <div className="w-full md:w-[340px] h-auto md:h-[380px] bg-[rgba(0,119,254,0.16)] rounded-2xl p-6 flex text-center items-center justify-between flex-col gap-6 -rotate-0 md:-rotate-3">
                   <div className="w-10 h-10 rounded-full bg-[#0077FE] flex items-center justify-center text-lg font-bold text-white">1</div>
-                  <h3 className="text-lg md:text-xl font-bold text-[#2D2D2D]">Сфотографируй посылку или выбери фото из галереи</h3>
-                  <p className="text-sm text-[#2D2D2D]">Загрузи фотографию с компьютера или с телефона</p>
+                  <h3 className="text-lg md:text-xl font-bold text-[#2D2D2D]">Сфотографируйте посылку или введите маршрут</h3>
+                  <p className="text-sm text-[#2D2D2D]">Начать может и отправитель, и получатель</p>
                 </div>
               </div>
               <div className="">
                 <div className="w-full md:w-[312px] h-auto md:h-[348px] bg-[rgba(246,189,96,0.32)] items-center justify-between text-center rounded-2xl p-6 flex flex-col gap-6">
                   <div className="w-10 h-10 rounded-full bg-[#F6BD60] flex items-center justify-center text-lg font-bold text-[#2D2D2D]">2</div>
-                  <h3 className="text-lg md:text-xl font-bold text-[#2D2D2D]">Сервис определит размеры и рассчитает стоимость доставки</h3>
-                  <p className="text-sm text-[#2D2D2D]">Загрузи фотографию с компьютера или с телефона</p>
+                  <h3 className="text-lg md:text-xl font-bold text-[#2D2D2D]">Мы сравним варианты доставки</h3>
+                  <p className="text-sm text-[#2D2D2D]">Сразу по нескольким транспортным компаниям</p>
                 </div>
               </div>
               <div className="pt-0 md:pt-6">
                 <div className="w-full md:w-[340px] h-auto md:h-[380px] bg-[rgba(87,167,115,0.24)] items-center justify-between text-center rounded-2xl p-6 flex flex-col gap-6 rotate-0 md:rotate-3">
                   <div className="w-10 h-10 rounded-full bg-[#57A773] flex items-center justify-center text-lg font-bold text-white">3</div>
-                  <h3 className="text-lg md:text-xl font-bold text-[#2D2D2D]">Если все устроит, курьер приедет к вам и заберет посылку</h3>
-                  <p className="text-sm text-[#2D2D2D]">Загрузи фотографию с компьютера или с телефона</p>
+                  <h3 className="text-lg md:text-xl font-bold text-[#2D2D2D]">Отправитель передаст посылку курьеру или сдаст в ближайший пункт приёма</h3>
+                  <p className="text-sm text-[#2D2D2D]">Получатель выбирает и оплачивает удобный вариант</p>
                 </div>
               </div>
             </div>
