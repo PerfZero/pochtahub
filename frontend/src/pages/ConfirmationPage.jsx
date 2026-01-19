@@ -39,7 +39,7 @@ function ConfirmationPage() {
     console.log("[PAYMENT FRONTEND] Начало оплаты для заказа:", orderId);
     setPaying(true);
     try {
-      console.log("[PAYMENT FRONTEND] Отправка запроса на оплату...");
+      console.log("[PAYMENT FRONTEND] Отправка запроса на опл1ату...");
       const response = await paymentAPI.createPayment(orderId);
       console.log("[PAYMENT FRONTEND] Ответ от сервера:", response);
       const confirmationUrl = response?.data?.confirmation_url;

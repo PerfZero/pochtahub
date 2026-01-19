@@ -9,53 +9,52 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '20'
-    
-    - name: Build frontend
-      working-directory: ./frontend
-      run: |
-        npm ci
-        npm run build
-    
-    - name: Deploy to server
-      uses: appleboy/ssh-action@v1.0.0
-      with:
-        host: ${{ secrets.SERVER_HOST }}
-        username: ${{ secrets.SERVER_USER }}
-        password: ${{ secrets.SERVER_PASSWORD }}
-        script: |
-          cd /var/www/pochtahub
-          git pull origin main
-          
-          echo "=== Deploying Backend ==="
-          cd backend
-          source venv/bin/activate
-          pip install -r requirements.txt --quiet
-          python manage.py collectstatic --noinput
-          python manage.py migrate --noinput
-          
-          echo "=== Deploying Frontend ==="
-          cd ../frontend
-          
-          NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
-          if [ "$NODE_VERSION" -lt 20 ]; then
-            echo "Node.js version is too old. Installing Node.js 20..."
-            curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-            apt-get install -y nodejs
-          fi
-          
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+
+      - name: Build frontend
+        working-directory: ./frontend
+        run: |
           npm ci
           npm run build
-          
-          echo "=== Deployment completed ==="
-          echo "Backend and Frontend updated successfully."
-          echo "Note: Server should be running via systemd or screen. Restart manually if needed."
 
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          script: |
+            cd /var/www/pochtahub
+            git pull origin main
+
+            echo "=== Deploying Backend ==="
+            cd backend
+            source venv/bin/activate
+            pip install -r requirements.txt --quiet
+            python manage.py collectstatic --noinput
+            python manage.py migrate --noinput
+
+            echo "=== Deploying Frontend ==="
+            cd ../frontend
+
+            NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
+            if [ "$NODE_VERSION" -lt 20 ]; then
+              echo "Node.js version is too old. Installing Node.js 20..."
+              curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+              apt-get install -y nodejs
+            fi
+
+            npm ci
+            npm run build
+
+            echo "=== Deployment completed ==="
+            echo "Backend and Frontend updated successfully."
+            echo "Note: Server should be running via systemd or screen. Restart manually if needed."
