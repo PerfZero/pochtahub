@@ -16,6 +16,8 @@ class Payment(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Сумма')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='Статус')
     payment_id = models.CharField(max_length=100, unique=True, blank=True, null=True, verbose_name='ID платежа')
+    confirmation_url = models.URLField(blank=True, null=True, verbose_name='Ссылка на оплату')
+    idempotence_key = models.CharField(max_length=64, blank=True, null=True, verbose_name='Idempotence ключ')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Дата обновления')
 

@@ -1,65 +1,69 @@
-import axios from 'axios'
+import axios from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL || '/api'
+const API_URL = import.meta.env.VITE_API_URL || "/api";
 
 const api = axios.create({
   baseURL: API_URL,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
-})
+});
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token')
+  const token = localStorage.getItem("access_token");
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`
+    config.headers.Authorization = `Bearer ${token}`;
   }
-  return config
-})
+  return config;
+});
 
 export const authAPI = {
-  sendCode: (phone, method = 'sms') => api.post('/auth/send-code/', { phone, method }),
-  verifyCode: (phone, code) => api.post('/auth/verify-code/', { phone, code }),
-  register: (data) => api.post('/auth/register/', data),
-  login: (data) => api.post('/auth/login/', data),
-  refreshToken: (refresh) => api.post('/auth/token/refresh/', { refresh }),
-}
+  sendCode: (phone, method = "sms") =>
+    api.post("/auth/send-code/", { phone, method }),
+  verifyCode: (phone, code) => api.post("/auth/verify-code/", { phone, code }),
+  register: (data) => api.post("/auth/register/", data),
+  login: (data) => api.post("/auth/login/", data),
+  refreshToken: (refresh) => api.post("/auth/token/refresh/", { refresh }),
+};
 
 export const tariffsAPI = {
-  getCompanies: () => api.get('/tariffs/companies/'),
-  calculate: (data) => api.post('/tariffs/calculate/', data),
-  analyzeImage: (formData) => api.post('/tariffs/analyze-image/', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  }),
-  getDeliveryPoints: (params) => api.get('/tariffs/delivery-points/', { params }),
-}
+  getCompanies: () => api.get("/tariffs/companies/"),
+  calculate: (data) => api.post("/tariffs/calculate/", data),
+  analyzeImage: (formData) =>
+    api.post("/tariffs/analyze-image/", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    }),
+  getDeliveryPoints: (params) =>
+    api.get("/tariffs/delivery-points/", { params }),
+};
 
 export const ordersAPI = {
-  getOrders: () => api.get('/orders/'),
-  createOrder: (data) => api.post('/orders/', data),
+  getOrders: () => api.get("/orders/"),
+  createOrder: (data) => api.post("/orders/", data),
   getOrder: (id) => api.get(`/orders/${id}/`),
   updateOrder: (id, data) => api.patch(`/orders/${id}/`, data),
   updateStatusFromCdek: (id) => api.post(`/orders/${id}/update-status/`),
   getOrderTracking: (id) => api.get(`/orders/${id}/tracking/`),
   getOrderDocuments: (id) => api.get(`/orders/${id}/documents/`),
-  uploadPackageImage: (formData) => api.post('/orders/upload-image/', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  }),
-}
+  uploadPackageImage: (formData) =>
+    api.post("/orders/upload-image/", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    }),
+};
 
 export const paymentAPI = {
-  createPayment: (orderId) => api.post('/payment/create/', { order_id: orderId }),
+  createPayment: (orderId) =>
+    api.post("/payment/create/", { order_id: orderId }),
   getPayment: (id) => api.get(`/payment/${id}/`),
-}
+};
 
 export const usersAPI = {
-  getProfile: () => api.get('/users/profile/'),
-  updateProfile: (data) => api.patch('/users/profile/', data),
-}
+  getProfile: () => api.get("/users/profile/"),
+  updateProfile: (data) => api.patch("/users/profile/", data),
+};
 
-export default api
-
+export default api;

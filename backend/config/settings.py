@@ -102,6 +102,12 @@ USE_I18N = True
 FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')
 USE_TZ = True
 
+# YooKassa
+YOOKASSA_SHOP_ID = config('YOOKASSA_SHOP_ID', default=None)
+YOOKASSA_SECRET_KEY = config('YOOKASSA_SECRET_KEY', default=None)
+YOOKASSA_API_URL = config('YOOKASSA_API_URL', default='https://api.yookassa.ru/v3/payments')
+YOOKASSA_NOTIFICATION_URL = config('YOOKASSA_NOTIFICATION_URL', default=None)
+
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
