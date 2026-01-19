@@ -10,7 +10,17 @@ function RoleSelectStep({ onRoleSelect, selectedRole }) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-8">
         <button
-          onClick={() => onRoleSelect("sender")}
+          onClick={() => {
+            if (
+              typeof window !== "undefined" &&
+              typeof window.ym === "function"
+            ) {
+              window.ym(104664178, "reachGoal", "role_sender", {
+                flow_step: "sender",
+              });
+            }
+            onRoleSelect("sender");
+          }}
           className={`p-4 md:p-6 rounded-xl border transition-all ${
             selectedRole === "sender"
               ? "border-[#0077FE] bg-[#F0F7FF]"
@@ -38,7 +48,9 @@ function RoleSelectStep({ onRoleSelect, selectedRole }) {
               typeof window !== "undefined" &&
               typeof window.ym === "function"
             ) {
-              window.ym(104664178, "params", { flow_step: "recipient" });
+              window.ym(104664178, "reachGoal", "role_recipient", {
+                flow_step: "recipient",
+              });
             }
             onRoleSelect("recipient");
           }}
