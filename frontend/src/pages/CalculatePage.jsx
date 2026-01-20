@@ -380,7 +380,15 @@ function CalculatePage() {
                 </Link>
               ) : (
                 <button
-                  onClick={() => setShowLoginPopup(true)}
+                  onClick={() => {
+                    if (
+                      typeof window !== "undefined" &&
+                      typeof window.ym === "function"
+                    ) {
+                      window.ym(104664178, "params", { glavnaya: "вход" });
+                    }
+                    setShowLoginPopup(true);
+                  }}
                   className="hidden md:inline-block px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#F4EEE2] text-[#2D2D2D]"
                 >
                   Войти

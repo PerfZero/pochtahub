@@ -1,8 +1,8 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from "react-router-dom";
 
 function OrderCompleteStep() {
-  const navigate = useNavigate()
-  
+  const navigate = useNavigate();
+
   return (
     <div className="mb-8">
       <div className="text-center mb-6 md:mb-8">
@@ -11,19 +11,28 @@ function OrderCompleteStep() {
           Готово 👍 Отправление создано
         </h1>
         <p className="text-sm md:text-base text-[#2D2D2D] mb-6 md:mb-8 px-2">
-          Получатель выберет и оплатит доставку. Мы сообщим Вам, когда назначим курьера.
+          Получатель выберет и оплатит доставку. Мы сообщим Вам, когда назначим
+          курьера.
         </p>
         <button
-          onClick={() => navigate('/cabinet')}
+          onClick={() => {
+            if (
+              typeof window !== "undefined" &&
+              typeof window.ym === "function"
+            ) {
+              window.ym(104664178, "params", {
+                offers: "отправитель_передал_заказ!",
+              });
+            }
+            navigate("/cabinet");
+          }}
           className="bg-[#0077FE] text-white px-6 md:px-8 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold hover:bg-[#0066CC] transition-colors"
         >
           Понятно
         </button>
       </div>
     </div>
-  )
+  );
 }
 
-export default OrderCompleteStep
-
-
+export default OrderCompleteStep;

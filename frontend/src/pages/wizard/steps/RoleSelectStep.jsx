@@ -18,6 +18,7 @@ function RoleSelectStep({ onRoleSelect, selectedRole }) {
               window.ym(104664178, "reachGoal", "role_sender", {
                 flow_step: "sender",
               });
+              window.ym(104664178, "params", { offers: "роль_отправитель" });
             }
             onRoleSelect("sender");
           }}
@@ -51,6 +52,7 @@ function RoleSelectStep({ onRoleSelect, selectedRole }) {
               window.ym(104664178, "reachGoal", "role_recipient", {
                 flow_step: "recipient",
               });
+              window.ym(104664178, "params", { offers: "роль_получатель" });
             }
             onRoleSelect("recipient");
           }}
