@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from .models import Payment
 from .serializers import PaymentSerializer, PaymentCreateSerializer
 from apps.orders.models import Order, OrderEvent
+from apps.orders.cdek_service import create_cdek_order
 
 logger = logging.getLogger('apps.payment')
 
@@ -122,6 +123,11 @@ def _send_payment_received(order, payment):
         description=f'Получена оплата на сумму {payment.amount}',
         metadata={'payment_id': payment.payment_id}
     )
+
+    try:
+        create_cdek_order(order)
+    except Exception as e:
+        logger.error('[PAYMENT] Ошибка создания заказа в CDEK после оплаты: %s', str(e), exc_info=True)
 
     def clean_phone(phone_str):
         if not phone_str:

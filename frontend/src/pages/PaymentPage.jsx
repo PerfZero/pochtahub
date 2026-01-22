@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import logoSvg from "../assets/whitelogo.svg";
 import cdekIcon from "../assets/images/cdek.svg";
-import { ordersAPI } from "../api";
+import { ordersAPI, paymentAPI } from "../api";
 
 const API_URL = import.meta.env.VITE_API_URL || "/api";
 const getMediaUrl = (path) => {
@@ -229,6 +229,18 @@ function PaymentPage() {
       if (orderId) {
         if (typeof window !== "undefined" && typeof window.ym === "function") {
           window.ym(104664178, "reachGoal", "заказ!");
+        }
+        try {
+          const paymentResponse = await paymentAPI.createPayment(orderId);
+          const confirmationUrl = paymentResponse?.data?.confirmation_url;
+          if (confirmationUrl) {
+            window.location.href = confirmationUrl;
+            return;
+          }
+        } catch (paymentError) {
+          alert(
+            `Ошибка создания платежа: ${paymentError.response?.data?.error || paymentError.message}`,
+          );
         }
         navigate(`/confirmation/${orderId}`);
       } else {

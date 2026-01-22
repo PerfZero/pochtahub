@@ -1,123 +1,131 @@
-import { useState, useEffect } from 'react'
-import { useNavigate, useLocation, Link } from 'react-router-dom'
-import { ordersAPI } from '../api'
-import PhoneInput from '../components/PhoneInput'
-import AddressInput from '../components/AddressInput'
-import CityInput from '../components/CityInput'
-import DeliveryPointInput from '../components/DeliveryPointInput'
-import logoSvg from '../assets/images/logo.svg'
-import iconVerify from '../assets/images/icon-verify.svg'
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation, Link } from "react-router-dom";
+import { ordersAPI, paymentAPI } from "../api";
+import PhoneInput from "../components/PhoneInput";
+import AddressInput from "../components/AddressInput";
+import CityInput from "../components/CityInput";
+import DeliveryPointInput from "../components/DeliveryPointInput";
+import logoSvg from "../assets/images/logo.svg";
+import iconVerify from "../assets/images/icon-verify.svg";
 
 function OrderPage() {
-  const location = useLocation()
-  const navigate = useNavigate()
-  
-  const orderData = location.state?.orderData || location.state || {}
-  const [company, setCompany] = useState(orderData.company || null)
-  const [weight, setWeight] = useState(orderData.weight || '')
-  const [fromAddress, setFromAddress] = useState(orderData.fromAddress || '')
-  const [toAddress, setToAddress] = useState(orderData.toAddress || '')
-  const [fromCity, setFromCity] = useState(orderData.fromCity || '')
-  const [toCity, setToCity] = useState(orderData.toCity || '')
-  const [courierPickup, setCourierPickup] = useState(orderData.courier_pickup !== undefined ? orderData.courier_pickup : true)
-  const [courierDelivery, setCourierDelivery] = useState(orderData.courier_delivery !== undefined ? orderData.courier_delivery : false)
-  
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const orderData = location.state?.orderData || location.state || {};
+  const [company, setCompany] = useState(orderData.company || null);
+  const [weight, setWeight] = useState(orderData.weight || "");
+  const [fromAddress, setFromAddress] = useState(orderData.fromAddress || "");
+  const [toAddress, setToAddress] = useState(orderData.toAddress || "");
+  const [fromCity, setFromCity] = useState(orderData.fromCity || "");
+  const [toCity, setToCity] = useState(orderData.toCity || "");
+  const [courierPickup, setCourierPickup] = useState(
+    orderData.courier_pickup !== undefined ? orderData.courier_pickup : true,
+  );
+  const [courierDelivery, setCourierDelivery] = useState(
+    orderData.courier_delivery !== undefined
+      ? orderData.courier_delivery
+      : false,
+  );
+
   useEffect(() => {
     if (location.state?.orderData) {
-      const data = location.state.orderData
+      const data = location.state.orderData;
       if (data.company) {
-        setCompany(data.company)
+        setCompany(data.company);
       }
       if (data.weight) {
-        setWeight(data.weight)
+        setWeight(data.weight);
       }
       if (data.fromAddress) {
-        setFromAddress(data.fromAddress)
+        setFromAddress(data.fromAddress);
       }
       if (data.toAddress) {
-        setToAddress(data.toAddress)
+        setToAddress(data.toAddress);
       }
       if (data.fromCity) {
-        setFromCity(data.fromCity)
+        setFromCity(data.fromCity);
       }
       if (data.toCity) {
-        setToCity(data.toCity)
+        setToCity(data.toCity);
       }
       if (data.courier_pickup !== undefined) {
-        setCourierPickup(data.courier_pickup)
+        setCourierPickup(data.courier_pickup);
       }
       if (data.courier_delivery !== undefined) {
-        setCourierDelivery(data.courier_delivery)
+        setCourierDelivery(data.courier_delivery);
       }
     }
     if (location.state?.courier_pickup !== undefined) {
-      setCourierPickup(location.state.courier_pickup)
+      setCourierPickup(location.state.courier_pickup);
     }
     if (location.state?.courier_delivery !== undefined) {
-      setCourierDelivery(location.state.courier_delivery)
+      setCourierDelivery(location.state.courier_delivery);
     }
-  }, [location.state])
-  
-  const [senderName, setSenderName] = useState('')
-  const [senderPhone, setSenderPhone] = useState('')
-  const [senderAddress, setSenderAddress] = useState(fromAddress)
-  const [senderCity, setSenderCity] = useState(fromCity)
-  const [senderCompany, setSenderCompany] = useState('')
-  const [senderTin, setSenderTin] = useState('')
-  const [senderContragentType, setSenderContragentType] = useState('')
-  
-  const [recipientName, setRecipientName] = useState('')
-  const [recipientPhone, setRecipientPhone] = useState('')
-  const [recipientAddress, setRecipientAddress] = useState(toAddress)
-  const [recipientCity, setRecipientCity] = useState(toCity)
-  const [recipientDeliveryPointCode, setRecipientDeliveryPointCode] = useState('')
-  const [senderDeliveryPointCode, setSenderDeliveryPointCode] = useState('')
+  }, [location.state]);
 
-  const trimmedSenderAddress = (senderAddress || '').trim()
-  const trimmedRecipientAddress = (recipientAddress || '').trim()
-  const senderHasHouseNumber = /\d/.test(trimmedSenderAddress)
-  const recipientHasHouseNumber = /\d/.test(trimmedRecipientAddress)
-  const isSenderHouseInvalid = trimmedSenderAddress && !senderHasHouseNumber
-  const isRecipientHouseInvalid = trimmedRecipientAddress && !recipientHasHouseNumber
-  
-  const [loading, setLoading] = useState(false)
-  const [checkingAuth, setCheckingAuth] = useState(true)
+  const [senderName, setSenderName] = useState("");
+  const [senderPhone, setSenderPhone] = useState("");
+  const [senderAddress, setSenderAddress] = useState(fromAddress);
+  const [senderCity, setSenderCity] = useState(fromCity);
+  const [senderCompany, setSenderCompany] = useState("");
+  const [senderTin, setSenderTin] = useState("");
+  const [senderContragentType, setSenderContragentType] = useState("");
+
+  const [recipientName, setRecipientName] = useState("");
+  const [recipientPhone, setRecipientPhone] = useState("");
+  const [recipientAddress, setRecipientAddress] = useState(toAddress);
+  const [recipientCity, setRecipientCity] = useState(toCity);
+  const [recipientDeliveryPointCode, setRecipientDeliveryPointCode] =
+    useState("");
+  const [senderDeliveryPointCode, setSenderDeliveryPointCode] = useState("");
+
+  const trimmedSenderAddress = (senderAddress || "").trim();
+  const trimmedRecipientAddress = (recipientAddress || "").trim();
+  const senderHasHouseNumber = /\d/.test(trimmedSenderAddress);
+  const recipientHasHouseNumber = /\d/.test(trimmedRecipientAddress);
+  const isSenderHouseInvalid = trimmedSenderAddress && !senderHasHouseNumber;
+  const isRecipientHouseInvalid =
+    trimmedRecipientAddress && !recipientHasHouseNumber;
+
+  const [loading, setLoading] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
   useEffect(() => {
-    const currentCompany = location.state?.orderData?.company || company
+    const currentCompany = location.state?.orderData?.company || company;
     if (!currentCompany) {
-      navigate('/calculate')
-      return
+      navigate("/calculate");
+      return;
     }
-    setCheckingAuth(false)
-  }, [location.state, company, navigate])
+    setCheckingAuth(false);
+  }, [location.state, company, navigate]);
 
   useEffect(() => {
     if (fromAddress) {
-      setSenderAddress(fromAddress)
+      setSenderAddress(fromAddress);
     }
     if (toAddress) {
-      setRecipientAddress(toAddress)
+      setRecipientAddress(toAddress);
     }
     if (fromCity) {
-      setSenderCity(fromCity)
+      setSenderCity(fromCity);
     }
     if (toCity) {
-      setRecipientCity(toCity)
+      setRecipientCity(toCity);
     }
-  }, [fromAddress, toAddress, fromCity, toCity])
+  }, [fromAddress, toAddress, fromCity, toCity]);
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
+    e.preventDefault();
+    setLoading(true);
     try {
-      const currentCompany = location.state?.orderData?.company || company
+      const currentCompany = location.state?.orderData?.company || company;
       if (!currentCompany || !currentCompany.company_id) {
-        alert('Ошибка: данные компании не найдены')
-        setLoading(false)
-        return
+        alert("Ошибка: данные компании не найдены");
+        setLoading(false);
+        return;
       }
-      
+
       const orderData = {
         sender_name: senderName,
         sender_phone: senderPhone,
@@ -138,22 +146,36 @@ function OrderPage() {
         price: currentCompany.price,
         tariff_code: currentCompany.tariff_code,
         tariff_name: currentCompany.tariff_name,
-      }
-      const response = await ordersAPI.createOrder(orderData)
-      
-      const orderId = response.data?.id || response.data?.pk
-      
+      };
+      const response = await ordersAPI.createOrder(orderData);
+
+      const orderId = response.data?.id || response.data?.pk;
+
       if (orderId) {
-        navigate(`/confirmation/${orderId}`)
+        try {
+          const paymentResponse = await paymentAPI.createPayment(orderId);
+          const confirmationUrl = paymentResponse?.data?.confirmation_url;
+          if (confirmationUrl) {
+            window.location.href = confirmationUrl;
+            return;
+          }
+        } catch (paymentError) {
+          alert(
+            `Ошибка создания платежа: ${paymentError.response?.data?.error || paymentError.message}`,
+          );
+        }
+        navigate(`/confirmation/${orderId}`);
       } else {
-        alert('Ошибка: ID заказа не получен')
-        setLoading(false)
+        alert("Ошибка: ID заказа не получен");
+        setLoading(false);
       }
     } catch (error) {
-      alert(`Ошибка создания заказа: ${error.response?.data?.detail || error.message}`)
-      setLoading(false)
+      alert(
+        `Ошибка создания заказа: ${error.response?.data?.detail || error.message}`,
+      );
+      setLoading(false);
     }
-  }
+  };
 
   if (checkingAuth || !company) {
     return (
@@ -163,7 +185,7 @@ function OrderPage() {
           <p className="text-[#2D2D2D]">Проверка авторизации...</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -175,10 +197,15 @@ function OrderPage() {
           </Link>
           <div className="flex items-center gap-1">
             <img src={iconVerify} alt="" className="w-6 h-6" />
-            <span className="text-xs text-[#2D2D2D]">Агрегатор транспортных компаний</span>
+            <span className="text-xs text-[#2D2D2D]">
+              Агрегатор транспортных компаний
+            </span>
           </div>
           <div className="ml-auto flex items-center gap-3">
-            <Link to="/cabinet" className="px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#F4EEE2] text-[#2D2D2D]">
+            <Link
+              to="/cabinet"
+              className="px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#F4EEE2] text-[#2D2D2D]"
+            >
               Личный кабинет
             </Link>
           </div>
@@ -187,7 +214,10 @@ function OrderPage() {
 
       <main className="flex-1 w-full max-w-[1128px] mx-auto px-6 py-8">
         <div className="mb-6">
-          <Link to="/calculate" className="text-[#0077FE] text-sm font-medium hover:underline">
+          <Link
+            to="/calculate"
+            className="text-[#0077FE] text-sm font-medium hover:underline"
+          >
             ← Назад к расчёту
           </Link>
         </div>
@@ -195,12 +225,23 @@ function OrderPage() {
         <div className="bg-white border border-[#C8C7CC] rounded-2xl p-8 mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-[#2D2D2D] mb-2">Оформление заказа</h1>
-              <p className="text-[#858585]">{(location.state?.orderData?.company || company)?.company_name || ''} {(location.state?.orderData?.company || company)?.tariff_name && `• ${(location.state?.orderData?.company || company).tariff_name}`}</p>
+              <h1 className="text-2xl font-bold text-[#2D2D2D] mb-2">
+                Оформление заказа
+              </h1>
+              <p className="text-[#858585]">
+                {(location.state?.orderData?.company || company)
+                  ?.company_name || ""}{" "}
+                {(location.state?.orderData?.company || company)?.tariff_name &&
+                  `• ${(location.state?.orderData?.company || company).tariff_name}`}
+              </p>
             </div>
             <div className="text-right">
-              <div className="text-3xl font-bold text-[#0077FE]">{(location.state?.orderData?.company || company)?.price || 0} ₽</div>
-              <p className="text-sm text-[#858585]">Вес: {location.state?.orderData?.weight || weight} кг</p>
+              <div className="text-3xl font-bold text-[#0077FE]">
+                {(location.state?.orderData?.company || company)?.price || 0} ₽
+              </div>
+              <p className="text-sm text-[#858585]">
+                Вес: {location.state?.orderData?.weight || weight} кг
+              </p>
             </div>
           </div>
         </div>
@@ -208,8 +249,10 @@ function OrderPage() {
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             <div className="bg-white border border-[#C8C7CC] rounded-2xl p-6">
-              <h2 className="text-lg font-bold text-[#2D2D2D] mb-6">Данные отправителя</h2>
-              
+              <h2 className="text-lg font-bold text-[#2D2D2D] mb-6">
+                Данные отправителя
+              </h2>
+
               <div className="flex flex-col gap-4">
                 <div className="relative">
                   <input
@@ -247,21 +290,33 @@ function OrderPage() {
                   required
                 />
                 {isSenderHouseInvalid && (
-                  <p className="text-red-500 text-sm mt-2">Укажите номер дома в адресе</p>
+                  <p className="text-red-500 text-sm mt-2">
+                    Укажите номер дома в адресе
+                  </p>
                 )}
 
-                {!courierPickup && ((location.state?.orderData?.company || company)?.company_code === 'cdek' || (location.state?.orderData?.company || company)?.company_name?.toLowerCase().includes('cdek')) && (
-                  <DeliveryPointInput
-                    city={senderCity}
-                    transportCompanyId={(location.state?.orderData?.company || company)?.company_id}
-                    value={senderDeliveryPointCode}
-                    onChange={(e) => {
-                      const value = e?.target?.value || e?.value || '';
-                      setSenderDeliveryPointCode(value);
-                    }}
-                    label="ПВЗ (Пункт выдачи)"
-                  />
-                )}
+                {!courierPickup &&
+                  ((location.state?.orderData?.company || company)
+                    ?.company_code === "cdek" ||
+                    (
+                      location.state?.orderData?.company || company
+                    )?.company_name
+                      ?.toLowerCase()
+                      .includes("cdek")) && (
+                    <DeliveryPointInput
+                      city={senderCity}
+                      transportCompanyId={
+                        (location.state?.orderData?.company || company)
+                          ?.company_id
+                      }
+                      value={senderDeliveryPointCode}
+                      onChange={(e) => {
+                        const value = e?.target?.value || e?.value || "";
+                        setSenderDeliveryPointCode(value);
+                      }}
+                      label="ПВЗ (Пункт выдачи)"
+                    />
+                  )}
 
                 <div className="relative">
                   <select
@@ -273,16 +328,24 @@ function OrderPage() {
                     <option value="INDIVIDUAL">Физическое лицо</option>
                     <option value="LEGAL_ENTITY">Юридическое лицо</option>
                   </select>
-                  <label className={`absolute left-4 transition-all duration-200 pointer-events-none ${
-                    senderContragentType 
-                      ? 'top-3 text-xs text-[#858585]' 
-                      : 'top-1/2 -translate-y-1/2 text-base text-[#858585]'
-                  }`}>
+                  <label
+                    className={`absolute left-4 transition-all duration-200 pointer-events-none ${
+                      senderContragentType
+                        ? "top-3 text-xs text-[#858585]"
+                        : "top-1/2 -translate-y-1/2 text-base text-[#858585]"
+                    }`}
+                  >
                     Тип контрагента
                   </label>
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
                     <svg width="12" height="8" viewBox="0 0 12 8" fill="none">
-                      <path d="M1 1.5L6 6.5L11 1.5" stroke="#858585" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path
+                        d="M1 1.5L6 6.5L11 1.5"
+                        stroke="#858585"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     </svg>
                   </div>
                 </div>
@@ -316,8 +379,10 @@ function OrderPage() {
             </div>
 
             <div className="bg-white border border-[#C8C7CC] rounded-2xl p-6">
-              <h2 className="text-lg font-bold text-[#2D2D2D] mb-6">Данные получателя</h2>
-              
+              <h2 className="text-lg font-bold text-[#2D2D2D] mb-6">
+                Данные получателя
+              </h2>
+
               <div className="flex flex-col gap-4">
                 <div className="relative">
                   <input
@@ -355,31 +420,49 @@ function OrderPage() {
                   required
                 />
                 {isRecipientHouseInvalid && (
-                  <p className="text-red-500 text-sm mt-2">Укажите номер дома в адресе</p>
+                  <p className="text-red-500 text-sm mt-2">
+                    Укажите номер дома в адресе
+                  </p>
                 )}
 
-                {!courierDelivery && ((location.state?.orderData?.company || company)?.company_code === 'cdek' || (location.state?.orderData?.company || company)?.company_name?.toLowerCase().includes('cdek')) && (
-                  <DeliveryPointInput
-                    city={recipientCity}
-                    transportCompanyId={(location.state?.orderData?.company || company)?.company_id}
-                    value={recipientDeliveryPointCode}
-                    onChange={(e) => {
-                      const value = e?.target?.value || e?.value || '';
-                      setRecipientDeliveryPointCode(value);
-                    }}
-                    label="ПВЗ (Пункт выдачи)"
-                  />
-                )}
+                {!courierDelivery &&
+                  ((location.state?.orderData?.company || company)
+                    ?.company_code === "cdek" ||
+                    (
+                      location.state?.orderData?.company || company
+                    )?.company_name
+                      ?.toLowerCase()
+                      .includes("cdek")) && (
+                    <DeliveryPointInput
+                      city={recipientCity}
+                      transportCompanyId={
+                        (location.state?.orderData?.company || company)
+                          ?.company_id
+                      }
+                      value={recipientDeliveryPointCode}
+                      onChange={(e) => {
+                        const value = e?.target?.value || e?.value || "";
+                        setRecipientDeliveryPointCode(value);
+                      }}
+                      label="ПВЗ (Пункт выдачи)"
+                    />
+                  )}
               </div>
             </div>
           </div>
 
           <button
             type="submit"
-            disabled={loading || !trimmedSenderAddress || !senderHasHouseNumber || !trimmedRecipientAddress || !recipientHasHouseNumber}
+            disabled={
+              loading ||
+              !trimmedSenderAddress ||
+              !senderHasHouseNumber ||
+              !trimmedRecipientAddress ||
+              !recipientHasHouseNumber
+            }
             className="w-full py-4 rounded-xl text-base font-semibold bg-[#0077FE] text-white disabled:opacity-50"
           >
-            {loading ? 'Создание заказа...' : 'Создать заказ'}
+            {loading ? "Создание заказа..." : "Создать заказ"}
           </button>
         </form>
       </main>
@@ -393,7 +476,7 @@ function OrderPage() {
         </div>
       </footer>
     </div>
-  )
+  );
 }
 
-export default OrderPage
+export default OrderPage;
