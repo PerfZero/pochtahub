@@ -632,11 +632,6 @@ function OffersPage() {
   const fastestOffer = [...offers].sort(
     (a, b) => (a.delivery_time || 999) - (b.delivery_time || 999),
   )[0];
-  const primaryCdekOffer = [...offers]
-    .filter(
-      (offer) => offer.company_name === "CDEK" || offer.company_code === "cdek",
-    )
-    .sort((a, b) => (a.price || 0) - (b.price || 0))[0];
 
   const handleNavigateToRecipientPhone = () => {
     const updatedWizardData = {
@@ -1861,29 +1856,6 @@ function OffersPage() {
               </div>
             </div>
 
-            <div className="bg-[#FFF7E6] border border-[#FFD591] rounded-2xl px-4 py-4 text-[#2D2D2D] mt-4">
-              <p className="text-sm md:text-base font-semibold">
-                Сейчас доступен только СДЭК
-              </p>
-              <p className="text-xs md:text-sm text-[#6B5B00] mt-1">
-                Извините, оформление и оплата временно работают только через
-                СДЭК. Другие службы доставки подключаем — скоро появятся.
-              </p>
-              {!isFromUrl && (
-                <button
-                  onClick={() => {
-                    if (primaryCdekOffer) {
-                      handleSelectOffer(primaryCdekOffer);
-                    }
-                  }}
-                  disabled={!primaryCdekOffer}
-                  className="mt-3 w-full md:w-auto px-4 py-3 rounded-xl text-sm md:text-base font-semibold bg-[#0077FE] text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Оформить через СДЭК
-                </button>
-              )}
-            </div>
-
             {loading && (
               <div className="space-y-4">
                 {[1, 2, 3].map((i) => (
@@ -2016,19 +1988,20 @@ function OffersPage() {
                             onClick={() => {
                               if (isCDEK) {
                                 handleSelectOffer(offer);
+                              } else {
+                                alert(
+                                  "Извините, оформление и оплата временно работают только через СДЭК.",
+                                );
                               }
                             }}
-                            disabled={!isCDEK}
                             className={`w-full md:w-auto px-4 md:px-3 py-3 md:py-3 rounded-xl font-semibold transition-colors text-sm whitespace-nowrap
  ${
-   isCDEK
-     ? isCheapest || isFastest
-       ? "bg-[#0077FE] text-white hover:bg-[#0066CC]"
-       : "bg-[#F5F5F5] text-[#2D2D2D] hover:bg-[#E5E5E5]"
-     : "bg-[#F5F5F5] text-[#A0A0A0] cursor-not-allowed"
+   isCheapest || isFastest
+     ? "bg-[#0077FE] text-white hover:bg-[#0066CC]"
+     : "bg-[#F5F5F5] text-[#2D2D2D] hover:bg-[#E5E5E5]"
  }`}
                           >
-                            {isCDEK ? "Оформить через СДЭК" : "Скоро"}
+                            Оформить отправку
                           </button>
                         )}
                       </div>
