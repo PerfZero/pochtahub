@@ -752,7 +752,9 @@ function OffersPage() {
     };
 
     const isAssistantFlow =
-      wizardData.inviteRecipient && wizardData.recipientPhone;
+      wizardData.inviteRecipient &&
+      wizardData.recipientPhone &&
+      wizardData.selectedRole === "sender";
     const hasCompletedFlow =
       (wizardData.pickupAddress || wizardData.senderAddress) &&
       wizardData.recipientPhone &&

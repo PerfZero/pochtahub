@@ -90,6 +90,29 @@ function WizardPage() {
     "email",
     "orderComplete",
   ];
+  const senderSteps = new Set([
+    "contactPhone",
+    "pickupAddress",
+    "recipientPhone",
+    "payment",
+    "recipientAddress",
+    "selectPvz",
+    "email",
+    "orderComplete",
+  ]);
+  const recipientSteps = new Set([
+    "recipientUserPhone",
+    "senderPhone",
+    "senderAddress",
+    "deliveryAddress",
+    "recipientFIO",
+  ]);
+
+  const getRoleForStep = (step) => {
+    if (senderSteps.has(step)) return "sender";
+    if (recipientSteps.has(step)) return "recipient";
+    return null;
+  };
   const initialStep =
     stepFromUrl && validSteps.includes(stepFromUrl) ? stepFromUrl : "role";
 
@@ -116,7 +139,12 @@ function WizardPage() {
     } else if (!stepFromUrl && currentStep !== "role") {
       navigate(`/wizard?step=${currentStep}`, { replace: true });
     }
-  }, [location.search, currentStep]);
+
+    const roleForStep = getRoleForStep(stepFromUrl);
+    if (!selectedRole && roleForStep) {
+      setSelectedRole(roleForStep);
+    }
+  }, [location.search, currentStep, selectedRole]);
 
   useEffect(() => {
     const wizardData = location.state?.wizardData;
