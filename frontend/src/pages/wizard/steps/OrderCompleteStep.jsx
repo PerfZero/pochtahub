@@ -65,6 +65,31 @@ function OrderCompleteStep({ wizardData: wizardDataProp = null }) {
   useEffect(() => {
     let isMounted = true;
     if (!invitePayload) return () => {};
+    if (inviteToken) return () => {};
+
+    ordersAPI
+      .createInviteLink(invitePayload)
+      .then((response) => {
+        const url = response?.data?.short_url;
+        const token = response?.data?.token;
+        if (isMounted && url) {
+          setShortLink(url);
+        }
+        if (isMounted && token) {
+          setInviteToken(token);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, [invitePayload, inviteToken]);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!invitePayload) return () => {};
+    if (!inviteToken) return () => {};
     if (inviteSentRef.current) return () => {};
     inviteSentRef.current = true;
 
@@ -77,66 +102,31 @@ function OrderCompleteStep({ wizardData: wizardDataProp = null }) {
     }
 
     setSmsStatus("sending");
-    const setLinkFromToken = (token) => {
-      if (!token || typeof window === "undefined") return;
-      setShortLink(`${window.location.origin}/o/${token}`);
-    };
-
-    const ensureShortLink = () => {
-      if (!invitePayload) return;
-      ordersAPI
-        .createInviteLink(invitePayload)
-        .then((response) => {
-          const url = response?.data?.short_url;
-          const token = response?.data?.token;
-          if (isMounted && url) {
-            setShortLink(url);
-          } else if (isMounted && token) {
-            setLinkFromToken(token);
-          }
-        })
-        .catch(() => {});
-    };
-
     ordersAPI
-      .sendInviteSms(phone, invitePayload)
+      .sendInviteSms(phone, invitePayload, inviteToken)
       .then((response) => {
         const url = response?.data?.short_url;
-        const token = response?.data?.token;
         if (isMounted && url) {
           setShortLink(url);
-        } else if (isMounted && token) {
-          setLinkFromToken(token);
-          setInviteToken(token);
         }
         if (isMounted) {
           setSmsStatus("sent");
         }
-        if (isMounted && !url && !token) {
-          ensureShortLink();
-        }
       })
       .catch((error) => {
         const url = error?.response?.data?.short_url;
-        const token = error?.response?.data?.token;
         if (isMounted && url) {
           setShortLink(url);
-        } else if (isMounted && token) {
-          setLinkFromToken(token);
-          setInviteToken(token);
         }
         if (isMounted) {
           setSmsStatus("failed");
-        }
-        if (isMounted && !url && !token) {
-          ensureShortLink();
         }
       });
 
     return () => {
       isMounted = false;
     };
-  }, [invitePayload]);
+  }, [invitePayload, inviteToken]);
 
   useEffect(() => {
     if (!inviteToken || smsStatus !== "sent") return;
@@ -168,23 +158,11 @@ function OrderCompleteStep({ wizardData: wizardDataProp = null }) {
   }, [inviteToken, smsStatus]);
 
   useEffect(() => {
-    if (!invitePayload || shortLink) return;
-    ordersAPI
-      .createInviteLink(invitePayload)
-      .then((response) => {
-        const url = response?.data?.short_url;
-        const token = response?.data?.token;
-        if (url) {
-          setShortLink(url);
-        } else if (token && typeof window !== "undefined") {
-          setShortLink(`${window.location.origin}/o/${token}`);
-        }
-        if (token) {
-          setInviteToken(token);
-        }
-      })
-      .catch(() => {});
-  }, [invitePayload, shortLink]);
+    if (!invitePayload || shortLink || !inviteToken) return;
+    if (typeof window !== "undefined") {
+      setShortLink(`${window.location.origin}/o/${inviteToken}`);
+    }
+  }, [invitePayload, shortLink, inviteToken]);
 
   const handleCopyLink = async () => {
     if (!inviteLink) return;

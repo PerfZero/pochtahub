@@ -200,14 +200,25 @@ def create_invite_link(request):
 def send_invite_sms(request):
     phone = request.data.get('phone')
     payload = request.data.get('payload')
+    token = request.data.get('token')
     if not phone:
         return Response({'error': 'phone обязателен'}, status=status.HTTP_400_BAD_REQUEST)
-    if not isinstance(payload, dict):
-        return Response({'error': 'payload обязателен'}, status=status.HTTP_400_BAD_REQUEST)
 
-    invite, short_url = _create_invite(payload, request)
+    invite = None
+    short_url = None
+    if token:
+        invite = InviteLink.objects.filter(token=token).first()
+        if invite:
+            short_url = request.build_absolute_uri(f'/o/{invite.token}')
+            if not isinstance(payload, dict):
+                payload = invite.payload
+
     if not invite:
-        return Response({'error': 'Не удалось создать ссылку'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        if not isinstance(payload, dict):
+            return Response({'error': 'payload обязателен'}, status=status.HTTP_400_BAD_REQUEST)
+        invite, short_url = _create_invite(payload, request)
+        if not invite:
+            return Response({'error': 'Не удалось создать ссылку'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     sms_ok, sms_task_id, error_text = _send_invite_sms(phone, short_url)
     if not sms_ok:

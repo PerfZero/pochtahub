@@ -54,8 +54,8 @@ export const ordersAPI = {
       },
     }),
   createInviteLink: (payload) => api.post("/orders/invites/", { payload }),
-  sendInviteSms: (phone, payload) =>
-    api.post("/orders/invites/send-sms/", { phone, payload }),
+  sendInviteSms: (phone, payload, token) =>
+    api.post("/orders/invites/send-sms/", { phone, payload, token }),
   getInviteStatus: (token) => api.get(`/orders/invites/${token}/status/`),
 };
 
