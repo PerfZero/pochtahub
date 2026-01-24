@@ -129,6 +129,12 @@ function OffersPage() {
   );
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, []);
+
+  useEffect(() => {
     const fetchSettings = async () => {
       try {
         const response = await fetch(`${API_URL}/orders/settings/`);
