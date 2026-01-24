@@ -12,6 +12,7 @@ import CabinetPage from "./pages/CabinetPage";
 import TestPage from "./pages/TestPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import RecipientInvitePage from "./pages/RecipientInvitePage";
+import InviteRedirectPage from "./pages/InviteRedirectPage";
 import "./App.css";
 
 function App() {
@@ -40,6 +41,7 @@ function App() {
         <Route path="/offers" element={<OffersPage />} />
         <Route path="/payment" element={<PaymentPage />} />
         <Route path="/order" element={<OrderPage />} />
+        <Route path="/o/:token" element={<InviteRedirectPage />} />
         <Route path="/recipient" element={<RecipientInvitePage />} />
         <Route path="/confirmation/:orderId" element={<ConfirmationPage />} />
         <Route path="/test" element={<TestPage />} />

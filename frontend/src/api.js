@@ -57,6 +57,7 @@ export const ordersAPI = {
   sendInviteSms: (phone, payload, token) =>
     api.post("/orders/invites/send-sms/", { phone, payload, token }),
   getInviteStatus: (token) => api.get(`/orders/invites/${token}/status/`),
+  getInvitePayload: (token) => api.get(`/orders/invites/${token}/payload/`),
 };
 
 export const paymentAPI = {

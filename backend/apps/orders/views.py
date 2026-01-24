@@ -281,6 +281,13 @@ def invite_sms_status(request, token):
     return Response(response)
 
 
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def invite_payload(request, token):
+    invite = get_object_or_404(InviteLink, token=token)
+    return Response({'payload': invite.payload or {}, 'token': invite.token})
+
+
 def _create_invite(payload, request):
     token = None
     for _ in range(10):

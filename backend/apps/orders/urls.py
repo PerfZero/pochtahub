@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import OrderListView, OrderDetailView, get_order_documents, update_order_status_from_cdek, get_order_tracking, upload_package_image, get_app_settings, create_invite_link, send_invite_sms, invite_sms_status
+from .views import OrderListView, OrderDetailView, get_order_documents, update_order_status_from_cdek, get_order_tracking, upload_package_image, get_app_settings, create_invite_link, send_invite_sms, invite_sms_status, invite_payload
 
 urlpatterns = [
     path('', OrderListView.as_view(), name='order-list'),
@@ -12,4 +12,5 @@ urlpatterns = [
     path('invites/', create_invite_link, name='invite-create'),
     path('invites/send-sms/', send_invite_sms, name='invite-send-sms'),
     path('invites/<str:token>/status/', invite_sms_status, name='invite-status'),
+    path('invites/<str:token>/payload/', invite_payload, name='invite-payload'),
 ]
