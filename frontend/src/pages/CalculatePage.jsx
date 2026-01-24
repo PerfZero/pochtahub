@@ -372,27 +372,51 @@ function CalculatePage() {
             </div>
             <div className="ml-auto flex items-center gap-2">
               {isAuthenticated ? (
-                <Link
-                  to="/cabinet"
-                  className="hidden md:inline-block px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#F4EEE2] text-[#2D2D2D]"
-                >
-                  Личный кабинет
-                </Link>
+                <>
+                  <Link
+                    to="/cabinet"
+                    className="inline-flex md:hidden px-3 py-2 rounded-lg text-xs font-semibold bg-[#F4EEE2] text-[#2D2D2D]"
+                  >
+                    Кабинет
+                  </Link>
+                  <Link
+                    to="/cabinet"
+                    className="hidden md:inline-block px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#F4EEE2] text-[#2D2D2D]"
+                  >
+                    Личный кабинет
+                  </Link>
+                </>
               ) : (
-                <button
-                  onClick={() => {
-                    if (
-                      typeof window !== "undefined" &&
-                      typeof window.ym === "function"
-                    ) {
-                      window.ym(104664178, "params", { glavnaya: "вход" });
-                    }
-                    setShowLoginPopup(true);
-                  }}
-                  className="hidden md:inline-block px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#F4EEE2] text-[#2D2D2D]"
-                >
-                  Войти
-                </button>
+                <>
+                  <button
+                    onClick={() => {
+                      if (
+                        typeof window !== "undefined" &&
+                        typeof window.ym === "function"
+                      ) {
+                        window.ym(104664178, "params", { glavnaya: "вход" });
+                      }
+                      setShowLoginPopup(true);
+                    }}
+                    className="inline-flex md:hidden px-3 py-2 rounded-lg text-xs font-semibold bg-[#F4EEE2] text-[#2D2D2D]"
+                  >
+                    Войти
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (
+                        typeof window !== "undefined" &&
+                        typeof window.ym === "function"
+                      ) {
+                        window.ym(104664178, "params", { glavnaya: "вход" });
+                      }
+                      setShowLoginPopup(true);
+                    }}
+                    className="hidden md:inline-block px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#F4EEE2] text-[#2D2D2D]"
+                  >
+                    Войти
+                  </button>
+                </>
               )}
               <button className="px-3 md:px-4 py-2 md:py-2.5 rounded-lg text-xs md:text-sm font-semibold bg-[#0077FE] text-white">
                 Рассчитать
