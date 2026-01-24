@@ -1,4 +1,7 @@
-import SeparatedAddressInput from "../../../components/SeparatedAddressInput";
+import { useState } from "react";
+import AddressInput from "../../../components/AddressInput";
+import { isValidFullName } from "../../../utils/validation";
+import { hasExplicitHouseNumber } from "../../../utils/address";
 
 function RecipientAddressStep({
   recipientAddress,
@@ -11,68 +14,13 @@ function RecipientAddressStep({
   toCity,
   onContinue,
 }) {
-  // Простая функция для базового разделения адреса (только для ручного ввода)
-  const parseAddress = (address) => {
-    if (!address) return { street: address || "", house: "", apartment: "" };
-
-    // Если есть запятые, пытаемся разделить
-    const parts = address.split(",");
-
-    if (parts.length === 1) {
-      // Простая улица без дома и квартиры
-      return { street: address.trim(), house: "", apartment: "" };
-    }
-
-    // Ищем квартиру
-    let apartment = "";
-    let streetAndHouse = parts.slice(0, -1).join(",");
-
-    const lastPart = parts[parts.length - 1].trim();
-    if (lastPart.match(/^(кв|квартира|офис|оф)\s*/i)) {
-      apartment = lastPart.replace(/^(кв|квартира|офис|оф)\s*/i, "").trim();
-    } else {
-      streetAndHouse = address;
-    }
-
-    // Ищем дом в streetAndHouse
-    const houseMatch = streetAndHouse.match(
-      /,\s*(?:д|дом|влд|владение|стр|строение)\s*([0-9а-яА-Я\/-]+)/i,
-    );
-    const house = houseMatch ? houseMatch[1] : "";
-    const street = houseMatch
-      ? streetAndHouse
-          .replace(
-            /,\s*(?:д|дом|влд|владение|стр|строение)\s*[0-9а-яА-Я\/-]+/i,
-            "",
-          )
-          .trim()
-      : streetAndHouse.trim();
-
-    return { street, house, apartment };
-  };
-
-  const { street, house, apartment } = parseAddress(recipientAddress);
-
-  const isAddressValid = street.trim();
-  const isDisabled = !isAddressValid || !recipientFIO;
-
-  const handleStreetChange = (e) => {
-    const newStreet = e.target.value;
-    const newAddress = `${newStreet}${house ? `, д ${house}` : ""}${apartment ? `, кв ${apartment}` : ""}`;
-    onRecipientAddressChange({ target: { value: newAddress } });
-  };
-
-  const handleHouseChange = (e) => {
-    const newHouse = e.target.value;
-    const newAddress = `${street}${newHouse ? `, д ${newHouse}` : ""}${apartment ? `, кв ${apartment}` : ""}`;
-    onRecipientAddressChange({ target: { value: newAddress } });
-  };
-
-  const handleApartmentChange = (e) => {
-    const newApartment = e.target.value;
-    const newAddress = `${street}${house ? `, д ${house}` : ""}${newApartment ? `, кв ${newApartment}` : ""}`;
-    onRecipientAddressChange({ target: { value: newAddress } });
-  };
+  const trimmedAddress = recipientAddress?.trim() || "";
+  const [hasHouseFromSuggestion, setHasHouseFromSuggestion] = useState(false);
+  const hasHouseNumber =
+    hasHouseFromSuggestion || hasExplicitHouseNumber(trimmedAddress);
+  const isAddressValid = trimmedAddress.length > 0 && hasHouseNumber;
+  const isFioValid = isValidFullName(recipientFIO);
+  const isDisabled = !isAddressValid || !isFioValid;
 
   return (
     <div className="mb-8">
@@ -80,17 +28,14 @@ function RecipientAddressStep({
         Пожалуйста, укажите адрес получателя и ФИО
       </h1>
       <div className="mb-6">
-        <SeparatedAddressInput
-          street={street}
-          house={house}
-          apartment={apartment}
-          onStreetChange={handleStreetChange}
-          onHouseChange={handleHouseChange}
-          onApartmentChange={handleApartmentChange}
+        <AddressInput
+          value={recipientAddress}
+          onChange={onRecipientAddressChange}
           label="Адрес"
           city={toCity}
+          onHouseValidation={(hasHouse) => setHasHouseFromSuggestion(hasHouse)}
         />
-        {street && !house && (
+        {trimmedAddress && !hasHouseNumber && (
           <p className="text-yellow-600 text-sm mt-2">
             Укажите номер дома для более точного адреса
           </p>
@@ -123,6 +68,11 @@ function RecipientAddressStep({
             </label>
           </div>
         </div>
+        {recipientFIO?.trim() && !isFioValid && (
+          <p className="text-sm text-red-500 mt-2">
+            Укажите как минимум имя и фамилию
+          </p>
+        )}
       </div>
       <button
         onClick={() => {

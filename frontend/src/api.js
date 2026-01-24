@@ -53,6 +53,10 @@ export const ordersAPI = {
         "Content-Type": "multipart/form-data",
       },
     }),
+  createInviteLink: (payload) => api.post("/orders/invites/", { payload }),
+  sendInviteSms: (phone, payload) =>
+    api.post("/orders/invites/send-sms/", { phone, payload }),
+  getInviteStatus: (token) => api.get(`/orders/invites/${token}/status/`),
 };
 
 export const paymentAPI = {

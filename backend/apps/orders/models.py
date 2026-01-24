@@ -46,13 +46,13 @@ class Order(models.Model):
     tariff_name = models.CharField(max_length=200, blank=True, verbose_name='Название тарифа')
     price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Цена')
     needs_packaging = models.BooleanField(default=False, verbose_name='Требуется упаковка')
-    
+
     packaging_price = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='Стоимость упаковки')
     insurance_price = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='Стоимость страховки')
     pochtahub_commission = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='Комиссия PochtaHub')
     acquiring_price = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='Стоимость эквайринга')
     total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='Итоговая стоимость')
-    
+
     external_order_uuid = models.CharField(max_length=100, blank=True, null=True, verbose_name='UUID заказа во внешней системе')
     external_order_number = models.CharField(max_length=100, blank=True, null=True, verbose_name='Номер заказа во внешней системе')
 
@@ -118,3 +118,20 @@ class AppSettings(models.Model):
     def load(cls):
         obj, created = cls.objects.get_or_create(pk=1)
         return obj
+
+
+class InviteLink(models.Model):
+    token = models.CharField(max_length=20, unique=True, verbose_name='Токен')
+    payload = models.JSONField(default=dict, blank=True, verbose_name='Данные')
+    sms_task_id = models.CharField(max_length=50, blank=True, null=True, verbose_name='ID SMS')
+    sms_status = models.CharField(max_length=20, blank=True, null=True, verbose_name='Статус SMS')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
+
+    class Meta:
+        db_table = 'invite_links'
+        verbose_name = 'Инвайт ссылка'
+        verbose_name_plural = 'Инвайт ссылки'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'Invite {self.token}'

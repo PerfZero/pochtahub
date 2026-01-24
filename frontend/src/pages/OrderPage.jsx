@@ -7,6 +7,7 @@ import CityInput from "../components/CityInput";
 import DeliveryPointInput from "../components/DeliveryPointInput";
 import logoSvg from "../assets/images/logo.svg";
 import iconVerify from "../assets/images/icon-verify.svg";
+import { isValidFullName } from "../utils/validation";
 
 function OrderPage() {
   const location = useLocation();
@@ -87,6 +88,8 @@ function OrderPage() {
   const isSenderHouseInvalid = trimmedSenderAddress && !senderHasHouseNumber;
   const isRecipientHouseInvalid =
     trimmedRecipientAddress && !recipientHasHouseNumber;
+  const isSenderNameValid = isValidFullName(senderName);
+  const isRecipientNameValid = isValidFullName(recipientName);
 
   const [loading, setLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -260,13 +263,18 @@ function OrderPage() {
                     value={senderName}
                     onChange={(e) => setSenderName(e.target.value)}
                     className="peer w-full px-4 pt-6 pb-2 border border-[#C8C7CC] rounded-xl text-base text-[#2D2D2D] focus:outline-none focus:border-[#0077FE] placeholder-transparent"
-                    placeholder="Имя"
+                    placeholder="ФИО"
                     required
                   />
                   <label className="absolute left-4 top-1/2 -translate-y-1/2 text-[#858585] text-base transition-all duration-200 pointer-events-none peer-focus:top-3 peer-focus:text-xs peer-focus:text-[#0077FE] peer-[:not(:placeholder-shown)]:top-3 peer-[:not(:placeholder-shown)]:text-xs">
-                    Имя *
+                    ФИО отправителя *
                   </label>
                 </div>
+                {senderName?.trim() && !isSenderNameValid && (
+                  <p className="text-red-500 text-sm mt-2">
+                    Укажите как минимум имя и фамилию
+                  </p>
+                )}
 
                 <PhoneInput
                   value={senderPhone}
@@ -390,13 +398,18 @@ function OrderPage() {
                     value={recipientName}
                     onChange={(e) => setRecipientName(e.target.value)}
                     className="peer w-full px-4 pt-6 pb-2 border border-[#C8C7CC] rounded-xl text-base text-[#2D2D2D] focus:outline-none focus:border-[#0077FE] placeholder-transparent"
-                    placeholder="Имя"
+                    placeholder="ФИО"
                     required
                   />
                   <label className="absolute left-4 top-1/2 -translate-y-1/2 text-[#858585] text-base transition-all duration-200 pointer-events-none peer-focus:top-3 peer-focus:text-xs peer-focus:text-[#0077FE] peer-[:not(:placeholder-shown)]:top-3 peer-[:not(:placeholder-shown)]:text-xs">
-                    Имя *
+                    ФИО получателя *
                   </label>
                 </div>
+                {recipientName?.trim() && !isRecipientNameValid && (
+                  <p className="text-red-500 text-sm mt-2">
+                    Укажите как минимум имя и фамилию
+                  </p>
+                )}
 
                 <PhoneInput
                   value={recipientPhone}
@@ -455,6 +468,8 @@ function OrderPage() {
             type="submit"
             disabled={
               loading ||
+              !isSenderNameValid ||
+              !isRecipientNameValid ||
               !trimmedSenderAddress ||
               !senderHasHouseNumber ||
               !trimmedRecipientAddress ||

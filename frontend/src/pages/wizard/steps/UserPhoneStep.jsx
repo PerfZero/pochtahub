@@ -1,5 +1,6 @@
-import PhoneInput from '../../../components/PhoneInput'
-import CodeInput from '../../../components/CodeInput'
+import PhoneInput from "../../../components/PhoneInput";
+import CodeInput from "../../../components/CodeInput";
+import { isValidFullName } from "../../../utils/validation";
 
 function UserPhoneStep({
   selectedRole,
@@ -15,24 +16,29 @@ function UserPhoneStep({
   onSendCode,
   onVerifyCode,
   onResendCode,
-  onContinue
+  onContinue,
 }) {
+  const isUserFioValid = isValidFullName(userFIO);
   if (!codeSent) {
     return (
       <div className="mb-8">
         <h1 className="text-xl md:text-3xl font-bold text-[#2D2D2D] mb-2 text-center px-2">
-          {selectedRole === 'recipient' ? 'Укажите ваши данные' : 'Ваш телефон'}
+          {selectedRole === "recipient" ? "Укажите ваши данные" : "Ваш телефон"}
         </h1>
         <p className="text-sm md:text-base text-[#2D2D2D] mb-6 md:mb-8 text-center px-2">
-          {selectedRole === 'recipient' ? 'Нужны для связи и оформления доставки.' : 'Это необходимо для оформления заказа, так же вы сможете отслеживать статус используя номер'}
+          {selectedRole === "recipient"
+            ? "Нужны для связи и оформления доставки."
+            : "Это необходимо для оформления заказа, так же вы сможете отслеживать статус используя номер"}
         </p>
-        {selectedRole === 'recipient' ? (
+        {selectedRole === "recipient" ? (
           <>
             <div className="mb-6">
               <div className="relative">
-                <div className={`relative border rounded-xl ${
-                  userFioFocused ? 'border-[#0077FE]' : 'border-[#C8C7CC]'
-                }`}>
+                <div
+                  className={`relative border rounded-xl ${
+                    userFioFocused ? "border-[#0077FE]" : "border-[#C8C7CC]"
+                  }`}
+                >
                   <input
                     type="text"
                     value={userFIO}
@@ -42,9 +48,13 @@ function UserPhoneStep({
                     placeholder=" "
                     className="w-full px-4 pt-6 pb-2 border-0 bg-transparent rounded-xl text-base text-[#2D2D2D] focus:outline-none"
                   />
-                  <label className={`absolute left-4 transition-all duration-200 pointer-events-none ${
-                    userFIO || userFioFocused ? 'top-2 text-xs' : 'top-1/2 -translate-y-1/2 text-base'
-                  } ${userFioFocused ? 'text-[#0077FE]' : 'text-[#858585]'}`}>
+                  <label
+                    className={`absolute left-4 transition-all duration-200 pointer-events-none ${
+                      userFIO || userFioFocused
+                        ? "top-2 text-xs"
+                        : "top-1/2 -translate-y-1/2 text-base"
+                    } ${userFioFocused ? "text-[#0077FE]" : "text-[#858585]"}`}
+                  >
                     ФИО
                   </label>
                 </div>
@@ -52,11 +62,16 @@ function UserPhoneStep({
             </div>
             <button
               onClick={onContinue}
-              disabled={!userFIO}
+              disabled={!isUserFioValid}
               className="w-full bg-[#0077FE] text-white px-6 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold disabled:opacity-50"
             >
               Продолжить
             </button>
+            {userFIO?.trim() && !isUserFioValid && (
+              <p className="text-sm text-red-500 mt-2 text-center">
+                Укажите как минимум имя и фамилию
+              </p>
+            )}
           </>
         ) : (
           <>
@@ -69,41 +84,47 @@ function UserPhoneStep({
             </div>
             {auth.codeError && (
               <div className="mb-4">
-                <p className="text-sm text-red-500 text-center mb-2">{auth.codeError}</p>
+                <p className="text-sm text-red-500 text-center mb-2">
+                  {auth.codeError}
+                </p>
               </div>
             )}
             <div className="flex flex-col gap-3">
               <button
-                onClick={() => onSendCode('telegram')}
+                onClick={() => onSendCode("telegram")}
                 disabled={auth.codeLoading || !userPhone}
                 className="w-full bg-[#0077FE] text-white px-6 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold disabled:opacity-50"
               >
-                {auth.codeLoading ? 'Отправка...' : 'Получить код в Telegram'}
+                {auth.codeLoading ? "Отправка..." : "Получить код в Telegram"}
               </button>
               <button
-                onClick={() => onSendCode('sms')}
+                onClick={() => onSendCode("sms")}
                 disabled={auth.codeLoading || !userPhone}
                 className="w-full bg-white border border-[#0077FE] text-[#0077FE] px-6 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold disabled:opacity-50"
               >
-                {auth.codeLoading ? 'Отправка...' : 'Отправить SMS'}
+                {auth.codeLoading ? "Отправка..." : "Отправить SMS"}
               </button>
             </div>
           </>
         )}
       </div>
-    )
+    );
   }
 
   return (
     <div className="mb-8">
       <h1 className="text-xl md:text-3xl font-bold text-[#2D2D2D] mb-2 text-center px-2">
-        {auth.telegramSent ? 'Введите код из Telegram' : 'Введите код из СМС'}
+        {auth.telegramSent ? "Введите код из Telegram" : "Введите код из СМС"}
       </h1>
       <p className="text-sm md:text-base text-[#2D2D2D] mb-6 md:mb-8 text-center px-2">
         {auth.telegramSent ? (
-          <>Отправили в <strong>Telegram</strong></>
+          <>
+            Отправили в <strong>Telegram</strong>
+          </>
         ) : (
-          <>Отправили на <strong>{userPhone}</strong></>
+          <>
+            Отправили на <strong>{userPhone}</strong>
+          </>
         )}
       </p>
       <div className="mb-6">
@@ -111,16 +132,18 @@ function UserPhoneStep({
           value={auth.smsCode}
           onChange={(e) => auth.setSmsCode(e.target.value)}
           onComplete={(code) => {
-            auth.setSmsCode(code)
+            auth.setSmsCode(code);
             if (code && code.length === 4) {
-              onVerifyCode(code)
+              onVerifyCode(code);
             }
           }}
         />
       </div>
       {auth.codeError && (
         <div className="mb-4">
-          <p className="text-sm text-red-500 text-center mb-2">{auth.codeError}</p>
+          <p className="text-sm text-red-500 text-center mb-2">
+            {auth.codeError}
+          </p>
         </div>
       )}
       {auth.telegramSent && (
@@ -132,7 +155,7 @@ function UserPhoneStep({
         <button
           type="button"
           onClick={() => {
-            auth.resetCodeState()
+            auth.resetCodeState();
           }}
           className="text-sm text-[#0077FE] hover:underline"
         >
@@ -148,8 +171,7 @@ function UserPhoneStep({
         </button>
       </div>
     </div>
-  )
+  );
 }
 
-export default UserPhoneStep
-
+export default UserPhoneStep;

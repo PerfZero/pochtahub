@@ -121,6 +121,12 @@ function PaymentPage() {
   };
 
   const handlePayment = async () => {
+    if (!isCDEK) {
+      alert(
+        "Извините, сейчас работает только СДЭК. Остальные службы подключаем.",
+      );
+      return;
+    }
     const senderName = wizardData.senderFIO || wizardData.senderName;
     const senderPhone = wizardData.senderPhone || wizardData.userPhone;
     const recipientName = wizardData.recipientFIO || wizardData.recipientName;

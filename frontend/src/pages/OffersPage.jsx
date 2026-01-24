@@ -82,7 +82,9 @@ function OffersPage() {
   });
   const [sortBy, setSortBy] = useState("price");
   const [shareSuccess, setShareSuccess] = useState(false);
+  const [isRouteEditing, setIsRouteEditing] = useState(false);
   const [showAssistant, setShowAssistant] = useState(() => {
+    const isRecipientFlow = wizardData.selectedRole === "recipient";
     const hasInviteRecipient = !!(
       wizardData.inviteRecipient || location.state?.inviteRecipient
     );
@@ -94,7 +96,7 @@ function OffersPage() {
       !location.state?.inviteRecipient &&
       location.state?.wizardData &&
       !isFromUrlCheck;
-    return !skippedAssistant;
+    return !skippedAssistant && !isRecipientFlow;
   });
   const [typedText, setTypedText] = useState("");
   const [assistantStep, setAssistantStep] = useState("initial");
@@ -107,6 +109,7 @@ function OffersPage() {
   const [recalculating, setRecalculating] = useState(false);
   const [showPackagingPopup, setShowPackagingPopup] = useState(false);
   const [pendingOfferNavigation, setPendingOfferNavigation] = useState(null);
+  const [packagingPrice, setPackagingPrice] = useState(200);
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [photoUrl, setPhotoUrl] = useState(wizardData.photoUrl || null);
@@ -124,6 +127,23 @@ function OffersPage() {
   const [deliveryName, setDeliveryName] = useState(
     wizardData.deliveryName || "",
   );
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await fetch(`${API_URL}/orders/settings/`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data?.packaging_price !== undefined) {
+            setPackagingPrice(data.packaging_price);
+          }
+        }
+      } catch (error) {
+        console.error("Ошибка загрузки настроек упаковки:", error);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   const assistantMessageInitial =
     "Привет! Я виртуальный ассистент Саша. Я помогу оформить доставку без лишних действий. Хотите, чтобы получатель сам выбрал доставку и указал точный адрес?";
@@ -569,6 +589,7 @@ function OffersPage() {
   }, [location.search, location.state]);
 
   useEffect(() => {
+    const isRecipientFlow = wizardData.selectedRole === "recipient";
     const isFromUrlCheck =
       !location.state?.wizardData && location.search.includes("data=");
     const skippedAssistant =
@@ -578,7 +599,9 @@ function OffersPage() {
       location.state?.wizardData &&
       !isFromUrlCheck;
     const hasPackageOption = selectedPackageOption !== null;
-    setShowAssistant(!skippedAssistant && !hasPackageOption);
+    setShowAssistant(
+      !skippedAssistant && !hasPackageOption && !isRecipientFlow,
+    );
   }, [wizardData, location.state, location.search, selectedPackageOption]);
 
   // Обновляем recipientNotified при возврате с WizardPage
@@ -962,33 +985,50 @@ function OffersPage() {
         <Link to="/calculate">
           <img src={logoSvg} alt="PochtaHub" className="h-6 md:h-8" />
         </Link>
-        <div className="w-full max-w-[720px] bg-white rounded-2xl flex flex-col md:flex-row items-stretch p-2 gap-2 md:gap-0">
-          <div className="flex-1 px-4 md:px-6 py-2 border-b md:border-b-0 md:border-r border-[#E5E5E5]">
-            <CityInput
-              placeholder="Откуда"
-              value={fromCity}
-              onChange={(e) => setFromCity(e.target.value)}
-              variant="hero"
-              label="Откуда"
-            />
+        {isRouteEditing ? (
+          <div className="w-full max-w-[720px] bg-white rounded-2xl flex flex-row md:flex-row items-stretch p-2 gap-2 md:gap-0">
+            <div className="flex-1 px-4 md:px-6 py-2 border-b md:border-b-0 md:border-r border-[#E5E5E5]">
+              <CityInput
+                placeholder="Откуда"
+                value={fromCity}
+                onChange={(e) => setFromCity(e.target.value)}
+                variant="hero"
+                label="Откуда"
+              />
+            </div>
+            <div className="flex-1 px-4 md:px-6 py-2 border-b md:border-b-0 md:border-r border-[#E5E5E5]">
+              <CityInput
+                placeholder="Куда"
+                value={toCity}
+                onChange={(e) => setToCity(e.target.value)}
+                variant="hero"
+                label="Куда"
+              />
+            </div>
+            <button
+              onClick={() => {
+                handleCalculate();
+                setIsRouteEditing(false);
+              }}
+              disabled={!fromCity || !toCity || !wizardData.weight || loading}
+              className="bg-[#0077FE] text-white px-4 py-3 md:py-2 text-sm md:text-base font-semibold whitespace-nowrap rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? "Расчет..." : "Рассчитать стоимость"}
+            </button>
           </div>
-          <div className="flex-1 px-4 md:px-6 py-2 border-b md:border-b-0 md:border-r border-[#E5E5E5]">
-            <CityInput
-              placeholder="Куда"
-              value={toCity}
-              onChange={(e) => setToCity(e.target.value)}
-              variant="hero"
-              label="Куда"
-            />
-          </div>
+        ) : (
           <button
-            onClick={handleCalculate}
-            disabled={!fromCity || !toCity || !wizardData.weight || loading}
-            className="bg-[#0077FE] text-white px-4 py-3 md:py-2 text-sm md:text-base font-semibold whitespace-nowrap rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => setIsRouteEditing(true)}
+            className="w-full max-w-[720px] bg-white rounded-2xl px-4 md:px-6 py-3 md:py-4 flex items-center justify-between text-left shadow-sm"
           >
-            {loading ? "Расчет..." : "Рассчитать стоимость"}
+            <span className="text-sm md:text-base font-semibold text-[#2D2D2D]">
+              {fromCity || "Откуда"} → {toCity || "Куда"}
+            </span>
+            <span className="text-sm md:text-base font-semibold text-[#0077FE]">
+              Изменить
+            </span>
           </button>
-        </div>
+        )}
       </header>
 
       {showPackagingPopup && (
@@ -1017,6 +1057,9 @@ function OffersPage() {
               </h2>
               <p className="text-sm md:text-base text-[#2D2D2D] mb-6 md:mb-8 text-center">
                 Мы заметили вам понадобится упаковка
+              </p>
+              <p className="text-sm md:text-base text-[#2D2D2D] mb-6 md:mb-8 text-center">
+                Упаковка — {Number(packagingPrice).toLocaleString("ru-RU")} ₽
               </p>
               <div className="flex flex-col gap-3 md:gap-4">
                 <button
@@ -1838,14 +1881,6 @@ function OffersPage() {
                   </div>
                 </label>
               </div>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="w-full md:w-auto md:ml-auto px-4 py-2 border border-[#C8C7CC] rounded-xl text-xs md:text-sm text-[#2D2D2D] focus:outline-none focus:border-[#0077FE]"
-              >
-                <option value="price">По наилучшей цене</option>
-                <option value="delivery_time">По скорости доставки</option>
-              </select>
             </div>
             <div className="bg-white border border-[#E5E5E5] rounded-2xl px-4 py-3 text-[#2D2D2D]">
               <div className="text-xs md:text-sm font-semibold">
@@ -1855,6 +1890,14 @@ function OffersPage() {
                 от двери отправителя — включено в Pochtahub
               </div>
             </div>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="w-full md:w-auto md:ml-auto mt-2 md:mt-3 px-4 py-2 border border-[#C8C7CC] rounded-xl text-xs md:text-sm text-[#2D2D2D] focus:outline-none focus:border-[#0077FE]"
+            >
+              <option value="price">По наилучшей цене</option>
+              <option value="delivery_time">По скорости доставки</option>
+            </select>
 
             {loading && (
               <div className="space-y-4">
@@ -1986,13 +2029,7 @@ function OffersPage() {
                         {!isFromUrl && (
                           <button
                             onClick={() => {
-                              if (isCDEK) {
-                                handleSelectOffer(offer);
-                              } else {
-                                alert(
-                                  "Извините, оформление и оплата временно работают только через СДЭК.",
-                                );
-                              }
+                              handleSelectOffer(offer);
                             }}
                             className={`w-full md:w-auto px-4 md:px-3 py-3 md:py-3 rounded-xl font-semibold transition-colors text-sm whitespace-nowrap
  ${

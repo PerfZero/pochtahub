@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { usersAPI, ordersAPI } from "../api";
 import logoSvg from "../assets/whitelogo.svg";
+import { isValidFullName } from "../utils/validation";
 
 const API_URL = import.meta.env.VITE_API_URL || "/api";
 const getMediaUrl = (path) => {
@@ -113,6 +114,10 @@ function CabinetPage() {
   };
 
   const handleSave = async () => {
+    if (!isValidFullName(fullName)) {
+      alert("Укажите ФИО полностью: минимум имя и фамилию.");
+      return;
+    }
     const token = localStorage.getItem("access_token");
     const isTestToken = token && token.startsWith("test_");
 
@@ -296,6 +301,11 @@ function CabinetPage() {
                       className="w-full px-4 py-3 border border-[#C8C7CC] rounded-xl text-base text-[#2D2D2D] focus:outline-none focus:border-[#0077FE]"
                       placeholder="Введите ФИО"
                     />
+                    {fullName?.trim() && !isValidFullName(fullName) && (
+                      <p className="text-sm text-red-500 mt-2">
+                        Укажите как минимум имя и фамилию
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm text-[#858585] mb-2">

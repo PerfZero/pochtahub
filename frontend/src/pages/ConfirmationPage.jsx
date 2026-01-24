@@ -145,6 +145,16 @@ function ConfirmationPage() {
     return texts[status] || status;
   };
 
+  const getDimensionsText = (orderData) => {
+    const length = orderData.length;
+    const width = orderData.width;
+    const height = orderData.height;
+    if (length && width && height) {
+      return `${length} × ${width} × ${height} см`;
+    }
+    return "—";
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -301,6 +311,22 @@ function ConfirmationPage() {
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+
+          <div className="bg-[#F9F9F9] rounded-xl p-6 mb-6">
+            <h3 className="text-sm font-semibold text-[#858585] uppercase tracking-wide mb-4">
+              Посылка
+            </h3>
+            <div className="flex flex-col gap-2 text-sm text-[#2D2D2D]">
+              <p>
+                <span className="text-[#858585]">Габариты:</span>{" "}
+                {getDimensionsText(order)}
+              </p>
+              <p>
+                <span className="text-[#858585]">Вес:</span>{" "}
+                {order.weight ? `${order.weight} кг` : "—"}
+              </p>
             </div>
           </div>
 

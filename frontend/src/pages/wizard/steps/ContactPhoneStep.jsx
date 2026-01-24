@@ -10,7 +10,12 @@ function ContactPhoneStep({
   description,
   onVerifyCode,
   onResendCode,
+  allowSms = true,
+  phoneLocked = false,
+  onSendCode,
 }) {
+  const sendCode = onSendCode || ((method) => auth.handleSendCode(method));
+
   if (!auth.codeSent) {
     return (
       <div className="mb-8">
@@ -31,7 +36,14 @@ function ContactPhoneStep({
             value={phone}
             onChange={onPhoneChange}
             label="Ваш телефон"
+            disabled={phoneLocked}
+            readOnly={phoneLocked}
           />
+          {phoneLocked && (
+            <p className="text-xs text-[#858585] mt-2">
+              Номер привязан к отправлению и недоступен для изменения.
+            </p>
+          )}
         </div>
         {auth.codeError && (
           <div className="mb-4">
@@ -49,28 +61,30 @@ function ContactPhoneStep({
               ) {
                 window.ym(104664178, "reachGoal", "указал_свой_телефон");
               }
-              auth.handleSendCode("telegram");
+              sendCode("telegram");
             }}
             disabled={auth.codeLoading || !phone}
             className="w-full bg-[#0077FE] text-white px-6 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold hover:bg-[#0066CC] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {auth.codeLoading ? "Отправка..." : "Получить код в Telegram"}
           </button>
-          <button
-            onClick={() => {
-              if (
-                typeof window !== "undefined" &&
-                typeof window.ym === "function"
-              ) {
-                window.ym(104664178, "reachGoal", "указал_свой_телефон");
-              }
-              auth.handleSendCode("sms");
-            }}
-            disabled={auth.codeLoading || !phone}
-            className="w-full bg-[#F5F5F5] text-[#2D2D2D] px-6 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold hover:bg-[#E5E5E5] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {auth.codeLoading ? "Отправка..." : "Отправить SMS"}
-          </button>
+          {allowSms && (
+            <button
+              onClick={() => {
+                if (
+                  typeof window !== "undefined" &&
+                  typeof window.ym === "function"
+                ) {
+                  window.ym(104664178, "reachGoal", "указал_свой_телефон");
+                }
+                sendCode("sms");
+              }}
+              disabled={auth.codeLoading || !phone}
+              className="w-full bg-[#F5F5F5] text-[#2D2D2D] px-6 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold hover:bg-[#E5E5E5] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {auth.codeLoading ? "Отправка..." : "Отправить SMS"}
+            </button>
+          )}
         </div>
       </div>
     );
@@ -117,15 +131,17 @@ function ContactPhoneStep({
         </p>
       )}
       <div className="flex flex-col gap-3">
-        <button
-          type="button"
-          onClick={() => {
-            auth.resetCodeState();
-          }}
-          className="text-sm text-[#0077FE] hover:underline"
-        >
-          Изменить номер
-        </button>
+        {!phoneLocked && (
+          <button
+            type="button"
+            onClick={() => {
+              auth.resetCodeState();
+            }}
+            className="text-sm text-[#0077FE] hover:underline"
+          >
+            Изменить номер
+          </button>
+        )}
         {onResendCode && (
           <button
             type="button"
