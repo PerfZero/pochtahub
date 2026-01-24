@@ -64,7 +64,7 @@ import SenderAddressStep from "./wizard/steps/SenderAddressStep";
 import SelectPvzStep from "./wizard/steps/SelectPvzStep";
 import OrderCompleteStep from "./wizard/steps/OrderCompleteStep";
 import EmailStep from "./wizard/steps/EmailStep";
-import { authAPI, ordersAPI, tariffsAPI } from "../api";
+import { authAPI, ordersAPI, tariffsAPI, usersAPI } from "../api";
 
 function WizardPage() {
   const location = useLocation();
@@ -126,6 +126,7 @@ function WizardPage() {
     location.state?.wizardData?.selectedRole || null,
   );
   const [currentStep, setCurrentStep] = useState(initialStep);
+  const [profile, setProfile] = useState(null);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
@@ -281,6 +282,66 @@ function WizardPage() {
   const [agreeMarketing, setAgreeMarketing] = useState(false);
 
   const [selectedOffer, setSelectedOffer] = useState(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+    let isMounted = true;
+    usersAPI
+      .getProfile()
+      .then((response) => {
+        if (isMounted) {
+          setProfile(response.data);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!profile) return;
+
+    const profileFullName = [profile.first_name, profile.last_name]
+      .filter(Boolean)
+      .join(" ");
+    const profilePhone = profile.phone || "";
+    const profileAddress = profile.address || "";
+    const profileEmail = profile.email || "";
+
+    if (selectedRole === "sender") {
+      if (!contactPhone && profilePhone) setContactPhone(profilePhone);
+      if (!pickupSenderName && profileFullName)
+        setPickupSenderName(profileFullName);
+      if (!senderFIO && profileFullName) setSenderFIO(profileFullName);
+      if (!pickupAddress && profileAddress) setPickupAddress(profileAddress);
+      if (!senderAddress && profileAddress) setSenderAddress(profileAddress);
+      if (!email && profileEmail) setEmail(profileEmail);
+    } else if (selectedRole === "recipient") {
+      if (!recipientUserPhone && profilePhone)
+        setRecipientUserPhone(profilePhone);
+      if (!recipientFIO && profileFullName) setRecipientFIO(profileFullName);
+      if (!deliveryAddress && profileAddress)
+        setDeliveryAddress(profileAddress);
+      if (!recipientAddress && profileAddress)
+        setRecipientAddress(profileAddress);
+      if (!email && profileEmail) setEmail(profileEmail);
+    }
+  }, [
+    profile,
+    selectedRole,
+    contactPhone,
+    pickupSenderName,
+    senderFIO,
+    pickupAddress,
+    senderAddress,
+    email,
+    recipientUserPhone,
+    recipientFIO,
+    deliveryAddress,
+    recipientAddress,
+  ]);
 
   const handleCalculate = () => {
     if (!fromCity || !toCity) return;

@@ -4,6 +4,7 @@ from django.db import models
 
 class User(AbstractUser):
     phone = models.CharField(max_length=20, blank=True, null=True, verbose_name='Телефон')
+    address = models.TextField(blank=True, null=True, verbose_name='Адрес')
     sender_company = models.CharField(max_length=200, blank=True, null=True, verbose_name='Название компании отправителя')
     sender_tin = models.CharField(max_length=20, blank=True, null=True, verbose_name='ИНН отправителя')
     sender_contragent_type = models.CharField(max_length=20, blank=True, null=True, choices=[('LEGAL_ENTITY', 'Юридическое лицо'), ('INDIVIDUAL', 'Физическое лицо')], verbose_name='Тип контрагента отправителя')

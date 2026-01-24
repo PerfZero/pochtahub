@@ -114,7 +114,7 @@ function CabinetPage() {
   };
 
   const handleSave = async () => {
-    if (!isValidFullName(fullName)) {
+    if (fullName?.trim() && !isValidFullName(fullName)) {
       alert("Укажите ФИО полностью: минимум имя и фамилию.");
       return;
     }
@@ -132,6 +132,7 @@ function CabinetPage() {
         first_name: nameParts[0] || "",
         last_name: nameParts.slice(1).join(" ") || "",
         address: address,
+        email: email || null,
       };
 
       await usersAPI.updateProfile(updateData);
@@ -314,8 +315,8 @@ function CabinetPage() {
                     <input
                       type="email"
                       value={email}
-                      disabled
-                      className="w-full px-4 py-3 border border-[#C8C7CC] rounded-xl text-base text-[#858585] bg-[#F5F5F5] cursor-not-allowed"
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full px-4 py-3 border border-[#C8C7CC] rounded-xl text-base text-[#2D2D2D] focus:outline-none focus:border-[#0077FE]"
                     />
                   </div>
                   <div>
