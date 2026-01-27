@@ -154,6 +154,10 @@ function CalculatePage() {
       return;
     }
 
+    if (typeof window !== "undefined" && typeof window.ym === "function") {
+      window.ym(104664178, "reachGoal", "расчет");
+    }
+
     const existingWizardData = location?.state?.wizardData || {};
     const wizardData = {
       fromCity,

@@ -145,6 +145,38 @@ function ConfirmationPage() {
     return texts[status] || status;
   };
 
+  const statusSteps = [
+    { key: "new", label: "Новый" },
+    { key: "pending_payment", label: "Ожидает оплаты" },
+    { key: "paid", label: "Оплачен" },
+    { key: "in_delivery", label: "В доставке" },
+    { key: "completed", label: "Завершен" },
+  ];
+
+  const getProgressInfo = (status) => {
+    if (status === "cancelled") {
+      return {
+        currentIndex: -1,
+        current: 0,
+        total: statusSteps.length,
+        remaining: 0,
+        cancelled: true,
+      };
+    }
+    const index = statusSteps.findIndex((step) => step.key === status);
+    if (index === -1) return null;
+    const total = statusSteps.length;
+    const current = index + 1;
+    const remaining = Math.max(total - current, 0);
+    return {
+      currentIndex: index,
+      current,
+      total,
+      remaining,
+      cancelled: false,
+    };
+  };
+
   const getDimensionsText = (orderData) => {
     const length = orderData.length;
     const width = orderData.width;
@@ -153,6 +185,36 @@ function ConfirmationPage() {
       return `${length} × ${width} × ${height} см`;
     }
     return "—";
+  };
+
+  const maskPhone = (phone) => {
+    if (!phone) return "—";
+    const digits = String(phone).replace(/\D/g, "");
+    if (digits.length < 2) return phone;
+    const last2 = digits.slice(-2);
+    return `+7 *** ***-**-${last2}`;
+  };
+
+  const maskName = (name) => {
+    if (!name) return "—";
+    const parts = String(name).trim().split(/\s+/);
+    if (parts.length === 1) return parts[0];
+    const first = parts[0];
+    const lastInitial = parts[parts.length - 1]?.[0]?.toUpperCase();
+    return lastInitial ? `${first} ${lastInitial}.` : first;
+  };
+
+  const shortenAddress = (address, city) => {
+    const cleanCity = city ? String(city).trim() : "";
+    const cleanAddress = address ? String(address).trim() : "";
+    if (!cleanAddress && !cleanCity) return "—";
+    if (!cleanAddress) return cleanCity || "—";
+    const maxLen = 12;
+    const shortAddress =
+      cleanAddress.length > maxLen
+        ? `${cleanAddress.slice(0, maxLen)}…`
+        : cleanAddress;
+    return cleanCity ? `${cleanCity}, ${shortAddress}` : shortAddress;
   };
 
   if (loading) {
@@ -194,10 +256,15 @@ function ConfirmationPage() {
     );
   }
 
+  const progressInfo = getProgressInfo(order.status);
+  const stepsToRender = progressInfo?.cancelled
+    ? [{ key: "cancelled", label: "Отменен", cancelled: true }]
+    : statusSteps;
+
   return (
     <div className="min-h-screen flex flex-col bg-[#F9F9F9]">
       <header className="w-full bg-white border-b border-[#C8C7CC]">
-        <div className="w-full max-w-[1128px] mx-auto flex items-center gap-6 p-6">
+        <div className="w-full max-w-[1128px] mx-auto flex flex-col md:flex-row md:items-center gap-4 md:gap-6 p-4 sm:p-6">
           <Link to="/">
             <img src={logoSvg} alt="PochtaHub" className="h-8" />
           </Link>
@@ -207,16 +274,16 @@ function ConfirmationPage() {
               Агрегатор транспортных компаний
             </span>
           </div>
-          <div className="ml-auto flex items-center gap-3">
+          <div className="md:ml-auto flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 w-full md:w-auto">
             <Link
               to="/cabinet"
-              className="px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#F4EEE2] text-[#2D2D2D]"
+              className="px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#F4EEE2] text-[#2D2D2D] text-center w-full sm:w-auto"
             >
               Личный кабинет
             </Link>
             <Link
               to="/calculate"
-              className="px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#0077FE] text-white"
+              className="px-4 py-2.5 rounded-lg text-sm font-semibold bg-[#0077FE] text-white text-center w-full sm:w-auto"
             >
               Новый заказ
             </Link>
@@ -224,7 +291,7 @@ function ConfirmationPage() {
         </div>
       </header>
 
-      <main className="flex-1 w-full max-w-[800px] mx-auto px-6 py-8">
+      <main className="flex-1 w-full max-w-[800px] mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <div className="mb-6">
           <Link
             to="/cabinet"
@@ -234,11 +301,11 @@ function ConfirmationPage() {
           </Link>
         </div>
 
-        <div className="bg-white border border-[#C8C7CC] rounded-2xl p-8 mb-6">
-          <div className="flex items-start justify-between mb-6 pb-6 border-b border-[#C8C7CC]">
+        <div className="bg-white border border-[#C8C7CC] rounded-2xl p-4 sm:p-6 lg:p-8 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6 pb-6 border-b border-[#C8C7CC]">
             <div>
               <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-2xl font-bold text-[#2D2D2D]">
+                <h1 className="text-xl sm:text-2xl font-bold text-[#2D2D2D]">
                   Заказ #{order.id}
                 </h1>
                 <span
@@ -249,8 +316,8 @@ function ConfirmationPage() {
               </div>
               <p className="text-[#858585]">{order.transport_company_name}</p>
             </div>
-            <div className="text-right">
-              <div className="text-3xl font-bold text-[#0077FE]">
+            <div className="text-left sm:text-right">
+              <div className="text-2xl sm:text-3xl font-bold text-[#0077FE]">
                 {order.total_price || order.price} ₽
               </div>
               {order.external_order_number && (
@@ -261,35 +328,155 @@ function ConfirmationPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-8 mb-6">
-            <div className="bg-[#F9F9F9] rounded-xl p-6">
+          <div className="bg-[#F9F9F9] rounded-xl p-4 sm:p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-[#858585] uppercase tracking-wide">
+                Этапы заказа
+              </h3>
+              {progressInfo && (
+                <span className="text-xs text-[#858585]">
+                  {progressInfo.cancelled
+                    ? "Осталось 0"
+                    : `Этап ${progressInfo.current} из ${progressInfo.total} · Осталось ${progressInfo.remaining}`}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-col">
+              {stepsToRender.map((step, index) => {
+                const isCancelled = step.cancelled;
+                const isCompleted =
+                  !isCancelled && index < (progressInfo?.currentIndex ?? -1);
+                const isCurrent =
+                  !isCancelled && index === (progressInfo?.currentIndex ?? -1);
+                const lineActive =
+                  isCancelled || index <= (progressInfo?.currentIndex ?? -1);
+                const isLast = index === stepsToRender.length - 1;
+                return (
+                  <div key={step.key} className="flex items-start gap-4">
+                    <div className="flex flex-col items-center shrink-0">
+                      {index > 0 && (
+                        <div
+                          className={`w-1.5 h-5 ${lineActive ? "bg-[#0077FE]" : "bg-[#F4F2F3]"}`}
+                        ></div>
+                      )}
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        {isCancelled ? (
+                          <>
+                            <circle
+                              cx="10"
+                              cy="10"
+                              r="9"
+                              fill="#E55353"
+                              stroke="#E55353"
+                              strokeWidth="1.5"
+                            />
+                            <path
+                              d="M6.5 6.5L13.5 13.5M13.5 6.5L6.5 13.5"
+                              stroke="white"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                            />
+                          </>
+                        ) : isCompleted ? (
+                          <>
+                            <circle
+                              cx="10"
+                              cy="10"
+                              r="9"
+                              fill="#0077FE"
+                              stroke="#0077FE"
+                              strokeWidth="1.5"
+                            />
+                            <path
+                              d="M6 10L9 13L14 7"
+                              stroke="white"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </>
+                        ) : isCurrent ? (
+                          <>
+                            <circle
+                              cx="10"
+                              cy="10"
+                              r="8"
+                              stroke="#0077FE"
+                              strokeWidth="2"
+                              fill="white"
+                            />
+                            <circle cx="10" cy="10" r="3" fill="#0077FE" />
+                          </>
+                        ) : (
+                          <circle
+                            cx="10"
+                            cy="10"
+                            r="8"
+                            stroke="#C8C7CC"
+                            strokeWidth="2"
+                            fill="white"
+                          />
+                        )}
+                      </svg>
+                      {!isLast && (
+                        <div
+                          className={`w-1.5 h-5 ${lineActive ? "bg-[#0077FE]" : "bg-[#F4F2F3]"}`}
+                        ></div>
+                      )}
+                    </div>
+                    <div className="flex-1 pb-4">
+                      <p
+                        className={`text-sm font-bold ${isCancelled ? "text-[#E55353]" : "text-[#2D2D2D]"}`}
+                      >
+                        {step.label}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-6">
+            <div className="bg-[#F9F9F9] rounded-xl p-4 sm:p-6">
               <h3 className="text-sm font-semibold text-[#858585] uppercase tracking-wide mb-4">
                 Отправитель
               </h3>
               <div className="flex flex-col gap-2">
                 <p className="text-base font-medium text-[#2D2D2D]">
-                  {order.sender_name}
+                  {maskName(order.sender_name)}
                 </p>
-                <p className="text-sm text-[#2D2D2D]">{order.sender_phone}</p>
+                <p className="text-sm text-[#2D2D2D]">
+                  {maskPhone(order.sender_phone)}
+                </p>
                 <p className="text-sm text-[#858585]">
-                  {order.sender_address}, {order.sender_city}
+                  {shortenAddress(order.sender_address, order.sender_city)}
                 </p>
               </div>
             </div>
 
-            <div className="bg-[#F9F9F9] rounded-xl p-6">
+            <div className="bg-[#F9F9F9] rounded-xl p-4 sm:p-6">
               <h3 className="text-sm font-semibold text-[#858585] uppercase tracking-wide mb-4">
                 Получатель
               </h3>
               <div className="flex flex-col gap-2">
                 <p className="text-base font-medium text-[#2D2D2D]">
-                  {order.recipient_name}
+                  {maskName(order.recipient_name)}
                 </p>
                 <p className="text-sm text-[#2D2D2D]">
-                  {order.recipient_phone}
+                  {maskPhone(order.recipient_phone)}
                 </p>
                 <p className="text-sm text-[#858585]">
-                  {order.recipient_address}, {order.recipient_city}
+                  {shortenAddress(
+                    order.recipient_address,
+                    order.recipient_city,
+                  )}
                 </p>
                 {order.recipient_delivery_point_code && (
                   <div className="flex flex-col gap-1 mt-2 pt-2 border-t border-[#E5E5E5]">
@@ -298,11 +485,14 @@ function ConfirmationPage() {
                     </p>
                     {order.recipient_delivery_point_address ? (
                       <p className="text-sm text-[#858585]">
-                        {order.recipient_delivery_point_address}
+                        {shortenAddress(
+                          order.recipient_delivery_point_address,
+                          order.recipient_city,
+                        )}
                       </p>
                     ) : (
                       <p className="text-sm text-[#858585]">
-                        {order.recipient_city}
+                        {order.recipient_city || "—"}
                       </p>
                     )}
                     <p className="text-xs text-[#858585]">
@@ -314,7 +504,7 @@ function ConfirmationPage() {
             </div>
           </div>
 
-          <div className="bg-[#F9F9F9] rounded-xl p-6 mb-6">
+          <div className="bg-[#F9F9F9] rounded-xl p-4 sm:p-6 mb-6">
             <h3 className="text-sm font-semibold text-[#858585] uppercase tracking-wide mb-4">
               Посылка
             </h3>
@@ -353,14 +543,14 @@ function ConfirmationPage() {
           )}
         </div>
 
-        <div className="bg-white border border-[#C8C7CC] rounded-2xl p-6 mb-6">
+        <div className="bg-white border border-[#C8C7CC] rounded-2xl p-4 sm:p-6 mb-6">
           <h3 className="text-lg font-bold text-[#2D2D2D] mb-4">Действия</h3>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3">
             {(order.status === "pending_payment" || order.status === "new") && (
               <button
                 onClick={handlePayment}
                 disabled={paying}
-                className="px-6 py-3 rounded-xl text-base font-semibold bg-[#0077FE] text-white disabled:opacity-50"
+                className="px-6 py-3 rounded-xl text-base font-semibold bg-[#0077FE] text-white disabled:opacity-50 w-full sm:w-auto"
               >
                 {paying ? "Обработка..." : "Оплатить заказ"}
               </button>
@@ -371,20 +561,20 @@ function ConfirmationPage() {
                 <button
                   onClick={handleUpdateStatus}
                   disabled={updatingStatus}
-                  className="px-6 py-3 rounded-xl text-base font-semibold bg-[#F4EEE2] text-[#2D2D2D] disabled:opacity-50"
+                  className="px-6 py-3 rounded-xl text-base font-semibold bg-[#F4EEE2] text-[#2D2D2D] disabled:opacity-50 w-full sm:w-auto"
                 >
                   {updatingStatus ? "Обновление..." : "Обновить статус"}
                 </button>
                 <button
                   onClick={handleDownloadDocuments}
-                  className="px-6 py-3 rounded-xl text-base font-semibold bg-[#F4EEE2] text-[#2D2D2D]"
+                  className="px-6 py-3 rounded-xl text-base font-semibold bg-[#F4EEE2] text-[#2D2D2D] w-full sm:w-auto"
                 >
                   Скачать накладную
                 </button>
                 <button
                   onClick={loadTracking}
                   disabled={loadingTracking}
-                  className="px-6 py-3 rounded-xl text-base font-semibold bg-[#F4EEE2] text-[#2D2D2D] disabled:opacity-50"
+                  className="px-6 py-3 rounded-xl text-base font-semibold bg-[#F4EEE2] text-[#2D2D2D] disabled:opacity-50 w-full sm:w-auto"
                 >
                   {loadingTracking ? "Загрузка..." : "История статусов"}
                 </button>
@@ -396,7 +586,7 @@ function ConfirmationPage() {
         {tracking &&
           tracking.tracking_history &&
           tracking.tracking_history.length > 0 && (
-            <div className="bg-white border border-[#C8C7CC] rounded-2xl p-6">
+            <div className="bg-white border border-[#C8C7CC] rounded-2xl p-4 sm:p-6">
               <h3 className="text-lg font-bold text-[#2D2D2D] mb-4">
                 История статусов
               </h3>
@@ -408,7 +598,7 @@ function ConfirmationPage() {
                       <p className="text-base font-medium text-[#2D2D2D]">
                         {item.status_name}
                       </p>
-                      <div className="flex gap-4 mt-1">
+                      <div className="flex flex-col sm:flex-row gap-1 sm:gap-4 mt-1">
                         <span className="text-sm text-[#858585]">
                           {new Date(item.date_time).toLocaleString("ru-RU")}
                         </span>
@@ -427,7 +617,7 @@ function ConfirmationPage() {
       </main>
 
       <footer className="w-full bg-white border-t border-[#C8C7CC]">
-        <div className="w-full max-w-[1128px] mx-auto flex items-center justify-center gap-6 px-6 py-8">
+        <div className="w-full max-w-[1128px] mx-auto flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 px-4 sm:px-6 py-6 sm:py-8">
           <Link to="/calculate">
             <img src={logoSvg} alt="PochtaHub" className="h-6 opacity-50" />
           </Link>

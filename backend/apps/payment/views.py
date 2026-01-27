@@ -29,12 +29,13 @@ def send_order_sms(phone, order_id, order_price):
         phone_number = int(phone_clean)
         logger.info(f'[SMS] Очищенный номер: {phone_number}')
 
-        base_url = getattr(settings, 'FRONTEND_URL', 'https://pochtahab.ru')
+        base_url = getattr(settings, 'FRONTEND_URL', 'https://pochtahub.ru')
         if 'localhost' in base_url or '127.0.0.1' in base_url:
-            base_url = 'https://pochtahab.ru'
+            base_url = 'https://pochtahub.ru'
         order_url = f"{base_url}/confirmation/{order_id}"
 
-        message_text = f'PochtaHub. {order_url}'
+        display_url = order_url.replace('https://', '').replace('http://', '')
+        message_text = f'Pochtahub: готово! Подтверждение: {display_url}'
         logger.info(f'[SMS] Текст сообщения: {message_text}')
 
         headers = {
@@ -97,7 +98,7 @@ def send_order_sms(phone, order_id, order_price):
 
 
 def _build_return_url(order_id):
-    base_url = getattr(settings, 'FRONTEND_URL', 'https://pochtahab.ru').rstrip('/')
+    base_url = getattr(settings, 'FRONTEND_URL', 'https://pochtahub.ru').rstrip('/')
     return f'{base_url}/confirmation/{order_id}'
 
 

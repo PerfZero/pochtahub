@@ -31,32 +31,32 @@ TELEGRAM_GATEWAY_URL = 'https://gatewayapi.telegram.org/sendVerificationMessage'
 def send_telegram_message(phone, code):
     if not TELEGRAM_GATEWAY_TOKEN:
         return False
-    
+
     try:
         phone_clean = phone.replace('+', '').replace(' ', '').replace('-', '').replace('(', '').replace(')', '')
         phone_e164 = f'+{phone_clean}' if not phone.startswith('+') else phone
-        
+
         headers = {
             'Authorization': f'Bearer {TELEGRAM_GATEWAY_TOKEN}',
             'Content-Type': 'application/json'
         }
-        
+
         payload = {
             'phone_number': phone_e164,
             'code': code
         }
-        
+
         response = requests.post(
             TELEGRAM_GATEWAY_URL,
             json=payload,
             headers=headers,
             timeout=30
         )
-        
+
         if response.status_code == 200:
             result = response.json()
             return result.get('ok', False)
-        
+
         return False
     except Exception:
         return False
@@ -68,7 +68,7 @@ class SendCodeView(APIView):
     def post(self, request):
         phone = request.data.get('phone')
         method = request.data.get('method', 'telegram')
-        
+
         if not phone:
             return Response({'error': 'Телефон обязателен'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -77,9 +77,9 @@ class SendCodeView(APIView):
             phone = '+' + phone
 
         code = ''.join(random.choices(string.digits, k=4))
-        
+
         logger.info(f'Попытка отправить код для {phone}, метод: {method}')
-        
+
         if method == 'telegram' or method == 'auto':
             telegram_sent = send_telegram_message(phone, code)
             if telegram_sent:
@@ -98,21 +98,21 @@ class SendCodeView(APIView):
                         'telegram_available': False,
                         'sms_available': True
                     }, status=status.HTTP_400_BAD_REQUEST)
-        
+
         try:
             phone_clean = phone.replace('+', '').replace(' ', '').replace('-', '').replace('(', '').replace(')', '')
             phone_number = int(phone_clean)
-            
-            message_text = f'Ваш код подтверждения: {code}\npochtahab.ru'
-            
+
+            message_text = f'Pochtahub: код {code}. Не сообщайте никому'
+
             headers = {
                 'X-API-KEY': NOTIFICORE_API_KEY,
                 'Content-Type': 'application/json; charset=utf-8',
                 'Accept': 'application/json'
             }
-            
+
             reference = f'sms_{phone_number}_{int(time.time())}_{random.randint(1000, 9999)}'
-            
+
             payload = {
                 'destination': 'phone',
                 'body': message_text,
@@ -120,7 +120,7 @@ class SendCodeView(APIView):
                 'originator': 'PochtaHub',
                 'reference': reference
             }
-            
+
             try:
                 logger.info(f'Отправка SMS через Notificore V1 API для {phone}')
                 response = requests.post(
@@ -131,14 +131,14 @@ class SendCodeView(APIView):
                     verify=True
                 )
                 logger.info(f'Ответ V1 API: статус {response.status_code}, тело: {response.text[:200]}')
-                
+
                 if response is None:
                     raise requests.exceptions.RequestException('Не получен ответ от API')
-                
+
                 response.raise_for_status()
                 result = response.json()
                 logger.info(f'Результат API: {json.dumps(result, ensure_ascii=False)[:500]}')
-                
+
                 success = False
                 if isinstance(result, dict):
                     result_data = result.get('result')
@@ -160,7 +160,7 @@ class SendCodeView(APIView):
                     first_item = result[0]
                     if isinstance(first_item, dict):
                         success = first_item.get('status') in ['success', 'ok', 'sent'] or first_item.get('error') == 0
-                
+
                 if success:
                     cache_key = f'verify_code_{phone}'
                     cache.set(cache_key, str(code), 300)
@@ -174,14 +174,14 @@ class SendCodeView(APIView):
                         first_item = result[0]
                         if isinstance(first_item, dict):
                             error_msg = first_item.get('errorDescription') or first_item.get('error') or error_msg
-                    
+
                     logger.warning(f'Ошибка отправки SMS для {phone}: {error_msg}')
                     return Response({
                         'error': error_msg,
                         'telegram_available': False,
                         'sms_available': False
                     }, status=status.HTTP_400_BAD_REQUEST)
-                    
+
             except requests.exceptions.ConnectionError as conn_err:
                 logger.error(f'Ошибка подключения к Notificore API: {str(conn_err)}')
                 return Response({
@@ -203,7 +203,7 @@ class SendCodeView(APIView):
                     'telegram_available': False,
                     'sms_available': False
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-                
+
         except ValueError:
             return Response({'error': 'Неверный формат номера телефона'}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
@@ -232,15 +232,15 @@ class VerifyCodeView(APIView):
         cache_key = f'verify_code_{phone}'
         stored_code = cache.get(cache_key)
         logger.info(f'Проверка кода для {phone}, ключ кэша: {cache_key}, найден код: {stored_code is not None}')
-        
+
         if not stored_code:
             logger.warning(f'Код не найден в кэше для {phone}, ключ: {cache_key}')
             return Response({'error': 'Код истёк, запросите новый'}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         stored_code_str = str(stored_code).strip()
         code_str = str(code).strip()
         logger.info(f'Сравнение кодов: сохраненный="{stored_code_str}" (тип: {type(stored_code).__name__}), полученный="{code_str}" (тип: {type(code).__name__})')
-        
+
         if stored_code_str != code_str:
             logger.warning(f'Коды не совпадают: сохраненный="{stored_code_str}", полученный="{code_str}"')
             return Response({'error': 'Неверный код'}, status=status.HTTP_400_BAD_REQUEST)
@@ -248,7 +248,7 @@ class VerifyCodeView(APIView):
         logger.info(f'Код успешно проверен для {phone}, удаляем из кэша')
         cache.set(f'verified_phone_{phone}', True, 600)
         cache.delete(f'verify_code_{phone}')
-        
+
         try:
             logger.info(f'Поиск пользователя с телефоном {phone}')
             user = User.objects.get(phone=phone)
@@ -264,7 +264,7 @@ class VerifyCodeView(APIView):
                 password=password
             )
             logger.info(f'Создан новый пользователь: {user.id}, {user.username}')
-        
+
         refresh = RefreshToken.for_user(user)
         return Response({
             'success': True,

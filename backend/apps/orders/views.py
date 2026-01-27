@@ -10,7 +10,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.utils.crypto import get_random_string
 import json
 import requests
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 import base64
 from django.conf import settings
 
@@ -308,7 +308,13 @@ def _send_invite_sms(phone, short_url):
     try:
         phone_clean = phone.replace('+', '').replace(' ', '').replace('-', '').replace('(', '').replace(')', '')
         phone_number = int(phone_clean)
-        message_text = f'PochtaHub. {short_url}'
+        normalized_url = short_url
+        if 'localhost' in normalized_url or '127.0.0.1' in normalized_url:
+            parsed = urlparse(normalized_url)
+            token_part = parsed.path.split('/o/', 1)[-1]
+            normalized_url = f'https://pochtahub.ru/o/{token_part}'
+        display_url = normalized_url.replace('https://', '').replace('http://', '')
+        message_text = f'Pochtahub: оформите доставку: {display_url}'
 
         headers = {
             'X-API-KEY': NOTIFICORE_API_KEY,

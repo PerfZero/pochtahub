@@ -100,6 +100,11 @@ class AppSettings(models.Model):
     pochtahub_commission = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='Комиссия PochtaHub (₽)')
     acquiring_percent = models.DecimalField(max_digits=5, decimal_places=2, default=3.0, verbose_name='Процент эквайринга (%)')
     insurance_price = models.DecimalField(max_digits=10, decimal_places=2, default=10, verbose_name='Стоимость страховки (₽)')
+    third_party_name = models.CharField(max_length=200, blank=True, verbose_name='Третье лицо: ФИО/Компания')
+    third_party_address = models.TextField(blank=True, verbose_name='Третье лицо: Адрес')
+    third_party_phone = models.CharField(max_length=20, blank=True, verbose_name='Третье лицо: Телефон')
+    third_party_email = models.EmailField(blank=True, verbose_name='Третье лицо: Email')
+    third_party_tin = models.CharField(max_length=20, blank=True, verbose_name='Третье лицо: ИНН')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Дата обновления')
 
     class Meta:

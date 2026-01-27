@@ -1,6 +1,6 @@
 import logging
 
-from .models import OrderEvent
+from .models import OrderEvent, AppSettings
 from apps.tariffs.cdek_adapter import CDEKAdapter
 from apps.tariffs.models import TransportCompany
 
@@ -105,7 +105,8 @@ def create_cdek_order(order):
             'cost': float(order.price),
             'weight': int(float(order.weight) * 1000),
             'amount': 1,
-            'payment': {'value': 0.0 if recipient_delivery_point_code else float(order.price)}
+            # Оплата уже выполнена на сайте, наложенный платеж не нужен
+            'payment': {'value': 0.0}
         }
 
         sender_company = order.sender_company or (user.sender_company if user else None) or order.sender_name.strip()
@@ -125,7 +126,23 @@ def create_cdek_order(order):
             sender_data['tin'] = sender_tin
 
         seller_data = None
-        if sender_company or sender_tin:
+        app_settings = AppSettings.load()
+        third_party_name = (app_settings.third_party_name or '').strip()
+        third_party_phone = (app_settings.third_party_phone or '').strip()
+        third_party_address = (app_settings.third_party_address or '').strip()
+        third_party_tin = (app_settings.third_party_tin or '').strip()
+
+        if third_party_name or third_party_tin:
+            seller_data = {
+                'name': third_party_name or order.sender_name.strip()
+            }
+            if third_party_tin:
+                seller_data['inn'] = third_party_tin
+            if third_party_phone:
+                seller_data['phone'] = third_party_phone.replace(' ', '').replace('(', '').replace(')', '').replace('-', '')
+            if third_party_address:
+                seller_data['address'] = third_party_address
+        elif sender_company or sender_tin:
             seller_data = {
                 'name': sender_company or order.sender_name.strip()
             }
@@ -146,6 +163,9 @@ def create_cdek_order(order):
             'from_location': {
                 'code': from_code,
                 'address': order.sender_address or order.sender_city
+            },
+            'delivery_recipient_cost': {
+                'value': 0.0
             },
             'packages': [{
                 'number': str(order.id),

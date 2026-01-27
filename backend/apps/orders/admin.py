@@ -19,18 +19,18 @@ class OrderAdminForm(forms.ModelForm):
         choices=[('', '---------')],
         help_text='Выберите тариф CDEK из списка (заполните города и вес для загрузки тарифов)'
     )
-    
+
     class Meta:
         model = Order
         fields = '__all__'
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
+
         instance = self.instance
         tariff_choices = [('', '---------')]
         show_tariff_fields = False
-        
+
         if instance and instance.transport_company_id:
             try:
                 company = TransportCompany.objects.get(id=instance.transport_company_id)
@@ -64,21 +64,21 @@ class OrderAdminForm(forms.ModelForm):
                         self.fields['tariff_code'].help_text = 'Заполните города отправления/назначения и вес, затем сохраните заказ для загрузки тарифов'
             except TransportCompany.DoesNotExist:
                 pass
-        
+
         if not show_tariff_fields:
             self.fields['tariff_code'].help_text = 'Выберите транспортную компанию CDEK для загрузки тарифов'
-        
+
         self.fields['tariff_code'].choices = tariff_choices
-        
+
         if instance and instance.tariff_code:
             self.fields['tariff_code'].initial = str(instance.tariff_code)
-    
+
     def clean_tariff_code(self):
         tariff_code = self.cleaned_data.get('tariff_code')
         if tariff_code:
             return int(tariff_code)
         return None
-    
+
     def save(self, commit=True):
         instance = super().save(commit=False)
         tariff_code = self.cleaned_data.get('tariff_code')
@@ -121,7 +121,7 @@ class OrderAdmin(admin.ModelAdmin):
     list_filter = ('status', 'created_at', 'transport_company_name')
     search_fields = ('id', 'user__username', 'sender_name', 'recipient_name', 'external_order_uuid', 'external_order_number')
     readonly_fields = ('created_at', 'updated_at', 'package_image_preview')
-    
+
     def package_image_preview(self, obj):
         if obj.package_image:
             return format_html(
@@ -132,23 +132,23 @@ class OrderAdmin(admin.ModelAdmin):
     package_image_preview.short_description = 'Фото посылки'
     inlines = [OrderEventInline]
     actions = ['cancel_cdek_order']
-    
+
     def cancel_cdek_order(self, request, queryset):
         from apps.tariffs.models import TransportCompany
         from apps.tariffs.cdek_adapter import CDEKAdapter
         import logging
-        
+
         logger = logging.getLogger(__name__)
         cancelled = 0
         errors = 0
         skipped = 0
-        
+
         for order in queryset:
             if not order.external_order_uuid:
                 self.message_user(request, f'Заказ #{order.id} не имеет UUID заказа в CDEK', level='warning')
                 skipped += 1
                 continue
-            
+
             try:
                 company = TransportCompany.objects.get(id=order.transport_company_id)
                 if company.api_type == 'cdek' and company.api_account and company.api_secure_password:
@@ -157,32 +157,32 @@ class OrderAdmin(admin.ModelAdmin):
                         secure_password=company.api_secure_password,
                         test_mode=False
                     )
-                    
+
                     try:
                         order_info = adapter.get_order_info(order.external_order_uuid)
                         logger.info(f'Информация о заказе CDEK: {order_info}')
-                        
+
                         entity_status = None
                         cdek_number = None
                         if 'entity' in order_info:
                             entity = order_info['entity']
                             entity_status = entity.get('status')
                             cdek_number = entity.get('cdek_number')
-                        
+
                         status_info = f' (статус: {entity_status}, номер: {cdek_number})' if entity_status else ''
-                        
+
                         if entity_status and entity_status in ['CANCELLED', 'DELIVERED', 'RECEIVED_AT_SHIPMENT_WAREHOUSE', 'ACCEPTED_AT_SHIPMENT_WAREHOUSE', 'ACCEPTED_AT_DESTINATION', 'ISSUED']:
                             self.message_user(request, f'Заказ #{order.id}{status_info} - отмена невозможна (заказ уже в обработке или доставке)', level='warning')
                             skipped += 1
                             continue
-                        
+
                         if entity_status and entity_status not in ['ACCEPTED', 'CREATED', 'WAITING_FOR_PAYMENT']:
                             self.message_user(request, f'Заказ #{order.id}{status_info} - текущий статус не позволяет отмену', level='warning')
                             skipped += 1
                             continue
                     except Exception as e:
                         logger.warning(f'Не удалось получить информацию о заказе #{order.id}: {str(e)}')
-                    
+
                     try:
                         adapter.delete_order(order.external_order_uuid)
                         order.status = 'cancelled'
@@ -207,14 +207,14 @@ class OrderAdmin(admin.ModelAdmin):
                 logger.error(f'Ошибка отмены заказа #{order.id} в CDEK: {str(e)}', exc_info=True)
                 self.message_user(request, f'Ошибка отмены заказа #{order.id} в CDEK: {str(e)}', level='error')
                 errors += 1
-        
+
         if cancelled > 0:
             self.message_user(request, f'Отменено заказов в CDEK: {cancelled}', level='success')
         if skipped > 0:
             self.message_user(request, f'Пропущено заказов: {skipped}', level='warning')
         if errors > 0:
             self.message_user(request, f'Ошибок при отмене: {errors}', level='error')
-    
+
     cancel_cdek_order.short_description = 'Отменить заказы в CDEK'
     fieldsets = (
         ('Основная информация', {
@@ -250,7 +250,7 @@ class OrderEventAdmin(admin.ModelAdmin):
 @admin.register(AppSettings)
 class AppSettingsAdmin(admin.ModelAdmin):
     list_display = ('id', 'packaging_price', 'pochtahub_commission', 'acquiring_percent', 'insurance_price', 'updated_at')
-    
+
     def has_add_permission(self, request):
         return False
 
@@ -267,6 +267,10 @@ class AppSettingsAdmin(admin.ModelAdmin):
         ('Цены и комиссии', {
             'fields': ('packaging_price', 'pochtahub_commission', 'acquiring_percent', 'insurance_price'),
             'description': 'Настройте цены и комиссии для расчетов на странице оплаты'
+        }),
+        ('Третье лицо (плательщик/продавец)', {
+            'fields': ('third_party_name', 'third_party_address', 'third_party_phone', 'third_party_email', 'third_party_tin'),
+            'description': 'Реквизиты третьего лица для передачи в CDEK (seller)'
         }),
         ('Системная информация', {
             'fields': ('updated_at',),
