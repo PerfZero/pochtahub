@@ -26,7 +26,6 @@ const getMediaUrl = (path) => {
   }
   return path;
 };
-import assistantAvatar from "../assets/images/assistant-avatar-336dfe.png";
 import iconPhone from "../assets/images/icon-phone.svg";
 import iconIron from "../assets/images/icon-iron.svg";
 import iconShoes from "../assets/images/icon-shoes.svg";
@@ -740,6 +739,7 @@ function OffersPage() {
       fromCity: wizardData.fromCity || fromCity,
       toCity: wizardData.toCity || toCity,
       deliveryName: deliveryName,
+      selectedRole: wizardData.selectedRole || "sender",
       packageDataCompleted: true,
       estimatedValue: estimatedValue || wizardData.estimatedValue || "10", // Сохраняем estimatedValue
       selectedOffer: {
@@ -802,7 +802,7 @@ function OffersPage() {
         navigationPath = "/wizard?step=email";
       }
     } else {
-      navigationPath = "/wizard?step=role";
+      navigationPath = "/wizard?step=contactPhone";
     }
 
     const shouldShowPackagingPopup =
@@ -1594,212 +1594,23 @@ function OffersPage() {
       <div className="flex justify-center pt-6 md:pt-12 pb-8">
         <div className="w-full max-w-[720px] mx-4 md:mx-6">
           {showAssistant && (
-            <div className="bg-white rounded-2xl px-3 md:px-4 py-3 md:py-4 mb-4 md:mb-6 flex gap-2 md:gap-3">
-              <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden flex-shrink-0">
-                <img
-                  src={assistantAvatar}
-                  alt="Саша"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="flex-1 flex flex-col gap-1">
-                <p className="text-xs md:text-sm font-semibold text-[#2D2D2D]">
-                  Ассистент Саша
-                </p>
-                <div className="bg-[#F9F6F0] rounded-tl-[5px] rounded-tr-[12px] rounded-bl-[8px] rounded-br-[8px] px-2 md:px-3 py-2 mb-1">
-                  <p className="text-sm md:text-base text-[#2D2D2D]">
-                    {recalculating ? (
-                      "Пересчитываем предложения..."
-                    ) : isThinking ? (
-                      <span className="inline-flex gap-1">
-                        <span className="animate-pulse">.</span>
-                        <span
-                          className="animate-pulse"
-                          style={{ animationDelay: "0.2s" }}
-                        >
-                          .
-                        </span>
-                        <span
-                          className="animate-pulse"
-                          style={{ animationDelay: "0.4s" }}
-                        >
-                          .
-                        </span>
-                      </span>
-                    ) : (
-                      <>
-                        {typedText}
-                        {typedText.length < currentMessage.length && (
-                          <span className="inline-block w-0.5 h-4 bg-[#2D2D2D] ml-1 animate-pulse"></span>
-                        )}
-                      </>
-                    )}
-                  </p>
-                </div>
-                {recalculating ? null : recipientNotified ? (
-                  // Когда получатель уже получил уведомление, показываем кнопки для размеров
-                  <div className="flex flex-col md:flex-row gap-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPackageOption("photo");
-                        setShowPackagePopup(true);
-                      }}
-                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[8px] rounded-br-[8px] md:rounded-bl-[8px] md:rounded-br-[12px] px-2 md:px-3 py-2 text-sm md:text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
-                    >
-                      📸 Загрузить фото посылки
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPackageOption("manual");
-                        setShowPackagePopup(true);
-                      }}
-                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[8px] rounded-br-[8px] md:rounded-bl-[12px] md:rounded-br-[8px] md:rounded-tr-[8px] px-2 md:px-3 py-2 text-sm md:text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
-                    >
-                      📐 Указать точные размеры
-                    </button>
-                  </div>
-                ) : assistantStep === "initial" ? (
-                  <div className="flex flex-col md:flex-row gap-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (
-                          typeof window !== "undefined" &&
-                          typeof window.ym === "function"
-                        ) {
-                          window.ym(104664178, "params", {
-                            assistant: "приглашаем_получателя",
-                          });
-                        }
-                        handleNavigateToRecipientPhone();
-                      }}
-                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[8px] rounded-br-[8px] md:rounded-bl-[8px] md:rounded-br-[12px] px-2 md:px-3 py-2 text-sm md:text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
-                    >
-                      🤝 Да, пригласить получателя
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (
-                          typeof window !== "undefined" &&
-                          typeof window.ym === "function"
-                        ) {
-                          window.ym(104664178, "params", {
-                            assistant: "оформляет_сам",
-                          });
-                        }
-                        const updatedWizardData = {
-                          ...wizardData,
-                          fromCity: wizardData.fromCity || fromCity,
-                          toCity: wizardData.toCity || toCity,
-                          selectedRole: "sender",
-                        };
-                        navigate("/wizard?step=package", {
-                          state: {
-                            wizardData: updatedWizardData,
-                            fromCity: wizardData.fromCity || fromCity,
-                            toCity: wizardData.toCity || toCity,
-                          },
-                        });
-                      }}
-                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[8px] rounded-br-[8px] md:rounded-bl-[12px] md:rounded-br-[8px] md:rounded-tr-[8px] px-2 md:px-3 py-2 text-sm md:text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
-                    >
-                      📦 Нет, оформлю сам
-                    </button>
-                  </div>
-                ) : selectedPackageOption === "photo" ? (
-                  <div className="flex flex-col md:flex-row gap-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPackageOption("photo");
-                        setShowPackagePopup(true);
-                        setPhotoFile(null);
-                        setPhotoPreview(null);
-                      }}
-                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[8px] rounded-br-[8px] md:rounded-bl-[8px] md:rounded-br-[12px] px-2 md:px-3 py-2 text-sm md:text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
-                    >
-                      📸 Загрузить другое фото
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPackageOption("manual");
-                        setShowPackagePopup(true);
-                        setLength("");
-                        setWidth("");
-                        setHeight("");
-                        setWeight("");
-                      }}
-                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[8px] rounded-br-[8px] md:rounded-bl-[12px] md:rounded-br-[8px] md:rounded-tr-[8px] px-2 md:px-3 py-2 text-sm md:text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
-                    >
-                      📐 Указать точные размеры
-                    </button>
-                  </div>
-                ) : selectedPackageOption === "manual" ? (
-                  <div className="flex flex-col md:flex-row gap-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPackageOption("photo");
-                        setShowPackagePopup(true);
-                        setPhotoFile(null);
-                        setPhotoPreview(null);
-                      }}
-                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[8px] rounded-br-[8px] md:rounded-bl-[8px] md:rounded-br-[12px] px-2 md:px-3 py-2 text-sm md:text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
-                    >
-                      📸 Загрузить фото посылки
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPackageOption("manual");
-                        setShowPackagePopup(true);
-                      }}
-                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[8px] rounded-br-[8px] md:rounded-bl-[12px] md:rounded-br-[8px] md:rounded-tr-[8px] px-2 md:px-3 py-2 text-sm md:text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
-                    >
-                      📐 Указать другие размеры
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col md:flex-row gap-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (recipientNotified) {
-                          // Если получатель уже получил уведомление, открываем попап
-                          setPackageOption("photo");
-                          setShowPackagePopup(true);
-                        } else {
-                          // В первый раз переходим на recipientPhone
-                          handleNavigateToRecipientPhone();
-                        }
-                      }}
-                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[8px] rounded-br-[8px] md:rounded-bl-[8px] md:rounded-br-[12px] px-2 md:px-3 py-2 text-sm md:text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
-                    >
-                      📸 Загрузить фото посылки
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (recipientNotified) {
-                          // Если получатель уже получил уведомление, открываем попап
-                          setPackageOption("manual");
-                          setShowPackagePopup(true);
-                        } else {
-                          // В первый раз переходим на recipientPhone
-                          handleNavigateToRecipientPhone();
-                        }
-                      }}
-                      className="flex-1 bg-[#F4EEE2] rounded-tl-[8px] rounded-tr-[8px] rounded-bl-[8px] rounded-br-[8px] md:rounded-bl-[12px] md:rounded-br-[8px] md:rounded-tr-[8px] px-2 md:px-3 py-2 text-sm md:text-base text-[#2D2D2D] hover:bg-[#E8DDC8] transition-colors"
-                    >
-                      📐 Указать точные размеры
-                    </button>
-                  </div>
-                )}
-              </div>
+            <div className="bg-white border border-[#E5E5E5] rounded-2xl px-4 py-5 md:px-6 md:py-6 mb-4 md:mb-6">
+              <h2 className="text-lg md:text-2xl font-bold text-[#2D2D2D] mb-1">
+                Оформим доставку по фото
+              </h2>
+              <p className="text-sm md:text-base text-[#2D2D2D] mb-4">
+                Не нужно никуда идти — курьер приедет сам
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setPackageOption("photo");
+                  setShowPackagePopup(true);
+                }}
+                className="w-full bg-[#0077FE] text-white rounded-2xl px-4 py-3 md:py-4 text-base md:text-lg font-semibold hover:bg-[#0065D6] transition-colors"
+              >
+                👉 Оформить доставку
+              </button>
             </div>
           )}
           <div className="rounded-2xl mb-4 md:mb-6">

@@ -13,6 +13,7 @@ function ContactPhoneStep({
   allowSms = true,
   phoneLocked = false,
   onSendCode,
+  onRoleChange,
 }) {
   const sendCode = onSendCode || ((method) => auth.handleSendCode(method));
 
@@ -86,6 +87,46 @@ function ContactPhoneStep({
             </button>
           )}
         </div>
+        {onRoleChange && (
+          <div className="mt-6 border-t border-[#E5E5E5] pt-4">
+            <div className="flex flex-col gap-3">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="radio"
+                  name="role-select"
+                  checked={selectedRole === "sender"}
+                  onChange={() => onRoleChange("sender")}
+                  className="mt-1 h-5 w-5 accent-[#0077FE]"
+                />
+                <div>
+                  <div className="text-sm md:text-base font-semibold text-[#2D2D2D]">
+                    Я отправитель
+                  </div>
+                  <div className="text-xs md:text-sm text-[#858585]">
+                    Посылка у меня. Я передам её курьеру
+                  </div>
+                </div>
+              </label>
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="radio"
+                  name="role-select"
+                  checked={selectedRole === "recipient"}
+                  onChange={() => onRoleChange("recipient")}
+                  className="mt-1 h-5 w-5 accent-[#0077FE]"
+                />
+                <div>
+                  <div className="text-sm md:text-base font-semibold text-[#2D2D2D]">
+                    Я получатель
+                  </div>
+                  <div className="text-xs md:text-sm text-[#858585]">
+                    Посылка у отправителя. Вы оформляете доставку за него
+                  </div>
+                </div>
+              </label>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

@@ -50,7 +50,6 @@ if (typeof window !== "undefined") {
   };
 }
 import WizardLayout from "../components/wizard/WizardLayout";
-import RoleSelectStep from "./wizard/steps/RoleSelectStep";
 import PackageStep from "./wizard/steps/PackageStep";
 import ContactPhoneStep from "./wizard/steps/ContactPhoneStep";
 import PickupAddressStep from "./wizard/steps/PickupAddressStep";
@@ -74,7 +73,6 @@ function WizardPage() {
   const stepFromUrl = urlParams.get("step");
 
   const validSteps = [
-    "role",
     "package",
     "contactPhone",
     "pickupAddress",
@@ -114,7 +112,7 @@ function WizardPage() {
     return null;
   };
   const initialStep =
-    stepFromUrl && validSteps.includes(stepFromUrl) ? stepFromUrl : "role";
+    stepFromUrl && validSteps.includes(stepFromUrl) ? stepFromUrl : "package";
 
   const [fromCity, setFromCity] = useState(
     location.state?.fromCity || location.state?.wizardData?.fromCity || "",
@@ -131,13 +129,17 @@ function WizardPage() {
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const stepFromUrl = urlParams.get("step");
+    if (stepFromUrl === "role") {
+      navigate("/wizard?step=package", { replace: true });
+      return;
+    }
     if (
       stepFromUrl &&
       validSteps.includes(stepFromUrl) &&
       stepFromUrl !== currentStep
     ) {
       setCurrentStep(stepFromUrl);
-    } else if (!stepFromUrl && currentStep !== "role") {
+    } else if (!stepFromUrl && currentStep !== "package") {
       navigate(`/wizard?step=${currentStep}`, { replace: true });
     }
 
@@ -145,12 +147,15 @@ function WizardPage() {
     if (!selectedRole && roleForStep) {
       setSelectedRole(roleForStep);
     }
+    if (!selectedRole && stepFromUrl === "package") {
+      setSelectedRole("sender");
+    }
   }, [location.search, currentStep, selectedRole]);
 
   useEffect(() => {
     const wizardData = location.state?.wizardData;
     const stepFromUrl =
-      new URLSearchParams(location.search).get("step") || "role";
+      new URLSearchParams(location.search).get("step") || "package";
 
     // Логируем загрузку шага
     logWizardStep(`load_${stepFromUrl}`, {
@@ -358,10 +363,53 @@ function WizardPage() {
     });
   };
 
-  const handleRoleSelect = (role) => {
-    setSelectedRole(role);
-    navigate("/wizard?step=package", {
-      state: { wizardData: { selectedRole: role } },
+  const handleRoleToggle = (role) => {
+    if (role === selectedRole) return;
+
+    const baseWizardData = {
+      ...location.state?.wizardData,
+      selectedRole: role,
+      fromCity,
+      toCity,
+    };
+
+    if (role === "recipient") {
+      if (contactPhone && !recipientUserPhone) {
+        setRecipientUserPhone(contactPhone);
+      }
+      if (codeSent) {
+        setCodeSent(false);
+        setSmsCode("");
+        setCodeError("");
+        setTelegramSent(false);
+      }
+      const wizardData = {
+        ...baseWizardData,
+        recipientUserPhone: contactPhone || recipientUserPhone,
+      };
+      setSelectedRole("recipient");
+      navigate("/wizard?step=recipientUserPhone", {
+        state: { wizardData },
+      });
+      return;
+    }
+
+    if (recipientUserPhone && !contactPhone) {
+      setContactPhone(recipientUserPhone);
+    }
+    if (recipientUserCodeSent) {
+      setRecipientUserCodeSent(false);
+      setRecipientUserSmsCode("");
+      setRecipientUserCodeError("");
+      setRecipientUserTelegramSent(false);
+    }
+    const wizardData = {
+      ...baseWizardData,
+      contactPhone: recipientUserPhone || contactPhone,
+    };
+    setSelectedRole("sender");
+    navigate("/wizard?step=contactPhone", {
+      state: { wizardData },
     });
   };
 
@@ -445,9 +493,13 @@ function WizardPage() {
   };
 
   const handlePackageContinue = () => {
+    const roleToUse = selectedRole || "sender";
+    if (!selectedRole) {
+      setSelectedRole("sender");
+    }
     const currentWizardData = {
       ...location.state?.wizardData,
-      selectedRole,
+      selectedRole: roleToUse,
       weight,
       length,
       width,
@@ -459,11 +511,11 @@ function WizardPage() {
     };
     logWizardStep("package", currentWizardData);
 
-    if (selectedRole === "sender") {
+    if (roleToUse === "sender") {
       navigate("/wizard?step=contactPhone", {
         state: { wizardData: currentWizardData },
       });
-    } else if (selectedRole === "recipient") {
+    } else if (roleToUse === "recipient") {
       navigate("/wizard?step=recipientFIO", {
         state: { wizardData: currentWizardData },
       });
@@ -1487,12 +1539,16 @@ function WizardPage() {
     } else if (currentStep === "recipientFIO") {
       navigate("/wizard?step=package");
     } else if (currentStep === "package") {
-      navigate("/wizard?step=role");
-      setSelectedRole(null);
+      navigate("/calculate");
     } else {
       navigate("/calculate");
     }
   };
+
+  const inviteRecipient =
+    location.state?.inviteRecipient ||
+    location.state?.wizardData?.inviteRecipient ||
+    false;
 
   return (
     <WizardLayout
@@ -1505,12 +1561,7 @@ function WizardPage() {
       progressText={getProgressText()}
       onBack={handleBack}
     >
-      {currentStep === "role" ? (
-        <RoleSelectStep
-          onRoleSelect={handleRoleSelect}
-          selectedRole={selectedRole}
-        />
-      ) : currentStep === "package" ? (
+      {currentStep === "package" ? (
         <PackageStep
           packageOption={packageOption}
           onPackageOptionChange={setPackageOption}
@@ -1554,6 +1605,7 @@ function WizardPage() {
           }
           onVerifyCode={handleVerifyCode}
           onResendCode={handleResendCode}
+          onRoleChange={inviteRecipient ? undefined : handleRoleToggle}
         />
       ) : currentStep === "pickupAddress" && selectedRole === "sender" ? (
         <PickupAddressStep
@@ -1624,6 +1676,7 @@ function WizardPage() {
           }}
           onVerifyCode={handleRecipientUserVerifyCode}
           onResendCode={handleRecipientUserResendCode}
+          onRoleChange={handleRoleToggle}
         />
       ) : currentStep === "senderPhone" && selectedRole === "recipient" ? (
         <SenderPhoneStep
