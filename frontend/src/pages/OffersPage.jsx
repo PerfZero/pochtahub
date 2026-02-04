@@ -1604,8 +1604,17 @@ function OffersPage() {
               <button
                 type="button"
                 onClick={() => {
-                  setPackageOption("photo");
-                  setShowPackagePopup(true);
+                  if (
+                    typeof window !== "undefined" &&
+                    typeof window.ym === "function"
+                  ) {
+                    window.ym(104664178, "params", {
+                      offers: "оформить_отправку",
+                    });
+                  }
+                  if (cheapestOffer) {
+                    handleSelectOffer(cheapestOffer);
+                  }
                 }}
                 className="w-full bg-[#0077FE] text-white rounded-2xl px-4 py-3 md:py-4 text-base md:text-lg font-semibold hover:bg-[#0065D6] transition-colors"
               >
@@ -1613,7 +1622,7 @@ function OffersPage() {
               </button>
             </div>
           )}
-          <div className="rounded-2xl mb-4 md:mb-6">
+          <div className="rounded-2xl mb-4 md:mb-6" id="offers-list">
             <div className="flex items-center justify-center gap-2 mb-2">
               <h1 className="text-xl md:text-3xl text-center font-bold text-[#2D2D2D] px-2">
                 Предложения по вашим параметрам 🔥

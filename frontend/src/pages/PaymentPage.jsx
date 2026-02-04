@@ -169,6 +169,9 @@ function PaymentPage() {
       return;
     }
 
+    if (typeof window !== "undefined" && typeof window.ym === "function") {
+      window.ym(104664178, "reachGoal", "заказ!");
+    }
     setLoading(true);
     try {
       const userEmail = wizardData.email || null;
@@ -229,9 +232,6 @@ function PaymentPage() {
       const orderId = response.data?.id || response.data?.pk;
 
       if (orderId) {
-        if (typeof window !== "undefined" && typeof window.ym === "function") {
-          window.ym(104664178, "reachGoal", "заказ!");
-        }
         try {
           const paymentResponse = await paymentAPI.createPayment(orderId);
           const confirmationUrl = paymentResponse?.data?.confirmation_url;

@@ -95,7 +95,9 @@ function ContactPhoneStep({
                   type="radio"
                   name="role-select"
                   checked={selectedRole === "sender"}
-                  onChange={() => onRoleChange("sender")}
+                  onChange={() => {
+                    onRoleChange("sender");
+                  }}
                   className="mt-1 h-5 w-5 accent-[#0077FE]"
                 />
                 <div>
@@ -112,7 +114,17 @@ function ContactPhoneStep({
                   type="radio"
                   name="role-select"
                   checked={selectedRole === "recipient"}
-                  onChange={() => onRoleChange("recipient")}
+                  onChange={() => {
+                    if (
+                      typeof window !== "undefined" &&
+                      typeof window.ym === "function"
+                    ) {
+                      window.ym(104664178, "params", {
+                        offers: "роль_получатель",
+                      });
+                    }
+                    onRoleChange("recipient");
+                  }}
                   className="mt-1 h-5 w-5 accent-[#0077FE]"
                 />
                 <div>
