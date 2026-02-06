@@ -1857,6 +1857,14 @@ function OffersPage() {
                         {!isFromUrl && (
                           <button
                             onClick={() => {
+                              if (
+                                typeof window !== "undefined" &&
+                                typeof window.ym === "function"
+                              ) {
+                                window.ym(104664178, "params", {
+                                  offers: "оформить_отправку",
+                                });
+                              }
                               handleSelectOffer(offer);
                             }}
                             className={`w-full md:w-auto px-4 md:px-3 py-3 md:py-3 rounded-xl font-semibold transition-colors text-sm whitespace-nowrap
