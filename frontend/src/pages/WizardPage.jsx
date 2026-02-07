@@ -1352,6 +1352,57 @@ function WizardPage() {
     }
   };
 
+  const handleContactPhoneContinue = async () => {
+    if (!contactPhone) {
+      setCodeError("Введите номер телефона");
+      return;
+    }
+
+    setCodeError("");
+    setTelegramSent(false);
+
+    setCodeSent(false);
+    setSmsCode("");
+    setTelegramSent(false);
+
+    const inviteRecipient =
+      location.state?.inviteRecipient ||
+      location.state?.wizardData?.inviteRecipient ||
+      false;
+
+    if (selectedRole === "sender") {
+      if (inviteRecipient) {
+        const wizardDataForOrder = {
+          fromCity,
+          toCity,
+          pickupAddress,
+          pickupSenderName,
+          recipientPhone,
+          contactPhone,
+          weight: weight || "1",
+          length: length || "0",
+          width: width || "0",
+          height: height || "0",
+          packageOption,
+          selectedSize,
+          estimatedValue,
+          selectedRole: "sender",
+          inviteRecipient: true,
+          photoUrl,
+        };
+        navigate("/wizard?step=orderComplete", {
+          state: {
+            wizardData: wizardDataForOrder,
+            inviteRecipient: true,
+            selectedRole: "sender",
+          },
+        });
+      } else {
+        navigate("/wizard?step=package");
+      }
+    }
+  };
+
   const authObj = {
     codeSent,
     codeLoading,
@@ -1606,6 +1657,7 @@ function WizardPage() {
           onVerifyCode={handleVerifyCode}
           onResendCode={handleResendCode}
           onRoleChange={inviteRecipient ? undefined : handleRoleToggle}
+          onContinue={handleContactPhoneContinue}
         />
       ) : currentStep === "pickupAddress" && selectedRole === "sender" ? (
         <PickupAddressStep

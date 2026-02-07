@@ -1622,6 +1622,72 @@ function OffersPage() {
               </button>
             </div>
           )}
+          {showAssistant && (
+            <div className="bg-white border border-[#E5E5E5] rounded-2xl px-4 py-5 md:px-6 md:py-6 mb-4 md:mb-6">
+              <h2 className="text-lg md:text-2xl font-bold text-[#2D2D2D] mb-1">
+                Что отправляете?
+              </h2>
+              <p className="text-sm md:text-base text-[#2D2D2D] mb-4">
+                Добавьте фото посылки — чтобы точнее подобрать доставку
+              </p>
+              <div className="flex flex-col gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (
+                      typeof window !== "undefined" &&
+                      typeof window.ym === "function"
+                    ) {
+                      window.ym(104664178, "params", {
+                        offers: "добавил_габарит",
+                      });
+                    }
+                    const updatedWizardData = {
+                      ...wizardData,
+                      packageOption: "photo",
+                    };
+                    setWizardData(updatedWizardData);
+                    navigate("/wizard?step=package", {
+                      state: {
+                        wizardData: updatedWizardData,
+                        currentStep: "package",
+                      },
+                    });
+                  }}
+                  className="w-full bg-[#F5F5F5] text-[#2D2D2D] rounded-2xl px-4 py-3 md:py-4 text-base md:text-lg font-semibold hover:bg-[#E5E5E5] transition-colors"
+                >
+                  Добавить фото посылки
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (
+                      typeof window !== "undefined" &&
+                      typeof window.ym === "function"
+                    ) {
+                      window.ym(104664178, "params", {
+                        offers: "добавил_габарит",
+                      });
+                    }
+                    const updatedWizardData = {
+                      ...wizardData,
+                      packageOption: "manual",
+                    };
+                    setWizardData(updatedWizardData);
+                    navigate("/wizard?step=package", {
+                      state: {
+                        wizardData: updatedWizardData,
+                        currentStep: "package",
+                      },
+                    });
+                  }}
+                  className="text-sm md:text-base text-[#0077FE] hover:underline text-left"
+                >
+                  Указать размеры вручную
+                </button>
+              </div>
+            </div>
+          )}
           <div className="rounded-2xl mb-4 md:mb-6" id="offers-list">
             <div className="flex items-center justify-center gap-2 mb-2">
               <h1 className="text-xl md:text-3xl text-center font-bold text-[#2D2D2D] px-2">

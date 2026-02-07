@@ -14,10 +14,12 @@ function ContactPhoneStep({
   phoneLocked = false,
   onSendCode,
   onRoleChange,
+  onContinue,
 }) {
   const sendCode = onSendCode || ((method) => auth.handleSendCode(method));
+  const shouldSkipCode = typeof onContinue === "function";
 
-  if (!auth.codeSent) {
+  if (!auth.codeSent || shouldSkipCode) {
     return (
       <div className="mb-8">
         <h1 className="text-xl md:text-3xl font-bold text-[#2D2D2D] mb-2 text-center px-2">
@@ -53,7 +55,7 @@ function ContactPhoneStep({
             </p>
           </div>
         )}
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col items-center gap-3">
           <button
             onClick={() => {
               if (
@@ -62,83 +64,19 @@ function ContactPhoneStep({
               ) {
                 window.ym(104664178, "reachGoal", "указал_свой_телефон");
               }
-              sendCode("telegram");
+              if (shouldSkipCode) {
+                onContinue();
+              } else {
+                sendCode("sms");
+              }
             }}
             disabled={auth.codeLoading || !phone}
             className="w-full bg-[#0077FE] text-white px-6 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold hover:bg-[#0066CC] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {auth.codeLoading ? "Отправка..." : "Получить код в Telegram"}
+            {auth.codeLoading ? "Отправка..." : "Продолжить"}
           </button>
-          {allowSms && (
-            <button
-              onClick={() => {
-                if (
-                  typeof window !== "undefined" &&
-                  typeof window.ym === "function"
-                ) {
-                  window.ym(104664178, "reachGoal", "указал_свой_телефон");
-                }
-                sendCode("sms");
-              }}
-              disabled={auth.codeLoading || !phone}
-              className="w-full bg-[#F5F5F5] text-[#2D2D2D] px-6 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold hover:bg-[#E5E5E5] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {auth.codeLoading ? "Отправка..." : "Отправить SMS"}
-            </button>
-          )}
+          <p className="text-xs md:text-sm text-[#858585]">Код придёт в SMS</p>
         </div>
-        {onRoleChange && (
-          <div className="mt-6 border-t border-[#E5E5E5] pt-4">
-            <div className="flex flex-col gap-3">
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="radio"
-                  name="role-select"
-                  checked={selectedRole === "sender"}
-                  onChange={() => {
-                    onRoleChange("sender");
-                  }}
-                  className="mt-1 h-5 w-5 accent-[#0077FE]"
-                />
-                <div>
-                  <div className="text-sm md:text-base font-semibold text-[#2D2D2D]">
-                    Я отправитель
-                  </div>
-                  <div className="text-xs md:text-sm text-[#858585]">
-                    Посылка у меня. Я передам её курьеру
-                  </div>
-                </div>
-              </label>
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="radio"
-                  name="role-select"
-                  checked={selectedRole === "recipient"}
-                  onChange={() => {
-                    if (
-                      typeof window !== "undefined" &&
-                      typeof window.ym === "function"
-                    ) {
-                      window.ym(104664178, "params", {
-                        offers: "роль_получатель",
-                      });
-                    }
-                    onRoleChange("recipient");
-                  }}
-                  className="mt-1 h-5 w-5 accent-[#0077FE]"
-                />
-                <div>
-                  <div className="text-sm md:text-base font-semibold text-[#2D2D2D]">
-                    Я получатель
-                  </div>
-                  <div className="text-xs md:text-sm text-[#858585]">
-                    Посылка у отправителя. Вы оформляете доставку за него
-                  </div>
-                </div>
-              </label>
-            </div>
-          </div>
-        )}
       </div>
     );
   }
