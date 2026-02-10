@@ -849,6 +849,7 @@ function OffersPage() {
 
   const handleSelectOffer = (offer) => {
     if (typeof window !== "undefined" && typeof window.ym === "function") {
+      window.ym(104664178, "reachGoal", "star");
       window.ym(104664178, "params", { offers: "выбрал_ТК" });
     }
     const updatedWizardData = {
@@ -1603,7 +1604,13 @@ function OffersPage() {
                 <p className="text-right">Забор курьером</p>
               </div>
 
-              <h2 className="text-lg md:text-2xl font-bold text-[#2D2D2D] mb-2">
+              <h2 className="text-lg md:text-2xl font-bold text-[#2D2D2D] mb-2 flex items-center gap-2">
+                <span
+                  className="w-6 h-6 rounded-full bg-[#DDF5E6] text-[#22A05A] flex items-center justify-center text-sm"
+                  aria-hidden="true"
+                >
+                  ✓
+                </span>
                 Параметры посылки учтены
               </h2>
               <p className="text-sm md:text-base text-[#2D2D2D] mb-3">
@@ -1621,15 +1628,18 @@ function OffersPage() {
                     });
                   }
                 }}
-                className="w-full flex items-center justify-between gap-2 bg-[#F7FBFF] border border-[#E3F0FF] rounded-xl px-3 py-2 hover:bg-[#EDF6FF] transition-colors"
+                className="w-full flex items-center justify-between gap-2 bg-gradient-to-r from-[#1C70FF] to-[#2F8CFF] border border-[#2F8CFF] rounded-xl px-3 py-2 shadow-[0_8px_18px_rgba(0,119,254,0.25)] hover:brightness-105 transition-all"
               >
-                <span className="text-sm md:text-base font-semibold text-[#2D2D2D] text-left">
+                <span className="text-sm md:text-base font-semibold text-white text-left">
                   Осталось оформить забор курьером
                 </span>
-                <span className="px-2.5 py-1 rounded-full bg-[#0077FE] text-white text-xs font-semibold whitespace-nowrap">
+                <span className="px-2.5 py-1 rounded-full bg-[#7CCDA1] text-white text-xs font-semibold whitespace-nowrap">
                   Онлайн
                 </span>
               </button>
+              <p className="text-xs md:text-sm text-[#6A6A6A] mt-2 text-center">
+                ⏱ 2-3 мин
+              </p>
             </div>
           )}
           {!isOfferOnlyMode && !isRecipientFlow && showCourierPickupCta && (
@@ -1985,7 +1995,7 @@ function OffersPage() {
      : "bg-[#F5F5F5] text-[#2D2D2D] hover:bg-[#E5E5E5]"
  }`}
                           >
-                            Оформить отправку
+                            Оформить забор курьером
                           </button>
                         )}
                       </div>
