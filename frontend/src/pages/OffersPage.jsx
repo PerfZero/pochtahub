@@ -1609,14 +1609,27 @@ function OffersPage() {
               <p className="text-sm md:text-base text-[#2D2D2D] mb-3">
                 Оформите отправку онлайн - без визита в пункт и очередей
               </p>
-              <div className="flex items-center justify-between gap-2 bg-[#F7FBFF] border border-[#E3F0FF] rounded-xl px-3 py-2">
-                <p className="text-sm md:text-base font-semibold text-[#2D2D2D]">
+              <button
+                type="button"
+                onClick={() => {
+                  const offersListElement =
+                    document.getElementById("offers-list");
+                  if (offersListElement) {
+                    offersListElement.scrollIntoView({
+                      behavior: "smooth",
+                      block: "start",
+                    });
+                  }
+                }}
+                className="w-full flex items-center justify-between gap-2 bg-[#F7FBFF] border border-[#E3F0FF] rounded-xl px-3 py-2 hover:bg-[#EDF6FF] transition-colors"
+              >
+                <span className="text-sm md:text-base font-semibold text-[#2D2D2D] text-left">
                   Осталось оформить забор курьером
-                </p>
+                </span>
                 <span className="px-2.5 py-1 rounded-full bg-[#0077FE] text-white text-xs font-semibold whitespace-nowrap">
                   Онлайн
                 </span>
-              </div>
+              </button>
             </div>
           )}
           {!isOfferOnlyMode && !isRecipientFlow && showCourierPickupCta && (
