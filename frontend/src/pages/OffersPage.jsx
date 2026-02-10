@@ -163,6 +163,14 @@ function OffersPage() {
     location.state?.recipientNotified || false,
   );
 
+  const isRecipientFlow = wizardData.selectedRole === "recipient";
+  const hasPackageParams =
+    Boolean(selectedPackageOption) ||
+    Boolean(
+      wizardData.weight &&
+      (wizardData.length || wizardData.width || wizardData.height),
+    );
+
   const getCurrentMessage = () => {
     if (selectedPackageOption) {
       return assistantMessageSuccess;
@@ -594,7 +602,6 @@ function OffersPage() {
   }, [location.search, location.state]);
 
   useEffect(() => {
-    const isRecipientFlow = wizardData.selectedRole === "recipient";
     const isFromUrlCheck =
       !location.state?.wizardData && location.search.includes("data=");
     const skippedAssistant =
@@ -607,7 +614,13 @@ function OffersPage() {
     setShowAssistant(
       !skippedAssistant && !hasPackageOption && !isRecipientFlow,
     );
-  }, [wizardData, location.state, location.search, selectedPackageOption]);
+  }, [
+    wizardData,
+    location.state,
+    location.search,
+    selectedPackageOption,
+    isRecipientFlow,
+  ]);
 
   // Обновляем recipientNotified при возврате с WizardPage
   useEffect(() => {
@@ -1593,13 +1606,17 @@ function OffersPage() {
 
       <div className="flex justify-center pt-6 md:pt-12 pb-8">
         <div className="w-full max-w-[720px] mx-4 md:mx-6">
-          {showAssistant && (
+          {!isRecipientFlow && (
             <div className="bg-white border border-[#E5E5E5] rounded-2xl px-4 py-5 md:px-6 md:py-6 mb-4 md:mb-6">
               <h2 className="text-lg md:text-2xl font-bold text-[#2D2D2D] mb-1">
-                Оформим доставку по фото
+                {hasPackageParams
+                  ? "Параметры посылки учтены. Осталось оформить забор курьером."
+                  : "Оформим доставку по фото"}
               </h2>
-              <p className="text-sm md:text-base text-[#2D2D2D] mb-4">
-                Не нужно никуда идти — курьер приедет сам
+              <p className="text-xs md:text-sm text-[#2D2D2D] mb-4">
+                {hasPackageParams
+                  ? "Это займёт 1–2 шага"
+                  : "Не нужно никуда идти — курьер приедет сам"}
               </p>
               <button
                 type="button"
@@ -1651,6 +1668,7 @@ function OffersPage() {
                       state: {
                         wizardData: updatedWizardData,
                         currentStep: "package",
+                        returnToOffers: true,
                       },
                     });
                   }}
@@ -1678,6 +1696,7 @@ function OffersPage() {
                       state: {
                         wizardData: updatedWizardData,
                         currentStep: "package",
+                        returnToOffers: true,
                       },
                     });
                   }}

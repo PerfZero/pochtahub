@@ -12,10 +12,10 @@ function PhoneInput({ value, onChange, label = 'Телефон', required = fals
       onChange({ target: { value: processed } })
       return
     }
-    
+
     const unmasked = mask.unmaskedValue || ''
     let processedValue = val
-    
+
     if (unmasked.startsWith('8')) {
       const digits = unmasked.substring(1)
       let formatted = '+7'
@@ -36,7 +36,7 @@ function PhoneInput({ value, onChange, label = 'Телефон', required = fals
         }, 0)
       }
     }
-    
+
     onChange({ target: { value: processedValue } })
   }
 

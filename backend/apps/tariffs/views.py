@@ -17,7 +17,7 @@ class TransportCompanyListView(generics.ListAPIView):
     permission_classes = [permissions.AllowAny]
     queryset = TransportCompany.objects.filter(is_active=True)
     serializer_class = TransportCompanySerializer
-    
+
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context['request'] = self.request
@@ -48,8 +48,8 @@ class CalculatePriceView(generics.GenericAPIView):
         declared_value = serializer.validated_data.get('declared_value')
 
         results = TariffCalculator.calculate(
-            weight, 
-            dimensions, 
+            weight,
+            dimensions,
             transport_company_id,
             from_city=from_city,
             to_city=to_city,
@@ -77,11 +77,11 @@ class AnalyzeImageView(generics.GenericAPIView):
             serializer.is_valid(raise_exception=True)
 
             image_file = serializer.validated_data['image']
-            
+
             image_file.seek(0)
             image_data = image_file.read()
             image_base64 = base64.b64encode(image_data).decode('utf-8')
-            
+
             image_type = 'jpeg'
             if hasattr(image_file, 'content_type') and image_file.content_type:
                 if 'png' in image_file.content_type:
@@ -90,7 +90,7 @@ class AnalyzeImageView(generics.GenericAPIView):
                     image_type = 'webp'
                 elif 'gif' in image_file.content_type:
                     image_type = 'gif'
-            
+
             api_key = config('OPENAI_API_KEY', default='')
             if not api_key:
                 return Response({'error': 'OpenAI API key not configured'}, status=500)
@@ -100,7 +100,7 @@ class AnalyzeImageView(generics.GenericAPIView):
             client = OpenAI(api_key=api_key, http_client=http_client)
 
             response = client.chat.completions.create(
-                model="gpt-4-turbo",
+                model="gpt-4o",
                 messages=[
                     {
                         "role": "system",
@@ -127,20 +127,20 @@ class AnalyzeImageView(generics.GenericAPIView):
 
             if not response.choices or not response.choices[0].message:
                 return Response({'error': 'Пустой ответ от OpenAI API'}, status=500)
-            
+
             content = response.choices[0].message.content
             if not content:
                 return Response({'error': 'Контент ответа пустой'}, status=500)
-            
+
             content = content.strip()
-            
+
             import logging
             logger = logging.getLogger(__name__)
             logger.info(f"OpenAI response content: {content}")
-            
+
             try:
                 data = json.loads(content)
-                
+
                 def safe_float(value, default=0):
                     if value is None:
                         return default
@@ -148,7 +148,7 @@ class AnalyzeImageView(generics.GenericAPIView):
                         return float(value)
                     except (ValueError, TypeError):
                         return default
-                
+
                 def safe_int(value, default=0):
                     if value is None:
                         return default
@@ -156,7 +156,7 @@ class AnalyzeImageView(generics.GenericAPIView):
                         return int(value)
                     except (ValueError, TypeError):
                         return default
-                
+
                 length = safe_float(data.get('length'), 0)
                 width = safe_float(data.get('width'), 0)
                 height = safe_float(data.get('height'), 0)
@@ -166,14 +166,14 @@ class AnalyzeImageView(generics.GenericAPIView):
                 if not isinstance(object_names, list):
                     object_names = []
                 declared_value = safe_float(data.get('declared_value'), 0)
-                
+
                 if height > 0 and height < 1:
                     height = 1.0
                     logger.info(f"Высота скорректирована до минимума 1 см (было меньше)")
-                
+
                 if length == 0 and width == 0 and height == 0 and weight == 0:
                     logger.warning(f"All values are zero. Raw response: {content}")
-                
+
                 return Response({
                     'length': max(0, length),
                     'width': max(0, width),
@@ -187,7 +187,7 @@ class AnalyzeImageView(generics.GenericAPIView):
                 json_match = re.search(r'\{[^}]+\}', content)
                 if json_match:
                     data = json.loads(json_match.group())
-                    
+
                     def safe_float(value, default=0):
                         if value is None:
                             return default
@@ -195,7 +195,7 @@ class AnalyzeImageView(generics.GenericAPIView):
                             return float(value)
                         except (ValueError, TypeError):
                             return default
-                    
+
                     def safe_int(value, default=0):
                         if value is None:
                             return default
@@ -203,15 +203,15 @@ class AnalyzeImageView(generics.GenericAPIView):
                             return int(value)
                         except (ValueError, TypeError):
                             return default
-                    
+
                     object_names = data.get('object_names', [])
                     if not isinstance(object_names, list):
                         object_names = []
-                    
+
                     height_value = safe_float(data.get('height'), 0)
                     if height_value > 0 and height_value < 1:
                         height_value = 1.0
-                    
+
                     return Response({
                         'length': max(0, safe_float(data.get('length'), 0)),
                         'width': max(0, safe_float(data.get('width'), 0)),
@@ -249,41 +249,41 @@ class DeliveryPointsView(generics.GenericAPIView):
         city_code = request.query_params.get('city_code')
         transport_company_id = request.query_params.get('transport_company_id')
         size = int(request.query_params.get('size', 20))
-        
+
         if not city and not city_code:
             return Response({'error': 'Необходимо указать city или city_code'}, status=400)
-        
+
         if not transport_company_id:
             return Response({'error': 'Необходимо указать transport_company_id'}, status=400)
-        
+
         if size > 100:
             size = 100
-        
+
         try:
             company = TransportCompany.objects.get(id=transport_company_id)
             if company.api_type != 'cdek' or not company.api_account or not company.api_secure_password:
                 return Response({'error': 'Компания не поддерживает CDEK API'}, status=400)
-            
+
             adapter = CDEKAdapter(
                 account=company.api_account,
                 secure_password=company.api_secure_password,
                 test_mode=False
             )
-            
+
             city_code_int = int(city_code) if city_code else None
-            
+
             if city and not city_code_int:
                 city_code_int = adapter._get_city_code(city)
-            
+
             request_size = size * 3 if city else size
-            
+
             points = adapter.get_delivery_points(
                 city_code=city_code_int,
                 city=city,
                 type='PVZ',
                 size=request_size
             )
-            
+
             if city and points:
                 filtered_points = []
                 city_lower = city.lower().strip()
@@ -291,12 +291,12 @@ class DeliveryPointsView(generics.GenericAPIView):
                     point_city = point.get('location', {}).get('city', '')
                     if point_city and city_lower in point_city.lower():
                         filtered_points.append(point)
-                
+
                 if filtered_points:
                     points = filtered_points[:size]
                 else:
                     points = points[:size]
-            
+
             for point in points:
                 if 'work_time_list' in point and 'work_time' not in point:
                     work_time_list = point.get('work_time_list', [])
@@ -308,7 +308,7 @@ class DeliveryPointsView(generics.GenericAPIView):
                                 'time': day_info.get('time', '')
                             })
                     point['work_time'] = work_time
-            
+
             return Response({'points': points, 'total': len(points)})
         except TransportCompany.DoesNotExist:
             return Response({'error': 'Транспортная компания не найдена'}, status=404)
@@ -327,54 +327,54 @@ class CdekWidgetServiceView(generics.GenericAPIView):
         import requests as http_requests
         import logging
         logger = logging.getLogger(__name__)
-        
+
         # Виджет СДЭК 3.0 отправляет данные в определённом формате
         action = request.data.get('action')
         logger.info(f'CDEK Widget request: action={action}, data={request.data}')
-        
+
         try:
             company = TransportCompany.objects.filter(
-                api_type='cdek', 
+                api_type='cdek',
                 is_active=True,
                 api_account__isnull=False,
                 api_secure_password__isnull=False
             ).first()
-            
+
             if not company:
                 return Response({'error': 'CDEK компания не настроена'}, status=400)
-            
+
             adapter = CDEKAdapter(
                 account=company.api_account,
                 secure_password=company.api_secure_password,
                 test_mode=False
             )
-            
+
             token = adapter._get_token()
             if not token:
                 return Response({'error': 'Не удалось получить токен СДЭК'}, status=500)
-            
+
             headers = {
                 'Authorization': f'Bearer {token}',
                 'Content-Type': 'application/json'
             }
-            
+
             base_url = adapter.api_url
-            
+
             if action == 'offices' or action == 'getOffices':
                 # Получение списка ПВЗ
                 city_code = request.data.get('city_code') or request.data.get('cityCode')
-                
+
                 params = {'size': 500}
                 if city_code:
                     params['city_code'] = city_code
-                
+
                 response = http_requests.get(
                     f'{base_url}/deliverypoints',
                     headers=headers,
                     params=params,
                     timeout=30
                 )
-                
+
                 if response.status_code == 200:
                     data = response.json()
                     # Форматируем ответ для виджета - он ожидает массив офисов
@@ -402,7 +402,7 @@ class CdekWidgetServiceView(generics.GenericAPIView):
                 else:
                     logger.error(f'CDEK offices error: {response.status_code} - {response.text}')
                     return Response([], status=200)  # Возвращаем пустой массив
-                    
+
             elif action == 'calculate' or action == 'calculateDelivery':
                 # Расчёт стоимости доставки
                 calc_data = {
@@ -413,49 +413,49 @@ class CdekWidgetServiceView(generics.GenericAPIView):
                     'to_location': request.data.get('to_location') or request.data.get('toLocation', {}),
                     'packages': request.data.get('packages', []),
                 }
-                
+
                 tariff_code = request.data.get('tariff_code') or request.data.get('tariffCode')
                 if tariff_code:
                     calc_data['tariff_code'] = tariff_code
-                
+
                 response = http_requests.post(
                     f'{base_url}/calculator/tarifflist',
                     headers=headers,
                     json=calc_data,
                     timeout=30
                 )
-                
+
                 if response.status_code == 200:
                     return Response(response.json())
                 else:
                     logger.error(f'CDEK calculate error: {response.text}')
                     return Response({'tariff_codes': []}, status=200)
-                    
+
             elif action == 'cities' or action == 'getCities':
                 # Поиск городов
                 city = request.data.get('city', '') or request.data.get('name', '')
-                
+
                 params = {'size': 50}
                 if city:
                     params['city'] = city
-                
+
                 response = http_requests.get(
                     f'{base_url}/location/cities',
                     headers=headers,
                     params=params,
                     timeout=30
                 )
-                
+
                 if response.status_code == 200:
                     return Response(response.json())
                 else:
                     logger.error(f'CDEK cities error: {response.text}')
                     return Response([], status=200)
-            
+
             else:
                 logger.warning(f'Unknown CDEK widget action: {action}')
                 return Response({'error': f'Unknown action: {action}'}, status=400)
-                
+
         except Exception as e:
             logger.error(f'CDEK widget service error: {str(e)}', exc_info=True)
             return Response({'error': str(e)}, status=500)
@@ -471,20 +471,20 @@ class GetTariffsView(generics.GenericAPIView):
     def get(self, request, *args, **kwargs):
         if not request.user.is_authenticated or not request.user.is_staff:
             return Response({'detail': 'Учетные данные не были предоставлены.'}, status=401)
-        
+
         transport_company_id = request.query_params.get('transport_company_id')
         from_city = request.query_params.get('from_city')
         to_city = request.query_params.get('to_city')
         weight = request.query_params.get('weight', '1.0')
         api_account = request.query_params.get('api_account')
         api_secure_password = request.query_params.get('api_secure_password')
-        
+
         if not from_city or not to_city:
             return Response({'error': 'Необходимо указать from_city и to_city'}, status=400)
-        
+
         account = None
         password = None
-        
+
         if transport_company_id:
             try:
                 company = TransportCompany.objects.get(id=transport_company_id)
@@ -499,14 +499,14 @@ class GetTariffsView(generics.GenericAPIView):
             password = api_secure_password
         else:
             return Response({'error': 'Необходимо указать transport_company_id или api_account и api_secure_password'}, status=400)
-        
+
         try:
             adapter = CDEKAdapter(
                 account=account,
                 secure_password=password,
                 test_mode=False
             )
-            
+
             tariffs = adapter.calculate_price(
                 from_city=from_city,
                 to_city=to_city,
@@ -515,7 +515,7 @@ class GetTariffsView(generics.GenericAPIView):
                 width=10,
                 height=10
             )
-            
+
             seen_codes = set()
             tariff_list = []
             for tariff in tariffs:
@@ -527,7 +527,7 @@ class GetTariffsView(generics.GenericAPIView):
                         'code': tariff_code,
                         'name': tariff_name
                     })
-            
+
             return Response({'tariffs': tariff_list})
         except Exception as e:
             return Response({'error': f'Ошибка получения тарифов: {str(e)}'}, status=500)

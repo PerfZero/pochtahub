@@ -15,9 +15,10 @@ function ContactPhoneStep({
   onSendCode,
   onRoleChange,
   onContinue,
+  skipCode = false,
 }) {
   const sendCode = onSendCode || ((method) => auth.handleSendCode(method));
-  const shouldSkipCode = typeof onContinue === "function";
+  const shouldSkipCode = Boolean(skipCode);
 
   if (!auth.codeSent || shouldSkipCode) {
     return (

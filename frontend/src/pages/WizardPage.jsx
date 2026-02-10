@@ -511,6 +511,13 @@ function WizardPage() {
     };
     logWizardStep("package", currentWizardData);
 
+    if (location.state?.returnToOffers) {
+      navigate("/offers", {
+        state: { wizardData: currentWizardData, packageUpdated: true },
+      });
+      return;
+    }
+
     if (roleToUse === "sender") {
       navigate("/wizard?step=contactPhone", {
         state: { wizardData: currentWizardData },
@@ -1398,7 +1405,7 @@ function WizardPage() {
           },
         });
       } else {
-        navigate("/wizard?step=package");
+        navigate("/wizard?step=pickupAddress");
       }
     }
   };
@@ -1657,7 +1664,8 @@ function WizardPage() {
           onVerifyCode={handleVerifyCode}
           onResendCode={handleResendCode}
           onRoleChange={inviteRecipient ? undefined : handleRoleToggle}
-          onContinue={handleContactPhoneContinue}
+          skipCode={inviteRecipient}
+          onContinue={inviteRecipient ? handleContactPhoneContinue : undefined}
         />
       ) : currentStep === "pickupAddress" && selectedRole === "sender" ? (
         <PickupAddressStep

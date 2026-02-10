@@ -168,11 +168,11 @@ function AssistantWizard() {
       case ASSISTANT_STEPS.CONTACT_PHONE:
         return (
           <ContactPhoneStep
-            contactPhone={contactPhone}
-            onContactPhoneChange={(e) => setContactPhone(e.target.value)}
+            phone={contactPhone}
+            onPhoneChange={(e) => setContactPhone(e.target.value)}
             auth={auth}
-            onContinue={handleContinue}
             onVerifyCode={handleVerifyCodeAndContinue}
+            onSendCode={(method) => auth.handleSendCode(contactPhone, method)}
           />
         );
 
