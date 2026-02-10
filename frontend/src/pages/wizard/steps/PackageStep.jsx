@@ -58,6 +58,8 @@ function PackageStep({
   onSelectedSizeChange,
   onContinue,
 }) {
+  const isContinueDisabled = photoAnalyzing;
+
   return (
     <>
       <h1 className="text-xl md:text-3xl font-bold text-[#2D2D2D] mb-2 text-center px-2">
@@ -281,7 +283,8 @@ function PackageStep({
           </div>
           <button
             onClick={onContinue}
-            className="w-full bg-[#0077FE] text-white px-6 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold"
+            disabled={isContinueDisabled}
+            className="w-full bg-[#0077FE] text-white px-6 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Продолжить
           </button>
@@ -321,7 +324,8 @@ function PackageStep({
           </div>
           <button
             onClick={onContinue}
-            className="w-full bg-[#0077FE] text-white px-6 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold"
+            disabled={isContinueDisabled}
+            className="w-full bg-[#0077FE] text-white px-6 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Продолжить
           </button>
@@ -367,7 +371,8 @@ function PackageStep({
           </div>
           <button
             onClick={onContinue}
-            className="w-full bg-[#0077FE] text-white px-6 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold"
+            disabled={isContinueDisabled}
+            className="w-full bg-[#0077FE] text-white px-6 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Продолжить
           </button>

@@ -10,7 +10,6 @@ function ContactPhoneStep({
   description,
   onVerifyCode,
   onResendCode,
-  allowSms = true,
   phoneLocked = false,
   onSendCode,
   onRoleChange,
@@ -66,7 +65,7 @@ function ContactPhoneStep({
                 window.ym(104664178, "reachGoal", "указал_свой_телефон");
               }
               if (shouldSkipCode) {
-                onContinue();
+                onContinue?.();
               } else {
                 sendCode("sms");
               }
@@ -76,7 +75,11 @@ function ContactPhoneStep({
           >
             {auth.codeLoading ? "Отправка..." : "Продолжить"}
           </button>
-          <p className="text-xs md:text-sm text-[#858585]">Код придёт в SMS</p>
+          {!shouldSkipCode && (
+            <p className="text-xs md:text-sm text-[#858585]">
+              Код придёт в SMS
+            </p>
+          )}
         </div>
       </div>
     );

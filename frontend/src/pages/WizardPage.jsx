@@ -63,6 +63,7 @@ import SenderAddressStep from "./wizard/steps/SenderAddressStep";
 import SelectPvzStep from "./wizard/steps/SelectPvzStep";
 import OrderCompleteStep from "./wizard/steps/OrderCompleteStep";
 import EmailStep from "./wizard/steps/EmailStep";
+import RoleSelectStep from "./wizard/steps/RoleSelectStep";
 import { authAPI, ordersAPI, tariffsAPI, usersAPI } from "../api";
 
 function WizardPage() {
@@ -73,6 +74,7 @@ function WizardPage() {
   const stepFromUrl = urlParams.get("step");
 
   const validSteps = [
+    "role",
     "package",
     "contactPhone",
     "pickupAddress",
@@ -112,7 +114,11 @@ function WizardPage() {
     return null;
   };
   const initialStep =
-    stepFromUrl && validSteps.includes(stepFromUrl) ? stepFromUrl : "package";
+    stepFromUrl && validSteps.includes(stepFromUrl)
+      ? stepFromUrl
+      : location.state?.wizardData?.selectedRole
+        ? "package"
+        : "role";
 
   const [fromCity, setFromCity] = useState(
     location.state?.fromCity || location.state?.wizardData?.fromCity || "",
@@ -129,26 +135,20 @@ function WizardPage() {
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const stepFromUrl = urlParams.get("step");
-    if (stepFromUrl === "role") {
-      navigate("/wizard?step=package", { replace: true });
-      return;
-    }
+    const fallbackStep = selectedRole ? "package" : "role";
     if (
       stepFromUrl &&
       validSteps.includes(stepFromUrl) &&
       stepFromUrl !== currentStep
     ) {
       setCurrentStep(stepFromUrl);
-    } else if (!stepFromUrl && currentStep !== "package") {
-      navigate(`/wizard?step=${currentStep}`, { replace: true });
+    } else if (!stepFromUrl && currentStep !== fallbackStep) {
+      navigate(`/wizard?step=${fallbackStep}`, { replace: true });
     }
 
     const roleForStep = getRoleForStep(stepFromUrl);
     if (!selectedRole && roleForStep) {
       setSelectedRole(roleForStep);
-    }
-    if (!selectedRole && stepFromUrl === "package") {
-      setSelectedRole("sender");
     }
   }, [location.search, currentStep, selectedRole]);
 
@@ -363,6 +363,18 @@ function WizardPage() {
     });
   };
 
+  const handleRoleSelect = (role) => {
+    const wizardData = {
+      ...location.state?.wizardData,
+      selectedRole: role,
+      fromCity,
+      toCity,
+    };
+    setSelectedRole(role);
+    logWizardStep("role", wizardData);
+    navigate("/wizard?step=package", { state: { wizardData } });
+  };
+
   const handleRoleToggle = (role) => {
     if (role === selectedRole) return;
 
@@ -459,12 +471,6 @@ function WizardPage() {
               const declaredValue =
                 analyzeResponse.data.declared_value.toString();
               setEstimatedValue(declaredValue);
-              // Сохраняем в wizardData
-              const currentWizardData = location.state?.wizardData || {};
-              setWizardData({
-                ...currentWizardData,
-                estimatedValue: declaredValue,
-              });
             }
           }
         } catch (err) {
@@ -507,26 +513,19 @@ function WizardPage() {
       estimatedValue,
       selectedSize,
       packageOption,
+      packageDataCompleted: true,
+      offerOnlyMode: true,
       photoUrl,
     };
     logWizardStep("package", currentWizardData);
 
-    if (location.state?.returnToOffers) {
-      navigate("/offers", {
-        state: { wizardData: currentWizardData, packageUpdated: true },
-      });
-      return;
-    }
-
-    if (roleToUse === "sender") {
-      navigate("/wizard?step=contactPhone", {
-        state: { wizardData: currentWizardData },
-      });
-    } else if (roleToUse === "recipient") {
-      navigate("/wizard?step=recipientFIO", {
-        state: { wizardData: currentWizardData },
-      });
-    }
+    navigate("/offers", {
+      state: {
+        wizardData: currentWizardData,
+        packageUpdated: true,
+        focusOfferSelection: true,
+      },
+    });
   };
 
   const handleRecipientFIOContinue = () => {
@@ -687,6 +686,18 @@ function WizardPage() {
     if (recipientUserPhone) {
       await handleRecipientUserSendCode("telegram");
     }
+  };
+
+  const handleRecipientUserPhoneContinue = () => {
+    if (!recipientUserPhone) {
+      setRecipientUserCodeError("Введите номер телефона");
+      return;
+    }
+    setRecipientUserCodeError("");
+    setRecipientUserCodeSent(false);
+    setRecipientUserSmsCode("");
+    setRecipientUserTelegramSent(false);
+    navigate("/wizard?step=senderPhone");
   };
 
   const handleSenderPhoneContinue = () => {
@@ -1619,7 +1630,12 @@ function WizardPage() {
       progressText={getProgressText()}
       onBack={handleBack}
     >
-      {currentStep === "package" ? (
+      {currentStep === "role" ? (
+        <RoleSelectStep
+          selectedRole={selectedRole}
+          onRoleSelect={handleRoleSelect}
+        />
+      ) : currentStep === "package" ? (
         <PackageStep
           packageOption={packageOption}
           onPackageOptionChange={setPackageOption}
@@ -1664,8 +1680,8 @@ function WizardPage() {
           onVerifyCode={handleVerifyCode}
           onResendCode={handleResendCode}
           onRoleChange={inviteRecipient ? undefined : handleRoleToggle}
-          skipCode={inviteRecipient}
-          onContinue={inviteRecipient ? handleContactPhoneContinue : undefined}
+          skipCode
+          onContinue={handleContactPhoneContinue}
         />
       ) : currentStep === "pickupAddress" && selectedRole === "sender" ? (
         <PickupAddressStep
@@ -1734,8 +1750,8 @@ function WizardPage() {
             },
             handleSendCode: handleRecipientUserSendCode,
           }}
-          onVerifyCode={handleRecipientUserVerifyCode}
-          onResendCode={handleRecipientUserResendCode}
+          skipCode
+          onContinue={handleRecipientUserPhoneContinue}
           onRoleChange={handleRoleToggle}
         />
       ) : currentStep === "senderPhone" && selectedRole === "recipient" ? (

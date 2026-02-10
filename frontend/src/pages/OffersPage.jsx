@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import logoSvg from "../assets/whitelogo.svg";
 import cdekIcon from "../assets/images/cdek.svg";
@@ -82,11 +82,9 @@ function OffersPage() {
   const [sortBy, setSortBy] = useState("price");
   const [shareSuccess, setShareSuccess] = useState(false);
   const [isRouteEditing, setIsRouteEditing] = useState(false);
+  const [showCourierPickupCta, setShowCourierPickupCta] = useState(true);
   const [showAssistant, setShowAssistant] = useState(() => {
     const isRecipientFlow = wizardData.selectedRole === "recipient";
-    const hasInviteRecipient = !!(
-      wizardData.inviteRecipient || location.state?.inviteRecipient
-    );
     const isFromUrlCheck =
       !location.state?.wizardData && location.search.includes("data=");
     const skippedAssistant =
@@ -95,7 +93,8 @@ function OffersPage() {
       !location.state?.inviteRecipient &&
       location.state?.wizardData &&
       !isFromUrlCheck;
-    return !skippedAssistant && !isRecipientFlow;
+    const hasCompletedPackageStep = Boolean(wizardData.packageDataCompleted);
+    return !skippedAssistant && !isRecipientFlow && !hasCompletedPackageStep;
   });
   const [typedText, setTypedText] = useState("");
   const [assistantStep, setAssistantStep] = useState("initial");
@@ -115,6 +114,7 @@ function OffersPage() {
   const [photoError, setPhotoError] = useState("");
   const [photoAnalyzing, setPhotoAnalyzing] = useState(false);
   const [photoAnalysis, setPhotoAnalysis] = useState(null);
+  const photoRequestIdRef = useRef(0);
   const [length, setLength] = useState("");
   const [width, setWidth] = useState("");
   const [height, setHeight] = useState("");
@@ -164,12 +164,21 @@ function OffersPage() {
   );
 
   const isRecipientFlow = wizardData.selectedRole === "recipient";
+  const isOfferOnlyMode = Boolean(
+    location.state?.focusOfferSelection || wizardData.offerOnlyMode,
+  );
+  const isPositivePackageValue = (value) => {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) && numeric > 0;
+  };
+  const hasPackageDimensions =
+    isPositivePackageValue(wizardData.length) ||
+    isPositivePackageValue(wizardData.width) ||
+    isPositivePackageValue(wizardData.height);
   const hasPackageParams =
-    Boolean(selectedPackageOption) ||
-    Boolean(
-      wizardData.weight &&
-      (wizardData.length || wizardData.width || wizardData.height),
-    );
+    Boolean(wizardData.packageDataCompleted) ||
+    (Boolean(wizardData.packageOption) &&
+      (Boolean(wizardData.selectedSize) || hasPackageDimensions));
 
   const getCurrentMessage = () => {
     if (selectedPackageOption) {
@@ -249,6 +258,7 @@ function OffersPage() {
         width: finalWidth,
         height: finalHeight,
         packageOption: "photo",
+        packageDataCompleted: true,
         photoFile,
         photoUrl,
       };
@@ -303,6 +313,7 @@ function OffersPage() {
         width,
         height,
         packageOption: "manual",
+        packageDataCompleted: true,
       };
 
       setWizardData(updatedWizardData);
@@ -367,6 +378,7 @@ function OffersPage() {
         height: finalHeight,
         selectedSize,
         packageOption: "unknown",
+        packageDataCompleted: true,
       };
 
       setWizardData(updatedWizardData);
@@ -423,7 +435,84 @@ function OffersPage() {
   const isManualValid =
     packageOption === "manual" && length && width && height && weight;
   const isUnknownValid = packageOption === "unknown" && selectedSize;
-  const isContinueDisabled = !isPhotoValid && !isManualValid && !isUnknownValid;
+  const isContinueDisabled =
+    photoAnalyzing || (!isPhotoValid && !isManualValid && !isUnknownValid);
+
+  const processPhotoFile = async (file) => {
+    if (!file) return;
+
+    const requestId = ++photoRequestIdRef.current;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setPhotoError("Файл слишком большой. Максимальный размер 5 МБ.");
+      setPhotoFile(null);
+      setPhotoPreview(null);
+      setPhotoUrl(null);
+      setPhotoAnalysis(null);
+      setPhotoAnalyzing(false);
+      return;
+    }
+
+    setPhotoFile(file);
+    setPhotoError("");
+    setPhotoAnalyzing(true);
+    setPhotoAnalysis(null);
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (requestId !== photoRequestIdRef.current) return;
+      setPhotoPreview(reader.result);
+    };
+    reader.readAsDataURL(file);
+
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+
+      try {
+        const uploadResponse = await ordersAPI.uploadPackageImage(formData);
+        if (requestId !== photoRequestIdRef.current) return;
+        if (uploadResponse.data?.success && uploadResponse.data?.image_url) {
+          setPhotoUrl(uploadResponse.data.image_url);
+        }
+      } catch (uploadError) {
+        console.warn(
+          "Ошибка загрузки изображения, продолжаем анализ:",
+          uploadError,
+        );
+      }
+
+      const analyzeFormData = new FormData();
+      analyzeFormData.append("image", file);
+      const analyzeResponse = await tariffsAPI.analyzeImage(analyzeFormData);
+      if (requestId !== photoRequestIdRef.current) return;
+
+      if (analyzeResponse.data) {
+        setPhotoError("");
+        setPhotoAnalysis(analyzeResponse.data);
+        if (analyzeResponse.data.length)
+          setLength(analyzeResponse.data.length.toString());
+        if (analyzeResponse.data.width)
+          setWidth(analyzeResponse.data.width.toString());
+        if (analyzeResponse.data.height)
+          setHeight(analyzeResponse.data.height.toString());
+        if (analyzeResponse.data.weight)
+          setWeight(analyzeResponse.data.weight.toString());
+        if (analyzeResponse.data.declared_value)
+          setEstimatedValue(analyzeResponse.data.declared_value.toString());
+      }
+    } catch (err) {
+      if (requestId !== photoRequestIdRef.current) return;
+      console.error("Ошибка обработки изображения:", err);
+      setPhotoError(
+        err.response?.data?.error || "Ошибка обработки изображения",
+      );
+    } finally {
+      if (requestId === photoRequestIdRef.current) {
+        setPhotoAnalyzing(false);
+      }
+    }
+  };
 
   const isFromUrl =
     !location.state?.wizardData && location.search.includes("data=");
@@ -610,9 +699,9 @@ function OffersPage() {
       !location.state?.inviteRecipient &&
       location.state?.wizardData &&
       !isFromUrlCheck;
-    const hasPackageOption = selectedPackageOption !== null;
+    const hasCompletedPackageStep = Boolean(wizardData.packageDataCompleted);
     setShowAssistant(
-      !skippedAssistant && !hasPackageOption && !isRecipientFlow,
+      !skippedAssistant && !hasCompletedPackageStep && !isRecipientFlow,
     );
   }, [
     wizardData,
@@ -673,6 +762,21 @@ function OffersPage() {
   const fastestOffer = [...offers].sort(
     (a, b) => (a.delivery_time || 999) - (b.delivery_time || 999),
   )[0];
+
+  const handleCourierPickupCtaClick = () => {
+    setShowCourierPickupCta(false);
+    if (typeof window !== "undefined") {
+      window.requestAnimationFrame(() => {
+        const offersListElement = document.getElementById("offers-list");
+        if (offersListElement) {
+          offersListElement.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }
+      });
+    }
+  };
 
   const handleNavigateToRecipientPhone = () => {
     const updatedWizardData = {
@@ -752,8 +856,9 @@ function OffersPage() {
       fromCity: wizardData.fromCity || fromCity,
       toCity: wizardData.toCity || toCity,
       deliveryName: deliveryName,
-      selectedRole: wizardData.selectedRole || "sender",
-      packageDataCompleted: true,
+      selectedRole: wizardData.selectedRole || null,
+      packageDataCompleted: Boolean(wizardData.packageDataCompleted),
+      offerOnlyMode: false,
       estimatedValue: estimatedValue || wizardData.estimatedValue || "10", // Сохраняем estimatedValue
       selectedOffer: {
         company_id: offer.company_id,
@@ -815,7 +920,15 @@ function OffersPage() {
         navigationPath = "/wizard?step=email";
       }
     } else {
-      navigationPath = "/wizard?step=contactPhone";
+      if (!updatedWizardData.selectedRole) {
+        navigationPath = "/wizard?step=role";
+      } else if (!updatedWizardData.packageDataCompleted) {
+        navigationPath = "/wizard?step=package";
+      } else if (updatedWizardData.selectedRole === "recipient") {
+        navigationPath = "/wizard?step=recipientUserPhone";
+      } else {
+        navigationPath = "/wizard?step=contactPhone";
+      }
     }
 
     const shouldShowPackagingPopup =
@@ -1106,6 +1219,7 @@ function OffersPage() {
           <div className="bg-white rounded-2xl max-w-[468px] w-full max-h-[90vh] overflow-y-auto relative">
             <button
               onClick={() => {
+                photoRequestIdRef.current += 1;
                 setShowPackagePopup(false);
                 setPackageOption(null);
                 setPhotoFile(null);
@@ -1143,81 +1257,7 @@ function OffersPage() {
                           onChange={async (e) => {
                             const file = e.target.files[0];
                             if (file) {
-                              if (file.size > 5 * 1024 * 1024) {
-                                setPhotoError(
-                                  "Файл слишком большой. Максимальный размер 5 МБ.",
-                                );
-                                setPhotoFile(null);
-                                setPhotoPreview(null);
-                                setPhotoUrl(null);
-                                setPhotoAnalysis(null);
-                              } else {
-                                setPhotoFile(file);
-                                setPhotoError("");
-                                setPhotoAnalyzing(true);
-                                setPhotoAnalysis(null);
-                                const reader = new FileReader();
-                                reader.onloadend = () => {
-                                  setPhotoPreview(reader.result);
-                                };
-                                reader.readAsDataURL(file);
-
-                                try {
-                                  const formData = new FormData();
-                                  formData.append("image", file);
-                                  const uploadResponse =
-                                    await ordersAPI.uploadPackageImage(
-                                      formData,
-                                    );
-                                  if (
-                                    uploadResponse.data?.success &&
-                                    uploadResponse.data?.image_url
-                                  ) {
-                                    setPhotoUrl(uploadResponse.data.image_url);
-                                  }
-
-                                  const analyzeFormData = new FormData();
-                                  analyzeFormData.append("image", file);
-                                  const analyzeResponse =
-                                    await tariffsAPI.analyzeImage(
-                                      analyzeFormData,
-                                    );
-                                  if (analyzeResponse.data) {
-                                    setPhotoAnalysis(analyzeResponse.data);
-                                    if (analyzeResponse.data.length)
-                                      setLength(
-                                        analyzeResponse.data.length.toString(),
-                                      );
-                                    if (analyzeResponse.data.width)
-                                      setWidth(
-                                        analyzeResponse.data.width.toString(),
-                                      );
-                                    if (analyzeResponse.data.height)
-                                      setHeight(
-                                        analyzeResponse.data.height.toString(),
-                                      );
-                                    if (analyzeResponse.data.weight)
-                                      setWeight(
-                                        analyzeResponse.data.weight.toString(),
-                                      );
-                                    if (analyzeResponse.data.declared_value)
-                                      setEstimatedValue(
-                                        analyzeResponse.data.declared_value.toString(),
-                                      );
-                                  }
-                                } catch (err) {
-                                  console.error(
-                                    "Ошибка обработки изображения:",
-                                    err,
-                                  );
-                                  setPhotoError(
-                                    err.response?.data?.error ||
-                                      "Ошибка обработки изображения",
-                                  );
-                                } finally {
-                                  setPhotoAnalyzing(false);
-                                }
-                              }
+                              await processPhotoFile(file);
                             }
                           }}
                           className="hidden"
@@ -1242,6 +1282,7 @@ function OffersPage() {
                           />
                           <button
                             onClick={() => {
+                              photoRequestIdRef.current += 1;
                               setPhotoFile(null);
                               setPhotoPreview(null);
                               setPhotoUrl(null);
@@ -1348,79 +1389,7 @@ function OffersPage() {
                             onChange={async (e) => {
                               const file = e.target.files[0];
                               if (file) {
-                                if (file.size > 5 * 1024 * 1024) {
-                                  setPhotoError(
-                                    "Файл слишком большой. Максимальный размер 5 МБ.",
-                                  );
-                                } else {
-                                  setPhotoFile(file);
-                                  setPhotoError("");
-                                  setPhotoAnalyzing(true);
-                                  setPhotoAnalysis(null);
-                                  const reader = new FileReader();
-                                  reader.onloadend = () => {
-                                    setPhotoPreview(reader.result);
-                                  };
-                                  reader.readAsDataURL(file);
-
-                                  try {
-                                    const formData = new FormData();
-                                    formData.append("image", file);
-                                    const uploadResponse =
-                                      await ordersAPI.uploadPackageImage(
-                                        formData,
-                                      );
-                                    if (
-                                      uploadResponse.data?.success &&
-                                      uploadResponse.data?.image_url
-                                    ) {
-                                      setPhotoUrl(
-                                        uploadResponse.data.image_url,
-                                      );
-                                    }
-
-                                    const analyzeFormData = new FormData();
-                                    analyzeFormData.append("image", file);
-                                    const analyzeResponse =
-                                      await tariffsAPI.analyzeImage(
-                                        analyzeFormData,
-                                      );
-                                    if (analyzeResponse.data) {
-                                      setPhotoAnalysis(analyzeResponse.data);
-                                      if (analyzeResponse.data.length)
-                                        setLength(
-                                          analyzeResponse.data.length.toString(),
-                                        );
-                                      if (analyzeResponse.data.width)
-                                        setWidth(
-                                          analyzeResponse.data.width.toString(),
-                                        );
-                                      if (analyzeResponse.data.height)
-                                        setHeight(
-                                          analyzeResponse.data.height.toString(),
-                                        );
-                                      if (analyzeResponse.data.weight)
-                                        setWeight(
-                                          analyzeResponse.data.weight.toString(),
-                                        );
-                                      if (analyzeResponse.data.declared_value)
-                                        setEstimatedValue(
-                                          analyzeResponse.data.declared_value.toString(),
-                                        );
-                                    }
-                                  } catch (err) {
-                                    console.error(
-                                      "Ошибка обработки изображения:",
-                                      err,
-                                    );
-                                    setPhotoError(
-                                      err.response?.data?.error ||
-                                        "Ошибка обработки изображения",
-                                    );
-                                  } finally {
-                                    setPhotoAnalyzing(false);
-                                  }
-                                }
+                                await processPhotoFile(file);
                               }
                             }}
                             className="hidden"
@@ -1606,7 +1575,51 @@ function OffersPage() {
 
       <div className="flex justify-center pt-6 md:pt-12 pb-8">
         <div className="w-full max-w-[720px] mx-4 md:mx-6">
-          {!isRecipientFlow && (
+          {isOfferOnlyMode && (
+            <div className="relative overflow-hidden bg-white border border-[#D8E8FF] rounded-2xl px-4 py-5 md:px-6 md:py-6 mb-4 md:mb-6 shadow-[0_8px_24px_rgba(0,119,254,0.08)]">
+              <div className="absolute -top-20 -right-10 w-44 h-44 bg-[#EAF4FF] rounded-full blur-2xl pointer-events-none" />
+
+              <p className="text-xs md:text-sm font-semibold text-[#5F7EA6] uppercase tracking-wide mb-3">
+                Прогресс оформления
+              </p>
+
+              <div className="grid grid-cols-[auto_1fr_auto_1fr_auto] items-center gap-2 mb-2">
+                <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-[#0077FE] text-white flex items-center justify-center text-xs md:text-sm font-bold">
+                  ✓
+                </div>
+                <div className="h-[3px] rounded-full bg-[#0077FE]" />
+                <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-[#0077FE] text-white flex items-center justify-center text-xs md:text-sm font-bold">
+                  ✓
+                </div>
+                <div className="h-[3px] rounded-full bg-gradient-to-r from-[#0077FE] to-[#9CC9FF]" />
+                <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-[#0077FE] text-white flex items-center justify-center text-xs md:text-sm font-bold ring-4 ring-[#EAF4FF]">
+                  3
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 text-[11px] md:text-xs font-semibold text-[#2D2D2D] mb-4">
+                <p className="text-left">Посылка</p>
+                <p className="text-center">Расчёт</p>
+                <p className="text-right">Забор курьером</p>
+              </div>
+
+              <h2 className="text-lg md:text-2xl font-bold text-[#2D2D2D] mb-2">
+                Параметры посылки учтены
+              </h2>
+              <p className="text-sm md:text-base text-[#2D2D2D] mb-3">
+                Оформите отправку онлайн - без визита в пункт и очередей
+              </p>
+              <div className="flex items-center justify-between gap-2 bg-[#F7FBFF] border border-[#E3F0FF] rounded-xl px-3 py-2">
+                <p className="text-sm md:text-base font-semibold text-[#2D2D2D]">
+                  Осталось оформить забор курьером
+                </p>
+                <span className="px-2.5 py-1 rounded-full bg-[#0077FE] text-white text-xs font-semibold whitespace-nowrap">
+                  Онлайн
+                </span>
+              </div>
+            </div>
+          )}
+          {!isOfferOnlyMode && !isRecipientFlow && showCourierPickupCta && (
             <div className="bg-white border border-[#E5E5E5] rounded-2xl px-4 py-5 md:px-6 md:py-6 mb-4 md:mb-6">
               <h2 className="text-lg md:text-2xl font-bold text-[#2D2D2D] mb-1">
                 {hasPackageParams
@@ -1629,9 +1642,7 @@ function OffersPage() {
                       offers: "оформить_отправку",
                     });
                   }
-                  if (cheapestOffer) {
-                    handleSelectOffer(cheapestOffer);
-                  }
+                  handleCourierPickupCtaClick();
                 }}
                 className="w-full bg-[#0077FE] text-white rounded-2xl px-4 py-3 md:py-4 text-base md:text-lg font-semibold hover:bg-[#0065D6] transition-colors"
               >
@@ -1639,7 +1650,7 @@ function OffersPage() {
               </button>
             </div>
           )}
-          {showAssistant && (
+          {!isOfferOnlyMode && showAssistant && (
             <div className="bg-white border border-[#E5E5E5] rounded-2xl px-4 py-5 md:px-6 md:py-6 mb-4 md:mb-6">
               <h2 className="text-lg md:text-2xl font-bold text-[#2D2D2D] mb-1">
                 Что отправляете?
@@ -1662,6 +1673,7 @@ function OffersPage() {
                     const updatedWizardData = {
                       ...wizardData,
                       packageOption: "photo",
+                      packageDataCompleted: false,
                     };
                     setWizardData(updatedWizardData);
                     navigate("/wizard?step=package", {
@@ -1690,6 +1702,7 @@ function OffersPage() {
                     const updatedWizardData = {
                       ...wizardData,
                       packageOption: "manual",
+                      packageDataCompleted: false,
                     };
                     setWizardData(updatedWizardData);
                     navigate("/wizard?step=package", {
