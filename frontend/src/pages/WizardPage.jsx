@@ -503,13 +503,35 @@ function WizardPage() {
     if (!selectedRole) {
       setSelectedRole("sender");
     }
+
+    let finalWeight = weight;
+    let finalLength = length;
+    let finalWidth = width;
+    let finalHeight = height;
+
+    if (packageOption === "unknown" && selectedSize) {
+      const sizePresetMap = {
+        smartphone: { weight: "1", length: "17", width: "12", height: "9" },
+        iron: { weight: "3", length: "21", width: "20", height: "11" },
+        shoes: { weight: "7", length: "33", width: "25", height: "15" },
+        microwave: { weight: "15", length: "42", width: "35", height: "30" },
+      };
+      const preset = sizePresetMap[selectedSize];
+      if (preset) {
+        finalWeight = preset.weight;
+        finalLength = preset.length;
+        finalWidth = preset.width;
+        finalHeight = preset.height;
+      }
+    }
+
     const currentWizardData = {
       ...location.state?.wizardData,
       selectedRole: roleToUse,
-      weight,
-      length,
-      width,
-      height,
+      weight: finalWeight,
+      length: finalLength,
+      width: finalWidth,
+      height: finalHeight,
       estimatedValue,
       selectedSize,
       packageOption,

@@ -58,7 +58,12 @@ function PackageStep({
   onSelectedSizeChange,
   onContinue,
 }) {
-  const isContinueDisabled = photoAnalyzing;
+  const isPhotoValid = packageOption === "photo" && Boolean(photoPreview);
+  const isManualValid =
+    packageOption === "manual" && Boolean(length && width && height && weight);
+  const isUnknownValid = packageOption === "unknown" && Boolean(selectedSize);
+  const isContinueDisabled =
+    photoAnalyzing || !(isPhotoValid || isManualValid || isUnknownValid);
 
   return (
     <>
