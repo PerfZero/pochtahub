@@ -64,6 +64,23 @@ function CalculatePage() {
     setIsAuthenticated(!!localStorage.getItem("access_token"));
   }, [location.pathname]);
 
+  useEffect(() => {
+    if (!location.hash) {
+      return;
+    }
+    const id = location.hash.slice(1);
+    if (!id) {
+      return;
+    }
+    const target = document.getElementById(id);
+    if (!target) {
+      return;
+    }
+    requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [location.hash]);
+
   const handleSendCode = async (method = "telegram") => {
     if (!phone) {
       setCodeError("Введите номер телефона");
@@ -196,17 +213,12 @@ function CalculatePage() {
   };
 
   const handleRecipientDelivery = () => {
-    // Находим форму hero (первая форма на странице)
-    const heroForm = document.querySelector("form");
-    if (heroForm) {
-      heroForm.scrollIntoView({ behavior: "smooth", block: "center" });
-      // Небольшая задержка чтобы скролл завершился перед установкой фокуса
-      setTimeout(() => {
-        if (fromCityInputRef.current) {
-          fromCityInputRef.current.focus();
-        }
-      }, 800);
+    if (typeof window !== "undefined" && typeof window.ym === "function") {
+      window.ym(104664178, "reachGoal", "recipient_start");
     }
+    navigate("/wizard?step=recipientPhone", {
+      state: { currentStep: "recipientPhone" },
+    });
   };
 
   return (
@@ -552,19 +564,27 @@ function CalculatePage() {
         </section>
 
         {/* About */}
-        <section className="w-full flex justify-center px-4 md:px-6 py-8 md:py-16">
+        <section
+          id="recipient"
+          className="w-full flex justify-center px-4 md:px-6 py-8 md:py-16"
+        >
           <div className="w-full max-w-[1128px] relative">
             <div className="bg-[#F4EEE2] rounded-2xl p-6 md:p-12 flex flex-col md:flex-row">
               <div className="flex-1 flex flex-col gap-4 md:gap-6">
                 <div className="flex flex-col gap-3 md:gap-4">
                   <h2 className="text-2xl md:text-[40px] font-bold text-[#2D2D2D] leading-[1.1]">
-                    PochtaHub — просто отправить. Удобно получить
+                    Продавец не отправляет?
+                    <br />
+                    Курьер приедет к нему — вы оформите доставку сами
                   </h2>
                   <div className="flex flex-col gap-2 md:gap-3 text-sm md:text-base text-[#2D2D2D] max-w-full md:max-w-[400px]">
                     <p>
-                      <span className="font-semibold">Отправителю</span> не
-                      нужно разбираться в доставке — он просто передаёт посылку
-                      курьеру или сдаёт её в пункт приёма.
+                      <span className="font-semibold">Продавцу</span> ничего
+                      оформлять не нужно.
+                    </p>
+                    <p>
+                      <span className="font-semibold">Курьер</span> приедет к
+                      продавцу и заберёт посылку.
                     </p>
                     <p>
                       <span className="font-semibold">Получатель</span> сам

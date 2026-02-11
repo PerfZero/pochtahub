@@ -26,7 +26,7 @@ function RecipientPhoneStep({
             typeof window !== "undefined" &&
             typeof window.ym === "function"
           ) {
-            window.ym(104664178, "reachGoal", "указал_телефон_получателя");
+            window.ym(104664178, "reachGoal", "recipient_flow_started");
           }
           onContinue();
         }}
