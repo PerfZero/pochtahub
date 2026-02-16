@@ -8,6 +8,12 @@ function ContactPhoneStep({
   selectedRole,
   title,
   description,
+  fromCity = "",
+  toCity = "",
+  length = "",
+  width = "",
+  height = "",
+  weight = "",
   onVerifyCode,
   onResendCode,
   phoneLocked = false,
@@ -18,6 +24,24 @@ function ContactPhoneStep({
 }) {
   const sendCode = onSendCode || ((method) => auth.handleSendCode(method));
   const shouldSkipCode = Boolean(skipCode);
+  const route = [fromCity, toCity].filter(Boolean).join(" -> ");
+  const normalizedDimensions = [length, width, height]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+  const dimensions = normalizedDimensions.length
+    ? `${[length || "—", width || "—", height || "—"].join(" × ")} см`
+    : "";
+  const normalizedWeight = String(weight || "").trim();
+  const formattedWeight = normalizedWeight
+    ? /кг/i.test(normalizedWeight)
+      ? normalizedWeight
+      : `${normalizedWeight} кг`
+    : "";
+  const shipmentSummary = [
+    route ? { label: "Маршрут", value: route } : null,
+    dimensions ? { label: "Габариты", value: dimensions } : null,
+    formattedWeight ? { label: "Вес", value: formattedWeight } : null,
+  ].filter(Boolean);
 
   if (!auth.codeSent || shouldSkipCode) {
     return (
@@ -34,6 +58,21 @@ function ContactPhoneStep({
               ? "Это необходимо для оформления заказа"
               : "Курьер позвонит перед приездом")}
         </p>
+        {shipmentSummary.length > 0 && (
+          <div className="mb-6 bg-[#F8FAFF] border border-[#DCE8FF] rounded-xl p-4">
+            <div className="space-y-1">
+              {shipmentSummary.map((item) => (
+                <p
+                  key={item.label}
+                  className="text-xs md:text-sm text-[#2D2D2D]"
+                >
+                  <span className="text-[#858585]">{item.label}:</span>{" "}
+                  {item.value}
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="mb-6">
           <PhoneInput
             value={phone}
@@ -45,6 +84,11 @@ function ContactPhoneStep({
           {phoneLocked && (
             <p className="text-xs text-[#858585] mt-2">
               Номер привязан к отправлению и недоступен для изменения.
+            </p>
+          )}
+          {selectedRole === "sender" && (
+            <p className="text-xs text-[#858585] mt-2">
+              Телефон нужен только для связи с курьером. Без рекламы.
             </p>
           )}
         </div>

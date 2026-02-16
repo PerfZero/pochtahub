@@ -171,6 +171,12 @@ function AssistantWizard() {
             phone={contactPhone}
             onPhoneChange={(e) => setContactPhone(e.target.value)}
             auth={auth}
+            fromCity={fromCity}
+            toCity={toCity}
+            length={length}
+            width={width}
+            height={height}
+            weight={weight}
             onVerifyCode={handleVerifyCodeAndContinue}
             onSendCode={(method) => auth.handleSendCode(contactPhone, method)}
           />
@@ -208,6 +214,18 @@ function AssistantWizard() {
     }
   };
 
+  const getStepLabel = () => {
+    const stepOrder = [
+      ASSISTANT_STEPS.RECIPIENT_PHONE,
+      ASSISTANT_STEPS.PICKUP_ADDRESS,
+      ASSISTANT_STEPS.CONTACT_PHONE,
+      ASSISTANT_STEPS.ORDER_COMPLETE,
+    ];
+    const stepIndex = stepOrder.indexOf(currentStep);
+    if (stepIndex === -1) return "";
+    return `Шаг ${stepIndex + 1} из ${stepOrder.length}`;
+  };
+
   return (
     <WizardLayout
       fromCity={fromCity}
@@ -231,6 +249,7 @@ function AssistantWizard() {
           ? "Готово!"
           : "Уже подбираем транспортные компании..."
       }
+      stepLabel={getStepLabel()}
     >
       {renderStep()}
     </WizardLayout>

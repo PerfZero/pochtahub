@@ -1465,7 +1465,7 @@ function WizardPage() {
     if (currentStep === "payment") return 80;
     if (currentStep === "recipientPhone") return 70;
     if (currentStep === "pickupAddress") return 60;
-    if (currentStep === "contactPhone") return codeSent ? 50 : 40;
+    if (currentStep === "contactPhone") return 75;
     if (currentStep === "email") return 95;
     if (currentStep === "selectPvz") return 90;
     if (currentStep === "senderAddress") return 75;
@@ -1502,6 +1502,50 @@ function WizardPage() {
     if (currentStep === "package") return "Расскажите о посылке";
     if (selectedRole) return "Выбрана роль";
     return "Начните заполнение формы";
+  };
+
+  const getStepLabel = () => {
+    const isInviteRecipientFlow =
+      location.state?.inviteRecipient ||
+      location.state?.wizardData?.inviteRecipient ||
+      false;
+
+    if (currentStep === "contactPhone") {
+      return "Шаг 3 из 4";
+    }
+
+    let stepOrder = [];
+
+    if (!selectedRole || currentStep === "role") {
+      stepOrder = ["role", "package"];
+    } else if (selectedRole === "recipient") {
+      stepOrder = [
+        "package",
+        "recipientFIO",
+        "deliveryAddress",
+        "recipientUserPhone",
+        "senderPhone",
+        "senderAddress",
+      ];
+    } else if (isInviteRecipientFlow) {
+      stepOrder = ["package", "pickupAddress", "contactPhone", "orderComplete"];
+    } else {
+      stepOrder = [
+        "package",
+        "contactPhone",
+        "pickupAddress",
+        "recipientPhone",
+        "payment",
+        "recipientAddress",
+        "selectPvz",
+        "email",
+        "orderComplete",
+      ];
+    }
+
+    const stepIndex = stepOrder.indexOf(currentStep);
+    if (stepIndex === -1) return "";
+    return `Шаг ${stepIndex + 1} из ${stepOrder.length}`;
   };
 
   const handleBack = () => {
@@ -1650,6 +1694,7 @@ function WizardPage() {
       onCalculate={handleCalculate}
       progress={getProgress()}
       progressText={getProgressText()}
+      stepLabel={getStepLabel()}
       onBack={handleBack}
     >
       {currentStep === "role" ? (
@@ -1687,6 +1732,12 @@ function WizardPage() {
           onPhoneChange={(e) => setContactPhone(e.target.value)}
           auth={authObj}
           selectedRole={selectedRole}
+          fromCity={fromCity}
+          toCity={toCity}
+          length={length}
+          width={width}
+          height={height}
+          weight={weight}
           title={
             location.state?.inviteRecipient ||
             location.state?.wizardData?.inviteRecipient

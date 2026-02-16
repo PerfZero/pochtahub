@@ -342,8 +342,7 @@ function SenderWizard() {
     if (currentStep === "payment") return 95;
     if (currentStep === "recipientPhone") return 85;
     if (currentStep === "pickupAddress") return 75;
-    if (currentStep === "contactPhone" && auth.codeSent) return 60;
-    if (currentStep === "contactPhone") return 50;
+    if (currentStep === "contactPhone") return 75;
     if (packageDataCompleted) return 35;
     return 20;
   };
@@ -361,6 +360,23 @@ function SenderWizard() {
       return "Мы уже близко...";
     }
     return "Осталось еще чуть-чуть...";
+  };
+
+  const getStepLabel = () => {
+    if (currentStep === "contactPhone") {
+      return "Шаг 3 из 4";
+    }
+
+    const stepOrder = [
+      "package",
+      "contactPhone",
+      "pickupAddress",
+      "recipientPhone",
+      "payment",
+    ];
+    const stepIndex = stepOrder.indexOf(currentStep);
+    if (stepIndex === -1) return "";
+    return `Шаг ${stepIndex + 1} из ${stepOrder.length}`;
   };
 
   const renderStep = () => {
@@ -396,6 +412,12 @@ function SenderWizard() {
             phone={contactPhone}
             onPhoneChange={(e) => setContactPhone(e.target.value)}
             auth={auth}
+            fromCity={fromCity}
+            toCity={toCity}
+            length={length}
+            width={width}
+            height={height}
+            weight={weight}
             onVerifyCode={handleVerifyCodeAndContinue}
             onSendCode={(method) => auth.handleSendCode(contactPhone, method)}
           />
@@ -448,6 +470,7 @@ function SenderWizard() {
       onCalculate={handleCalculate}
       progress={getProgress()}
       progressText={getProgressText()}
+      stepLabel={getStepLabel()}
       onBack={handleBack}
     >
       {renderStep()}

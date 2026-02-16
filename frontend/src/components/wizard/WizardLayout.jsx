@@ -10,6 +10,7 @@ function WizardLayout({
   onCalculate,
   progress,
   progressText,
+  stepLabel,
   onBack,
   children,
 }) {
@@ -57,7 +58,15 @@ function WizardLayout({
                 style={{ width: `${progress}%` }}
               ></div>
             </div>
-            <p className="text-sm text-[#858585] mt-2 text-center">
+            <div className="mt-2 flex items-center justify-between">
+              <span className="text-xs md:text-sm font-semibold text-[#0077FE]">
+                {stepLabel || ""}
+              </span>
+              <span className="text-xs md:text-sm text-[#858585]">
+                {Math.round(progress)}%
+              </span>
+            </div>
+            <p className="text-sm text-[#858585] mt-1 text-center">
               {progressText}
             </p>
           </div>
