@@ -796,12 +796,6 @@ function WizardPage() {
   };
 
   const handleSenderAddressContinue = () => {
-    if (!fromCity || !toCity) {
-      console.error("Города не заполнены:", { fromCity, toCity });
-      alert("Пожалуйста, укажите города отправления и назначения");
-      return;
-    }
-
     const trimmedAddress = senderAddress?.trim() || "";
     if (!trimmedAddress) {
       return;
