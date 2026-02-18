@@ -1662,6 +1662,32 @@ function WizardPage() {
   };
 
   const getProgress = () => {
+    if (selectedRole === "recipient") {
+      const offer =
+        selectedOffer ||
+        location.state?.selectedOffer ||
+        location.state?.wizardData?.selectedOffer;
+      const filterCourierDelivery =
+        location.state?.wizardData?.filterCourierDelivery || false;
+      const needsDeliveryAddress = !needsPvzSelection(
+        offer,
+        filterCourierDelivery,
+      );
+      const recipientStepOrder = [
+        "recipientRoute",
+        "package",
+        "senderAddress",
+        "senderPhone",
+        "recipientFIO",
+        ...(needsDeliveryAddress ? ["deliveryAddress"] : []),
+        "recipientUserPhone",
+      ];
+      const stepIndex = recipientStepOrder.indexOf(currentStep);
+      if (stepIndex !== -1) {
+        return Math.round(((stepIndex + 1) / recipientStepOrder.length) * 100);
+      }
+    }
+
     if (currentStep === "orderComplete") return 100;
     if (currentStep === "recipientAddress") return 90;
     if (currentStep === "payment") return 80;
@@ -1673,8 +1699,7 @@ function WizardPage() {
     if (currentStep === "recipientRoute") return 20;
     if (currentStep === "senderAddress") return 70;
     if (currentStep === "senderPhone") return 75;
-    if (currentStep === "recipientUserPhone")
-      return recipientUserCodeSent ? 65 : 60;
+    if (currentStep === "recipientUserPhone") return 60;
     if (currentStep === "deliveryAddress") return 50;
     if (currentStep === "recipientFIO") return 40;
     if (currentStep === "package") return 30;
