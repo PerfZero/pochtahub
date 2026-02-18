@@ -363,6 +363,14 @@ function WizardPage() {
     });
   };
 
+  const resolveCityFromInputs = (cityValue, addressValue) => {
+    const normalizedCity = (cityValue || "").trim();
+    if (normalizedCity) return normalizedCity;
+
+    const firstAddressChunk = (addressValue || "").split(",")[0]?.trim() || "";
+    return firstAddressChunk.replace(/^(г\.?|город)\s*/i, "").trim();
+  };
+
   const handleRoleSelect = (role) => {
     const wizardData = {
       ...location.state?.wizardData,
@@ -723,12 +731,6 @@ function WizardPage() {
   };
 
   const handleSenderPhoneContinue = () => {
-    if (!fromCity || !toCity) {
-      console.error("Города не заполнены:", { fromCity, toCity });
-      alert("Пожалуйста, укажите города отправления и назначения");
-      return;
-    }
-
     const trimmedAddress = senderAddress?.trim() || "";
     if (!trimmedAddress) {
       return;
@@ -748,13 +750,27 @@ function WizardPage() {
       return;
     }
 
+    const resolvedFromCity = resolveCityFromInputs(fromCity, senderAddress);
+    const resolvedToCity = resolveCityFromInputs(toCity, deliveryAddress);
+
+    if (!resolvedFromCity || !resolvedToCity) {
+      return;
+    }
+
+    if (!fromCity && resolvedFromCity) {
+      setFromCity(resolvedFromCity);
+    }
+    if (!toCity && resolvedToCity) {
+      setToCity(resolvedToCity);
+    }
+
     if (selectedRole === "recipient") {
       const existingWizardData = location.state?.wizardData || {};
       const savedPickup = localStorage.getItem("filterCourierPickup");
       const savedDelivery = localStorage.getItem("filterCourierDelivery");
       const wizardData = {
-        fromCity: fromCity.trim(),
-        toCity: toCity.trim(),
+        fromCity: resolvedFromCity,
+        toCity: resolvedToCity,
         senderAddress: senderAddress,
         deliveryAddress: deliveryAddress,
         recipientAddress: deliveryAddress,
@@ -1325,17 +1341,31 @@ function WizardPage() {
   };
 
   const handleRecipientAddressContinue = () => {
-    if (!fromCity || !toCity) {
-      console.error("Города не заполнены:", { fromCity, toCity });
-      alert("Пожалуйста, укажите города отправления и назначения");
-      return;
-    }
-
     const trimmedAddress = recipientAddress?.trim() || "";
     const hasHouseNumber = /\d/.test(trimmedAddress);
 
     if (!trimmedAddress || !hasHouseNumber || !recipientFIO) {
       return;
+    }
+
+    const resolvedFromCity = resolveCityFromInputs(
+      fromCity,
+      pickupAddress || senderAddress,
+    );
+    const resolvedToCity = resolveCityFromInputs(
+      toCity,
+      recipientAddress || deliveryAddress,
+    );
+
+    if (!resolvedFromCity || !resolvedToCity) {
+      return;
+    }
+
+    if (!fromCity && resolvedFromCity) {
+      setFromCity(resolvedFromCity);
+    }
+    if (!toCity && resolvedToCity) {
+      setToCity(resolvedToCity);
     }
 
     const existingWizardData = location.state?.wizardData || {};
@@ -1364,8 +1394,8 @@ function WizardPage() {
     });
 
     const wizardData = {
-      fromCity: fromCity.trim(),
-      toCity: toCity.trim(),
+      fromCity: resolvedFromCity,
+      toCity: resolvedToCity,
       senderAddress: pickupAddress,
       pickupAddress: pickupAddress,
       deliveryAddress: recipientAddress,
