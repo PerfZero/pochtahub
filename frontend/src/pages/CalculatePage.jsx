@@ -173,7 +173,10 @@ function CalculatePage() {
 
   const handleGuideContinue = () => {
     if (selectedGuideRole === "recipient") {
-      navigate("/wizard?step=senderAddress", {
+      if (typeof window !== "undefined" && typeof window.ym === "function") {
+        window.ym(104664178, "reachGoal", "recipient_flow_started");
+      }
+      navigate("/wizard?step=recipientRoute", {
         state: {
           wizardData: {
             selectedRole: "recipient",
@@ -418,10 +421,10 @@ function CalculatePage() {
           <div className="w-full max-w-[1128px] rounded-3xl border border-[#C8C7CC] bg-[#F9F6F0] px-5 md:px-16 py-8 md:py-14">
             <div className="max-w-[820px] mx-auto flex flex-col gap-4 md:gap-6">
               <h1 className="text-3xl md:text-[56px] font-bold leading-[1.08] tracking-[-0.02em] text-[#2D2D2D] text-center">
-                Что делать, если отправитель не отправляет посылку?
+                PochtaHub — ты выбираешь доставку сам
               </h1>
               <p className="text-base md:text-2xl leading-[1.35] text-[#2D2D2D] text-center">
-                Ты можешь оформить доставку сам — без участия отправителя
+                Без навязанных тарифов и ожидания отправителя.
               </p>
             </div>
 

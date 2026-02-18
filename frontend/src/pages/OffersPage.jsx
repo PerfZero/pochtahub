@@ -926,7 +926,7 @@ function OffersPage() {
       } else if (!updatedWizardData.packageDataCompleted) {
         navigationPath = "/wizard?step=package";
       } else if (updatedWizardData.selectedRole === "recipient") {
-        navigationPath = "/wizard?step=recipientUserPhone";
+        navigationPath = "/wizard?step=senderAddress";
       } else {
         navigationPath = "/wizard?step=contactPhone";
       }

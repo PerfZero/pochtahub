@@ -60,6 +60,7 @@ import RecipientFIOStep from "./wizard/steps/RecipientFIOStep";
 import DeliveryAddressStep from "./wizard/steps/DeliveryAddressStep";
 import SenderPhoneStep from "./wizard/steps/SenderPhoneStep";
 import SenderAddressStep from "./wizard/steps/SenderAddressStep";
+import RecipientRouteStep from "./wizard/steps/RecipientRouteStep";
 import SelectPvzStep from "./wizard/steps/SelectPvzStep";
 import OrderCompleteStep from "./wizard/steps/OrderCompleteStep";
 import EmailStep from "./wizard/steps/EmailStep";
@@ -75,6 +76,7 @@ function WizardPage() {
 
   const validSteps = [
     "role",
+    "recipientRoute",
     "package",
     "contactPhone",
     "pickupAddress",
@@ -101,6 +103,7 @@ function WizardPage() {
     "orderComplete",
   ]);
   const recipientSteps = new Set([
+    "recipientRoute",
     "recipientUserPhone",
     "senderPhone",
     "senderAddress",
@@ -113,12 +116,19 @@ function WizardPage() {
     if (recipientSteps.has(step)) return "recipient";
     return null;
   };
-  const initialStep =
-    stepFromUrl && validSteps.includes(stepFromUrl)
-      ? stepFromUrl
-      : location.state?.wizardData?.selectedRole
-        ? "package"
-        : "role";
+  const initialStep = (() => {
+    if (stepFromUrl && validSteps.includes(stepFromUrl)) {
+      return stepFromUrl;
+    }
+    const initialRole = location.state?.wizardData?.selectedRole;
+    if (initialRole === "recipient") {
+      return "recipientRoute";
+    }
+    if (initialRole) {
+      return "package";
+    }
+    return "role";
+  })();
 
   const [fromCity, setFromCity] = useState(
     location.state?.fromCity || location.state?.wizardData?.fromCity || "",
@@ -135,7 +145,11 @@ function WizardPage() {
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const stepFromUrl = urlParams.get("step");
-    const fallbackStep = selectedRole ? "package" : "role";
+    const fallbackStep = selectedRole
+      ? selectedRole === "recipient"
+        ? "recipientRoute"
+        : "package"
+      : "role";
     if (
       stepFromUrl &&
       validSteps.includes(stepFromUrl) &&
@@ -350,6 +364,20 @@ function WizardPage() {
 
   const handleCalculate = () => {
     if (!fromCity || !toCity) return;
+    if (selectedRole === "recipient" && currentStep === "recipientRoute") {
+      const existingWizardData = location.state?.wizardData || {};
+      navigate("/wizard?step=package", {
+        state: {
+          wizardData: {
+            ...existingWizardData,
+            selectedRole: "recipient",
+            fromCity: fromCity.trim(),
+            toCity: toCity.trim(),
+          },
+        },
+      });
+      return;
+    }
     const existingWizardData = location.state?.wizardData || {};
     navigate("/offers", {
       state: {
@@ -380,7 +408,12 @@ function WizardPage() {
     };
     setSelectedRole(role);
     logWizardStep("role", wizardData);
-    navigate("/wizard?step=package", { state: { wizardData } });
+    navigate(
+      `/wizard?step=${role === "recipient" ? "recipientRoute" : "package"}`,
+      {
+        state: { wizardData },
+      },
+    );
   };
 
   const handleRoleToggle = (role) => {
@@ -408,7 +441,7 @@ function WizardPage() {
         recipientUserPhone: contactPhone || recipientUserPhone,
       };
       setSelectedRole("recipient");
-      navigate("/wizard?step=recipientUserPhone", {
+      navigate("/wizard?step=recipientRoute", {
         state: { wizardData },
       });
       return;
@@ -558,6 +591,23 @@ function WizardPage() {
     });
   };
 
+  const handleRecipientRouteContinue = () => {
+    if (!fromCity?.trim() || !toCity?.trim()) {
+      return;
+    }
+
+    const currentWizardData = {
+      ...location.state?.wizardData,
+      selectedRole: "recipient",
+      fromCity: fromCity.trim(),
+      toCity: toCity.trim(),
+    };
+
+    navigate("/wizard?step=package", {
+      state: { wizardData: currentWizardData },
+    });
+  };
+
   const handleRecipientFIOContinue = () => {
     const currentWizardData = {
       ...location.state?.wizardData,
@@ -566,9 +616,31 @@ function WizardPage() {
     logWizardStep("recipientFIO", currentWizardData);
 
     if (selectedRole === "recipient") {
-      navigate("/wizard?step=deliveryAddress", {
-        state: { wizardData: currentWizardData },
-      });
+      const offer =
+        selectedOffer ||
+        location.state?.selectedOffer ||
+        location.state?.wizardData?.selectedOffer;
+      const filterCourierDelivery =
+        location.state?.wizardData?.filterCourierDelivery || false;
+      const isCDEK =
+        offer?.company_name === "CDEK" || offer?.company_code === "cdek";
+      const PVZ_TARIFFS = [
+        136, 138, 62, 63, 233, 234, 235, 236, 237, 238, 239, 240,
+      ];
+      const isPvzFlow =
+        Boolean(offer) &&
+        !filterCourierDelivery &&
+        isCDEK &&
+        PVZ_TARIFFS.includes(offer?.tariff_code);
+
+      navigate(
+        isPvzFlow
+          ? "/wizard?step=recipientUserPhone"
+          : "/wizard?step=deliveryAddress",
+        {
+          state: { wizardData: currentWizardData },
+        },
+      );
     }
   };
 
@@ -655,6 +727,123 @@ function WizardPage() {
     }
   };
 
+  const completeRecipientFlow = () => {
+    const existingWizardData = location.state?.wizardData || {};
+    const offer =
+      selectedOffer ||
+      location.state?.selectedOffer ||
+      existingWizardData.selectedOffer;
+
+    if (!offer) {
+      navigate("/offers", {
+        state: {
+          wizardData: {
+            ...existingWizardData,
+            selectedRole: "recipient",
+            fromCity,
+            toCity,
+          },
+        },
+      });
+      return;
+    }
+
+    const filterCourierDelivery =
+      existingWizardData.filterCourierDelivery || false;
+    const requiresPvzSelection = needsPvzSelection(
+      offer,
+      filterCourierDelivery,
+    );
+
+    const resolvedFromCity = resolveCityFromInputs(fromCity, senderAddress);
+    const resolvedToCity = resolveCityFromInputs(
+      toCity,
+      deliveryAddress || recipientDeliveryPointAddress,
+    );
+
+    if (requiresPvzSelection && !recipientDeliveryPointCode) {
+      navigate("/wizard?step=selectPvz", {
+        state: {
+          ...location.state,
+          selectedOffer: offer,
+          wizardData: {
+            ...existingWizardData,
+            fromCity: resolvedFromCity || fromCity,
+            toCity: resolvedToCity || toCity,
+            selectedRole: "recipient",
+            selectedOffer: offer,
+            senderAddress,
+            senderFIO,
+            senderPhone,
+            pickupSenderName: senderFIO,
+            recipientFIO,
+            recipientPhone: recipientUserPhone,
+            recipientUserPhone,
+            contactPhone: recipientUserPhone,
+            filterCourierDelivery,
+          },
+        },
+      });
+      return;
+    }
+
+    const recipientAddressToUse = requiresPvzSelection
+      ? recipientDeliveryPointAddress ||
+        existingWizardData.recipientDeliveryPointAddress ||
+        ""
+      : deliveryAddress || existingWizardData.deliveryAddress || "";
+
+    const wizardDataForPayment = {
+      ...existingWizardData,
+      fromCity: resolvedFromCity || fromCity,
+      toCity: resolvedToCity || toCity,
+      senderAddress,
+      pickupAddress: senderAddress,
+      senderFIO,
+      senderName: senderFIO,
+      pickupSenderName: senderFIO,
+      senderPhone,
+      recipientFIO,
+      recipientName: recipientFIO,
+      recipientPhone: recipientUserPhone,
+      recipientUserPhone,
+      contactPhone: recipientUserPhone,
+      deliveryAddress: recipientAddressToUse,
+      recipientAddress: recipientAddressToUse,
+      recipientDeliveryPointCode: recipientDeliveryPointCode || null,
+      recipientDeliveryPointAddress: recipientDeliveryPointAddress || "",
+      weight: weight || existingWizardData.weight || "1",
+      length: length || existingWizardData.length || "0",
+      width: width || existingWizardData.width || "0",
+      height: height || existingWizardData.height || "0",
+      packageOption: packageOption || existingWizardData.packageOption,
+      selectedSize: selectedSize || existingWizardData.selectedSize,
+      estimatedValue: estimatedValue || existingWizardData.estimatedValue,
+      photoUrl: photoUrl || existingWizardData.photoUrl,
+      selectedOffer: offer,
+      selectedRole: "recipient",
+      paymentPayer: "me",
+      filterCourierPickup: existingWizardData.filterCourierPickup,
+      filterCourierDelivery,
+      needsPackaging: existingWizardData.needsPackaging === true,
+    };
+
+    navigate("/payment", {
+      state: {
+        wizardData: wizardDataForPayment,
+        company: offer.company_id,
+        companyName: offer.company_name,
+        companyCode: offer.company_code,
+        companyLogo: offer.company_logo,
+        price: offer.price,
+        tariffCode: offer.tariff_code,
+        tariffName: offer.tariff_name,
+        deliveryTime: offer.delivery_time,
+        insuranceCost: offer.insurance_cost || null,
+      },
+    });
+  };
+
   const handleRecipientUserVerifyCode = async (code = null) => {
     const codeToVerify = code || recipientUserSmsCode;
     if (!codeToVerify || codeToVerify.length !== 4) {
@@ -682,7 +871,7 @@ function WizardPage() {
         setRecipientUserCodeLoading(false);
         console.log("🔧 Тестовый режим: код верифицирован успешно");
         if (selectedRole === "recipient") {
-          navigate("/wizard?step=senderAddress");
+          completeRecipientFlow();
         }
       }, 500);
       return;
@@ -701,7 +890,7 @@ function WizardPage() {
       setRecipientUserCodeError("");
       setRecipientUserTelegramSent(false);
       if (selectedRole === "recipient") {
-        navigate("/wizard?step=senderAddress");
+        completeRecipientFlow();
       }
     } catch (err) {
       setRecipientUserCodeError(
@@ -714,7 +903,7 @@ function WizardPage() {
 
   const handleRecipientUserResendCode = async () => {
     if (recipientUserPhone) {
-      await handleRecipientUserSendCode("telegram");
+      await handleRecipientUserSendCode("sms");
     }
   };
 
@@ -724,10 +913,7 @@ function WizardPage() {
       return;
     }
     setRecipientUserCodeError("");
-    setRecipientUserCodeSent(false);
-    setRecipientUserSmsCode("");
-    setRecipientUserTelegramSent(false);
-    navigate("/wizard?step=senderAddress");
+    handleRecipientUserSendCode("sms");
   };
 
   const handleSenderPhoneContinue = () => {
@@ -751,61 +937,28 @@ function WizardPage() {
     }
 
     const resolvedFromCity = resolveCityFromInputs(fromCity, senderAddress);
-    const resolvedToCity = resolveCityFromInputs(toCity, deliveryAddress);
-
-    if (!resolvedFromCity || !resolvedToCity) {
+    if (!resolvedFromCity) {
       return;
     }
 
     if (!fromCity && resolvedFromCity) {
       setFromCity(resolvedFromCity);
     }
-    if (!toCity && resolvedToCity) {
-      setToCity(resolvedToCity);
-    }
 
     if (selectedRole === "recipient") {
       const existingWizardData = location.state?.wizardData || {};
-      const savedPickup = localStorage.getItem("filterCourierPickup");
-      const savedDelivery = localStorage.getItem("filterCourierDelivery");
       const wizardData = {
+        ...existingWizardData,
         fromCity: resolvedFromCity,
-        toCity: resolvedToCity,
-        senderAddress: senderAddress,
-        deliveryAddress: deliveryAddress,
-        recipientAddress: deliveryAddress,
-        weight: weight || "1",
-        length: length || "0",
-        width: width || "0",
-        height: height || "0",
-        packageOption,
-        selectedSize,
-        estimatedValue,
-        recipientPhone: recipientUserPhone,
-        recipientUserPhone: recipientUserPhone,
-        contactPhone: recipientUserPhone,
-        senderPhone: senderPhone,
-        recipientFIO,
+        toCity: toCity || existingWizardData.toCity || "",
+        senderAddress,
+        senderPhone,
         senderFIO,
         pickupSenderName: senderFIO,
-        paymentPayer: "me",
         selectedRole: "recipient",
-        photoUrl,
-        filterCourierPickup:
-          existingWizardData.filterCourierPickup !== undefined
-            ? existingWizardData.filterCourierPickup
-            : savedPickup !== null
-              ? savedPickup === "true"
-              : true,
-        filterCourierDelivery:
-          existingWizardData.filterCourierDelivery !== undefined
-            ? existingWizardData.filterCourierDelivery
-            : savedDelivery !== null
-              ? savedDelivery === "true"
-              : false,
       };
 
-      navigate("/offers", {
+      navigate("/wizard?step=recipientFIO", {
         state: { wizardData },
       });
     }
@@ -1194,6 +1347,10 @@ function WizardPage() {
       alert("Пожалуйста, выберите пункт выдачи");
       return;
     }
+    if (selectedRole === "recipient") {
+      completeRecipientFlow();
+      return;
+    }
     const existingWizardData = location.state?.wizardData || {};
     navigate("/wizard?step=email", {
       state: {
@@ -1513,6 +1670,7 @@ function WizardPage() {
     if (currentStep === "contactPhone") return 75;
     if (currentStep === "email") return 95;
     if (currentStep === "selectPvz") return 90;
+    if (currentStep === "recipientRoute") return 20;
     if (currentStep === "senderAddress") return 70;
     if (currentStep === "senderPhone") return 75;
     if (currentStep === "recipientUserPhone")
@@ -1529,6 +1687,8 @@ function WizardPage() {
     if (currentStep === "email") return "Электронный адрес";
     if (currentStep === "selectPvz") return "Выбор пункта выдачи";
     if (currentStep === "recipientAddress") return "Адрес получателя";
+    if (currentStep === "recipientRoute")
+      return "Откуда и куда доставить посылку?";
     if (currentStep === "senderAddress") return "Откуда забрать посылку?";
     if (currentStep === "senderPhone") return "Как связаться с отправителем?";
     if (currentStep === "recipientUserPhone") return "Ваш телефон";
@@ -1564,13 +1724,24 @@ function WizardPage() {
     if (!selectedRole || currentStep === "role") {
       stepOrder = ["role", "package"];
     } else if (selectedRole === "recipient") {
+      const offer =
+        selectedOffer ||
+        location.state?.selectedOffer ||
+        location.state?.wizardData?.selectedOffer;
+      const filterCourierDelivery =
+        location.state?.wizardData?.filterCourierDelivery || false;
+      const needsDeliveryAddress = !needsPvzSelection(
+        offer,
+        filterCourierDelivery,
+      );
       stepOrder = [
+        "recipientRoute",
         "package",
-        "recipientFIO",
-        "deliveryAddress",
-        "recipientUserPhone",
         "senderAddress",
         "senderPhone",
+        "recipientFIO",
+        ...(needsDeliveryAddress ? ["deliveryAddress"] : []),
+        "recipientUserPhone",
       ];
     } else if (isInviteRecipientFlow) {
       stepOrder = ["package", "pickupAddress", "contactPhone", "orderComplete"];
@@ -1702,10 +1873,12 @@ function WizardPage() {
         setCodeError("");
         setTelegramSent(false);
       }
+    } else if (currentStep === "recipientRoute") {
+      navigate("/calculate");
     } else if (currentStep === "senderPhone") {
       navigate("/wizard?step=senderAddress");
     } else if (currentStep === "senderAddress") {
-      navigate("/wizard?step=recipientUserPhone");
+      navigate("/wizard?step=package");
     } else if (currentStep === "recipientUserPhone") {
       if (recipientUserCodeSent) {
         setRecipientUserCodeSent(false);
@@ -1713,13 +1886,31 @@ function WizardPage() {
         setRecipientUserCodeError("");
         setRecipientUserTelegramSent(false);
       }
-      navigate("/wizard?step=deliveryAddress");
+      const offer =
+        selectedOffer ||
+        location.state?.selectedOffer ||
+        location.state?.wizardData?.selectedOffer;
+      const filterCourierDelivery =
+        location.state?.wizardData?.filterCourierDelivery || false;
+      const shouldReturnToDeliveryAddress = !needsPvzSelection(
+        offer,
+        filterCourierDelivery,
+      );
+      navigate(
+        shouldReturnToDeliveryAddress
+          ? "/wizard?step=deliveryAddress"
+          : "/wizard?step=recipientFIO",
+      );
     } else if (currentStep === "deliveryAddress") {
       navigate("/wizard?step=recipientFIO");
     } else if (currentStep === "recipientFIO") {
-      navigate("/wizard?step=package");
+      navigate("/wizard?step=senderPhone");
     } else if (currentStep === "package") {
-      navigate("/calculate");
+      if (selectedRole === "recipient") {
+        navigate("/wizard?step=recipientRoute");
+      } else {
+        navigate("/calculate");
+      }
     } else {
       navigate("/calculate");
     }
@@ -1746,6 +1937,12 @@ function WizardPage() {
         <RoleSelectStep
           selectedRole={selectedRole}
           onRoleSelect={handleRoleSelect}
+        />
+      ) : currentStep === "recipientRoute" && selectedRole === "recipient" ? (
+        <RecipientRouteStep
+          fromCity={fromCity}
+          toCity={toCity}
+          onContinue={handleRecipientRouteContinue}
         />
       ) : currentStep === "package" ? (
         <PackageStep
@@ -1868,7 +2065,8 @@ function WizardPage() {
             },
             handleSendCode: handleRecipientUserSendCode,
           }}
-          skipCode
+          onVerifyCode={handleRecipientUserVerifyCode}
+          onResendCode={handleRecipientUserResendCode}
           onContinue={handleRecipientUserPhoneContinue}
           onRoleChange={handleRoleToggle}
         />
