@@ -1942,6 +1942,8 @@ function WizardPage() {
         <RecipientRouteStep
           fromCity={fromCity}
           toCity={toCity}
+          onFromCityChange={(e) => setFromCity(e.target.value)}
+          onToCityChange={(e) => setToCity(e.target.value)}
           onContinue={handleRecipientRouteContinue}
         />
       ) : currentStep === "package" ? (

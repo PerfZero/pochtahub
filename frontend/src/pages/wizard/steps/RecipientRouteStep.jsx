@@ -1,4 +1,12 @@
-function RecipientRouteStep({ fromCity, toCity, onContinue }) {
+import CityInput from "../../../components/CityInput";
+
+function RecipientRouteStep({
+  fromCity,
+  toCity,
+  onFromCityChange,
+  onToCityChange,
+  onContinue,
+}) {
   const isDisabled = !fromCity?.trim() || !toCity?.trim();
 
   return (
@@ -9,6 +17,23 @@ function RecipientRouteStep({ fromCity, toCity, onContinue }) {
       <p className="text-sm md:text-base text-[#2D2D2D] mb-6 md:mb-8 text-center px-2">
         Укажите город отправителя и город получателя
       </p>
+
+      <div className="space-y-4 mb-6">
+        <div className="border border-[#C8C7CC] rounded-xl">
+          <CityInput
+            value={fromCity}
+            onChange={onFromCityChange}
+            label="Город отправителя"
+          />
+        </div>
+        <div className="border border-[#C8C7CC] rounded-xl">
+          <CityInput
+            value={toCity}
+            onChange={onToCityChange}
+            label="Город получателя"
+          />
+        </div>
+      </div>
 
       <button
         onClick={onContinue}
