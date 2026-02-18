@@ -674,7 +674,7 @@ function WizardPage() {
         setRecipientUserCodeLoading(false);
         console.log("🔧 Тестовый режим: код верифицирован успешно");
         if (selectedRole === "recipient") {
-          navigate("/wizard?step=senderPhone");
+          navigate("/wizard?step=senderAddress");
         }
       }, 500);
       return;
@@ -693,7 +693,7 @@ function WizardPage() {
       setRecipientUserCodeError("");
       setRecipientUserTelegramSent(false);
       if (selectedRole === "recipient") {
-        navigate("/wizard?step=senderPhone");
+        navigate("/wizard?step=senderAddress");
       }
     } catch (err) {
       setRecipientUserCodeError(
@@ -719,16 +719,10 @@ function WizardPage() {
     setRecipientUserCodeSent(false);
     setRecipientUserSmsCode("");
     setRecipientUserTelegramSent(false);
-    navigate("/wizard?step=senderPhone");
+    navigate("/wizard?step=senderAddress");
   };
 
   const handleSenderPhoneContinue = () => {
-    if (selectedRole === "recipient") {
-      navigate("/wizard?step=senderAddress");
-    }
-  };
-
-  const handleSenderAddressContinue = () => {
     if (!fromCity || !toCity) {
       console.error("Города не заполнены:", { fromCity, toCity });
       alert("Пожалуйста, укажите города отправления и назначения");
@@ -745,7 +739,12 @@ function WizardPage() {
       return;
     }
 
-    if (!senderFIO) {
+    const trimmedSenderPhone = senderPhone?.trim() || "";
+    if (!trimmedSenderPhone) {
+      return;
+    }
+
+    if (!senderFIO?.trim()) {
       return;
     }
 
@@ -793,6 +792,28 @@ function WizardPage() {
       navigate("/offers", {
         state: { wizardData },
       });
+    }
+  };
+
+  const handleSenderAddressContinue = () => {
+    if (!fromCity || !toCity) {
+      console.error("Города не заполнены:", { fromCity, toCity });
+      alert("Пожалуйста, укажите города отправления и назначения");
+      return;
+    }
+
+    const trimmedAddress = senderAddress?.trim() || "";
+    if (!trimmedAddress) {
+      return;
+    }
+
+    const hasHouseNumber = /\d/.test(trimmedAddress);
+    if (!hasHouseNumber) {
+      return;
+    }
+
+    if (selectedRole === "recipient") {
+      navigate("/wizard?step=senderPhone");
     }
   };
 
@@ -1468,8 +1489,8 @@ function WizardPage() {
     if (currentStep === "contactPhone") return 75;
     if (currentStep === "email") return 95;
     if (currentStep === "selectPvz") return 90;
-    if (currentStep === "senderAddress") return 75;
-    if (currentStep === "senderPhone") return 70;
+    if (currentStep === "senderAddress") return 70;
+    if (currentStep === "senderPhone") return 75;
     if (currentStep === "recipientUserPhone")
       return recipientUserCodeSent ? 65 : 60;
     if (currentStep === "deliveryAddress") return 50;
@@ -1484,8 +1505,8 @@ function WizardPage() {
     if (currentStep === "email") return "Электронный адрес";
     if (currentStep === "selectPvz") return "Выбор пункта выдачи";
     if (currentStep === "recipientAddress") return "Адрес получателя";
-    if (currentStep === "senderAddress") return "Адрес отправителя и ФИО";
-    if (currentStep === "senderPhone") return "Укажите номер отправителя";
+    if (currentStep === "senderAddress") return "Откуда забрать посылку?";
+    if (currentStep === "senderPhone") return "Как связаться с отправителем?";
     if (currentStep === "recipientUserPhone") return "Ваш телефон";
     if (currentStep === "deliveryAddress") return "Куда доставить посылку?";
     if (currentStep === "recipientFIO") return "Ваши данные";
@@ -1524,8 +1545,8 @@ function WizardPage() {
         "recipientFIO",
         "deliveryAddress",
         "recipientUserPhone",
-        "senderPhone",
         "senderAddress",
+        "senderPhone",
       ];
     } else if (isInviteRecipientFlow) {
       stepOrder = ["package", "pickupAddress", "contactPhone", "orderComplete"];
@@ -1657,9 +1678,9 @@ function WizardPage() {
         setCodeError("");
         setTelegramSent(false);
       }
-    } else if (currentStep === "senderAddress") {
-      navigate("/wizard?step=senderPhone");
     } else if (currentStep === "senderPhone") {
+      navigate("/wizard?step=senderAddress");
+    } else if (currentStep === "senderAddress") {
       navigate("/wizard?step=recipientUserPhone");
     } else if (currentStep === "recipientUserPhone") {
       if (recipientUserCodeSent) {
@@ -1831,17 +1852,17 @@ function WizardPage() {
         <SenderPhoneStep
           senderPhone={senderPhone}
           onSenderPhoneChange={(e) => setSenderPhone(e.target.value)}
+          senderFIO={senderFIO}
+          onSenderFIOChange={(e) => setSenderFIO(e.target.value)}
+          fioFocused={senderFioFocused}
+          onFioFocus={() => setSenderFioFocused(true)}
+          onFioBlur={() => setSenderFioFocused(false)}
           onContinue={handleSenderPhoneContinue}
         />
       ) : currentStep === "senderAddress" && selectedRole === "recipient" ? (
         <SenderAddressStep
           senderAddress={senderAddress}
           onSenderAddressChange={(e) => setSenderAddress(e.target.value)}
-          senderFIO={senderFIO}
-          onSenderFIOChange={(e) => setSenderFIO(e.target.value)}
-          fioFocused={senderFioFocused}
-          onFioFocus={() => setSenderFioFocused(true)}
-          onFioBlur={() => setSenderFioFocused(false)}
           fromCity={fromCity}
           onContinue={handleSenderAddressContinue}
         />

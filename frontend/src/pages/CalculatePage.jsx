@@ -22,6 +22,7 @@ function CalculatePage() {
   const [codeError, setCodeError] = useState("");
   const [verifyLoading, setVerifyLoading] = useState(false);
   const [telegramSent, setTelegramSent] = useState(false);
+  const [selectedGuideRole, setSelectedGuideRole] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(
     () => !!localStorage.getItem("access_token"),
   );
@@ -160,19 +161,28 @@ function CalculatePage() {
     if (typeof window !== "undefined" && typeof window.ym === "function") {
       window.ym(104664178, "reachGoal", "recipient_start");
     }
-    navigate("/wizard?step=package", {
-      state: {
-        wizardData: {
-          selectedRole: "recipient",
-        },
-      },
-    });
+    setSelectedGuideRole("recipient");
   };
 
   const handleSenderDelivery = () => {
     if (typeof window !== "undefined" && typeof window.ym === "function") {
       window.ym(104664178, "reachGoal", "sender_start");
     }
+    setSelectedGuideRole("sender");
+  };
+
+  const handleGuideContinue = () => {
+    if (selectedGuideRole === "recipient") {
+      navigate("/wizard?step=senderAddress", {
+        state: {
+          wizardData: {
+            selectedRole: "recipient",
+          },
+        },
+      });
+      return;
+    }
+
     navigate("/wizard?step=package", {
       state: {
         wizardData: {
@@ -416,34 +426,70 @@ function CalculatePage() {
             </div>
 
             <div className="max-w-[900px] mx-auto mt-8 md:mt-12">
-              <p className="text-sm md:text-base font-semibold uppercase tracking-[0.06em] text-[#858585] text-center">
-                Какая у тебя ситуация?
-              </p>
-              <div className="mt-4 md:mt-6 grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-                <button
-                  onClick={handleRecipientDelivery}
-                  className="w-full rounded-2xl bg-[#0077FE] text-white text-left px-6 py-6 md:px-7 md:py-7 transition-colors hover:bg-[#0066CC]"
-                >
-                  <span className="block text-xl md:text-2xl font-bold leading-[1.2]">
-                    Хочу сам оформить доставку
-                  </span>
-                  <span className="block mt-2 text-sm md:text-base leading-[1.35] text-[#D9E9FF]">
-                    Если продавец / отправитель не хочет заниматься доставкой
-                  </span>
-                </button>
+              {!selectedGuideRole ? (
+                <>
+                  <p className="text-sm md:text-base font-semibold uppercase tracking-[0.06em] text-[#858585] text-center">
+                    Какая у тебя ситуация?
+                  </p>
+                  <div className="mt-4 md:mt-6 grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                    <button
+                      onClick={handleRecipientDelivery}
+                      className="w-full rounded-2xl bg-[#0077FE] text-white text-left px-6 py-6 md:px-7 md:py-7 transition-colors hover:bg-[#0066CC]"
+                    >
+                      <span className="block text-xl md:text-2xl font-bold leading-[1.2]">
+                        Забрать посылку самому
+                      </span>
+                      <span className="block mt-2 text-sm md:text-base leading-[1.35] text-[#D9E9FF]">
+                        Я получатель
+                      </span>
+                    </button>
 
-                <button
-                  onClick={handleSenderDelivery}
-                  className="w-full rounded-2xl border border-[#C8C7CC] bg-white text-[#2D2D2D] text-left px-6 py-6 md:px-7 md:py-7 transition-colors hover:bg-[#F8F8F8]"
-                >
-                  <span className="block text-xl md:text-2xl font-bold leading-[1.2]">
-                    Хочу передать посылку получателю
-                  </span>
-                  <span className="block mt-2 text-sm md:text-base leading-[1.35] text-[#858585]">
-                    Без оформления доставки и выбора службы
-                  </span>
-                </button>
-              </div>
+                    <button
+                      onClick={handleSenderDelivery}
+                      className="w-full rounded-2xl border border-[#C8C7CC] bg-white text-[#2D2D2D] text-left px-6 py-6 md:px-7 md:py-7 transition-colors hover:bg-[#F8F8F8]"
+                    >
+                      <span className="block text-xl md:text-2xl font-bold leading-[1.2]">
+                        Передать посылку получателю
+                      </span>
+                      <span className="block mt-2 text-sm md:text-base leading-[1.35] text-[#858585]">
+                        Я отправитель
+                      </span>
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="mt-2 md:mt-4">
+                  <img
+                    src={
+                      selectedGuideRole === "recipient"
+                        ? "/1_img.jpg"
+                        : "/2_img.jpg"
+                    }
+                    alt={
+                      selectedGuideRole === "recipient"
+                        ? "Инструкция для получателя"
+                        : "Инструкция для отправителя"
+                    }
+                    className="w-full h-auto rounded-2xl border border-[#C8C7CC] bg-white"
+                  />
+                  <div className="mt-4 flex flex-col-reverse md:flex-row gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedGuideRole(null)}
+                      className="w-full md:w-auto md:min-w-[200px] px-6 py-3 rounded-xl text-sm md:text-base font-semibold border border-[#C8C7CC] text-[#2D2D2D] bg-white hover:bg-[#F8F8F8] transition-colors"
+                    >
+                      Назад
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleGuideContinue}
+                      className="w-full md:w-auto md:min-w-[200px] px-6 py-3 rounded-xl text-sm md:text-base font-semibold bg-[#0077FE] text-white hover:bg-[#0066CC] transition-colors"
+                    >
+                      Продолжить
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </section>
