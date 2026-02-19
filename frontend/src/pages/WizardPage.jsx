@@ -1772,8 +1772,7 @@ function WizardPage() {
     if (currentStep === "email") return "Электронный адрес";
     if (currentStep === "selectPvz") return "Выбор пункта выдачи";
     if (currentStep === "recipientAddress") return "Данные получателя";
-    if (currentStep === "recipientRoute")
-      return "Откуда и куда доставить посылку?";
+    if (currentStep === "recipientRoute") return "";
     if (currentStep === "senderAddress") return "Откуда забрать посылку?";
     if (currentStep === "senderPhone") return "Как связаться с отправителем?";
     if (currentStep === "recipientUserPhone") return "Ваш телефон";

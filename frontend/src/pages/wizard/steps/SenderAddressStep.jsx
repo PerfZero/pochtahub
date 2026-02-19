@@ -21,7 +21,7 @@ function SenderAddressStep({
         Откуда забрать посылку?
       </h1>
       <p className="text-sm md:text-base text-[#2D2D2D] mb-6 md:mb-8 text-center px-2">
-        Укажите город отправителя и полный адрес с номером дома
+        Укажите полный адрес отправителя с номером дома
       </p>
       <div className="mb-6">
         <AddressInput

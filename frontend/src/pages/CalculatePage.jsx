@@ -193,6 +193,19 @@ function CalculatePage() {
     });
   };
 
+  const handleRecipientDirectLink = () => {
+    if (typeof window !== "undefined" && typeof window.ym === "function") {
+      window.ym(104664178, "reachGoal", "recipient_start");
+    }
+    navigate("/wizard?step=recipientRoute", {
+      state: {
+        wizardData: {
+          selectedRole: "recipient",
+        },
+      },
+    });
+  };
+
   return (
     <>
       {showLoginPopup && (
@@ -460,6 +473,15 @@ function CalculatePage() {
                   <p className="mt-4 text-sm md:text-base text-[#858585] text-center">
                     ⏱️ 3 минуты · 👤 выбор роли
                   </p>
+                  <div className="mt-3 text-center">
+                    <button
+                      type="button"
+                      onClick={handleRecipientDirectLink}
+                      className="text-sm md:text-base text-[#0077FE] hover:underline"
+                    >
+                      Оформить получателем
+                    </button>
+                  </div>
                 </>
               ) : (
                 <div className="mt-2 md:mt-4">

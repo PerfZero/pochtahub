@@ -875,17 +875,6 @@ function OffersPage() {
       returnToPayment: wizardData.returnToPayment || false,
       filterCourierDelivery: filterCourierDelivery,
     };
-
-    const isAssistantFlow =
-      wizardData.inviteRecipient &&
-      wizardData.recipientPhone &&
-      wizardData.selectedRole === "sender";
-    const hasCompletedFlow =
-      (wizardData.pickupAddress || wizardData.senderAddress) &&
-      wizardData.recipientPhone &&
-      wizardData.paymentPayer &&
-      (wizardData.recipientAddress || wizardData.deliveryAddress);
-
     const selectedOfferData = {
       company_id: offer.company_id,
       company_name: offer.company_name,
@@ -897,6 +886,23 @@ function OffersPage() {
       delivery_time: offer.delivery_time,
       insurance_cost: offer.insurance_cost || null,
     };
+    const selectedOfferNeedsPvz = needsPvzSelection(
+      selectedOfferData,
+      filterCourierDelivery,
+    );
+
+    const isAssistantFlow =
+      wizardData.inviteRecipient &&
+      wizardData.recipientPhone &&
+      wizardData.selectedRole === "sender";
+    const hasCompletedFlow =
+      (wizardData.pickupAddress || wizardData.senderAddress) &&
+      wizardData.recipientPhone &&
+      wizardData.recipientFIO &&
+      wizardData.paymentPayer &&
+      (wizardData.recipientAddress ||
+        wizardData.deliveryAddress ||
+        selectedOfferNeedsPvz);
 
     const navigateState = {
       wizardData: updatedWizardData,
