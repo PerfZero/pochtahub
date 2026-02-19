@@ -36,7 +36,15 @@ function RecipientRouteStep({
       </div>
 
       <button
-        onClick={onContinue}
+        onClick={() => {
+          if (
+            typeof window !== "undefined" &&
+            typeof window.ym === "function"
+          ) {
+            window.ym(104664178, "params", { offers: "рассчитал" });
+          }
+          onContinue();
+        }}
         disabled={isDisabled}
         className="w-full bg-[#0077FE] text-white px-6 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold hover:bg-[#0066CC] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >

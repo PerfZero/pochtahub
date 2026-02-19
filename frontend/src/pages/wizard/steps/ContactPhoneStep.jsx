@@ -107,6 +107,9 @@ function ContactPhoneStep({
                 typeof window.ym === "function"
               ) {
                 window.ym(104664178, "reachGoal", "указал_свой_телефон");
+                if (selectedRole === "recipient" && !shouldSkipCode) {
+                  window.ym(104664178, "reachGoal", "recipient_flow_started");
+                }
               }
               if (shouldSkipCode) {
                 onContinue?.();

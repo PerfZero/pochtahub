@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { ordersAPI, paymentAPI } from "../api";
 import logoSvg from "../assets/images/logo.svg";
@@ -13,10 +13,21 @@ function ConfirmationPage() {
   const [tracking, setTracking] = useState(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [loadingTracking, setLoadingTracking] = useState(false);
+  const hasTrackedOrderGoal = useRef(false);
 
   useEffect(() => {
     loadOrder();
   }, [orderId]);
+
+  useEffect(() => {
+    if (!order || hasTrackedOrderGoal.current) {
+      return;
+    }
+    if (typeof window !== "undefined" && typeof window.ym === "function") {
+      window.ym(104664178, "reachGoal", "заказ!");
+      hasTrackedOrderGoal.current = true;
+    }
+  }, [order]);
 
   const loadOrder = async () => {
     if (!orderId || orderId === "undefined") {

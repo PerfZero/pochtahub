@@ -22,12 +22,6 @@ function RecipientPhoneStep({
       </div>
       <button
         onClick={() => {
-          if (
-            typeof window !== "undefined" &&
-            typeof window.ym === "function"
-          ) {
-            window.ym(104664178, "reachGoal", "recipient_flow_started");
-          }
           onContinue();
         }}
         disabled={!recipientPhone}

@@ -928,7 +928,7 @@ function OffersPage() {
       } else if (updatedWizardData.selectedRole === "recipient") {
         navigationPath = "/wizard?step=senderAddress";
       } else {
-        navigationPath = "/wizard?step=contactPhone";
+        navigationPath = "/wizard?step=pickupAddress";
       }
     }
 
@@ -979,6 +979,9 @@ function OffersPage() {
   const handleCalculate = useCallback(async () => {
     if (!fromCity || !toCity || !wizardData.weight) {
       return;
+    }
+    if (typeof window !== "undefined" && typeof window.ym === "function") {
+      window.ym(104664178, "params", { offers: "рассчитал" });
     }
 
     try {
@@ -1467,98 +1470,58 @@ function OffersPage() {
                   />
                 </div>
 
-                <div className="mb-6 text-center">
-                  <button
-                    onClick={() => {
-                      setPackageOption("unknown");
-                      setLength("");
-                      setWidth("");
-                      setHeight("");
-                      setWeight("");
-                    }}
-                    className="text-sm text-[#0077FE] hover:underline"
-                  >
-                    Не знаю габариты
-                  </button>
-                </div>
-
-                <button
-                  onClick={handlePackageContinue}
-                  disabled={isContinueDisabled}
-                  className="w-full bg-[#0077FE] text-white px-6 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold hover:bg-[#0066CC] transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#0077FE]"
-                >
-                  Продолжить
-                </button>
-              </div>
-            )}
-
-            {packageOption === "unknown" && (
-              <div className="p-4 md:p-8">
-                <h2 className="text-2xl md:text-3xl font-bold text-[#2D2D2D] mb-6 md:mb-8">
-                  Указать точные размеры
-                </h2>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
-                  {sizeOptions.map((option) => (
-                    <button
-                      key={option.id}
-                      onClick={() => setSelectedSize(option.id)}
-                      className={`p-4 rounded-xl border transition-all ${
-                        selectedSize === option.id
-                          ? "border-[#0077FE] bg-[#F0F7FF]"
-                          : "border-[#E5E5E5] bg-white hover:border-[#0077FE]"
-                      }`}
-                    >
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="w-12 h-12 flex items-center justify-center">
-                          <img
-                            src={option.icon}
-                            alt=""
-                            className="w-full h-full"
-                          />
-                        </div>
-                        <div className="text-center">
-                          <p className="text-sm font-semibold text-[#2D2D2D] mb-1">
-                            {option.name}
-                          </p>
-                          <p className="text-xs text-[#2D2D2D]">
-                            {option.dimensions}
-                          </p>
-                          <p className="text-xs text-[#2D2D2D]">
-                            {option.weight}
-                          </p>
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-
                 <div className="mb-6">
-                  <NumberInput
-                    value={estimatedValue}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setEstimatedValue(value);
-                      // Сохраняем в wizardData при изменении
-                      setWizardData({
-                        ...wizardData,
-                        estimatedValue: value,
-                      });
-                    }}
-                    label="Оценочная стоимость"
-                  />
-                </div>
+                  <p className="text-sm md:text-base font-semibold text-[#2D2D2D] mb-3">
+                    Шаблоны размеров
+                  </p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                    {sizeOptions.map((option) => (
+                      <button
+                        key={option.id}
+                        onClick={() => {
+                          const dimensionsMatch =
+                            option.dimensions.match(/(\d+)х(\d+)х(\d+)/);
+                          const weightMatch = option.weight.match(/(\d+)/);
 
-                <div className="mb-6 text-center">
-                  <button
-                    onClick={() => {
-                      setPackageOption("manual");
-                      setSelectedSize(null);
-                    }}
-                    className="text-sm text-[#0077FE] hover:underline"
-                  >
-                    Я знаю габариты
-                  </button>
+                          setSelectedSize(option.id);
+                          if (dimensionsMatch) {
+                            setLength(dimensionsMatch[1]);
+                            setWidth(dimensionsMatch[2]);
+                            setHeight(dimensionsMatch[3]);
+                          }
+                          if (weightMatch) {
+                            setWeight(weightMatch[1]);
+                          }
+                        }}
+                        className={`p-3 md:p-4 rounded-xl border transition-all ${
+                          selectedSize === option.id
+                            ? "border-[#0077FE] bg-[#F0F7FF]"
+                            : "border-[#E5E5E5] bg-white hover:border-[#0077FE]"
+                        }`}
+                      >
+                        <div className="flex flex-col items-center gap-2 md:gap-3">
+                          <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center">
+                            <img
+                              src={option.icon}
+                              alt=""
+                              className="w-full h-full"
+                            />
+                          </div>
+                          <div className="text-center">
+                            <p className="text-xs md:text-sm font-semibold text-[#2D2D2D] mb-1">
+                              {option.name}
+                            </p>
+                            <p className="text-xs text-[#2D2D2D]">
+                              {option.dimensions}
+                            </p>
+                            <p className="text-xs text-[#2D2D2D]">
+                              {option.weight}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <button
@@ -1581,65 +1544,28 @@ function OffersPage() {
               <div className="absolute -top-20 -right-10 w-44 h-44 bg-[#EAF4FF] rounded-full blur-2xl pointer-events-none" />
 
               <p className="text-xs md:text-sm font-semibold text-[#5F7EA6] uppercase tracking-wide mb-3">
-                Прогресс оформления
+                Сводка оформления
               </p>
 
-              <div className="grid grid-cols-[auto_1fr_auto_1fr_auto] items-center gap-2 mb-2">
-                <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-[#0077FE] text-white flex items-center justify-center text-xs md:text-sm font-bold">
-                  ✓
-                </div>
-                <div className="h-[3px] rounded-full bg-[#0077FE]" />
-                <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-[#0077FE] text-white flex items-center justify-center text-xs md:text-sm font-bold">
-                  ✓
-                </div>
-                <div className="h-[3px] rounded-full bg-gradient-to-r from-[#0077FE] to-[#9CC9FF]" />
-                <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-[#0077FE] text-white flex items-center justify-center text-xs md:text-sm font-bold ring-4 ring-[#EAF4FF]">
-                  3
-                </div>
+              <div className="space-y-1 mb-4">
+                <p className="text-sm md:text-base text-[#2D2D2D]">
+                  ✔️ Маршрут указан
+                </p>
+                <p className="text-sm md:text-base text-[#2D2D2D]">
+                  ✔️ Параметры посылки учтены
+                </p>
+                <p className="text-sm md:text-base text-[#2D2D2D]">
+                  → Выберите способ доставки
+                </p>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 text-[11px] md:text-xs font-semibold text-[#2D2D2D] mb-4">
-                <p className="text-left">Посылка</p>
-                <p className="text-center">Расчёт</p>
-                <p className="text-right">Забор курьером</p>
-              </div>
-
-              <h2 className="text-lg md:text-2xl font-bold text-[#2D2D2D] mb-2 flex items-center gap-2">
-                <span
-                  className="w-6 h-6 rounded-full bg-[#DDF5E6] text-[#22A05A] flex items-center justify-center text-sm"
-                  aria-hidden="true"
-                >
-                  ✓
-                </span>
-                Параметры посылки учтены
-              </h2>
-              <p className="text-sm md:text-base text-[#2D2D2D] mb-3">
-                Оформите отправку онлайн - без визита в пункт и очередей
-              </p>
               <button
                 type="button"
-                onClick={() => {
-                  const offersListElement =
-                    document.getElementById("offers-list");
-                  if (offersListElement) {
-                    offersListElement.scrollIntoView({
-                      behavior: "smooth",
-                      block: "start",
-                    });
-                  }
-                }}
-                className="w-full flex items-center justify-between gap-2 bg-gradient-to-r from-[#1C70FF] to-[#2F8CFF] border border-[#2F8CFF] rounded-xl px-3 py-2 shadow-[0_8px_18px_rgba(0,119,254,0.25)] hover:brightness-105 transition-all"
+                onClick={handleCourierPickupCtaClick}
+                className="text-sm md:text-base text-[#0077FE] hover:underline"
               >
-                <span className="text-sm md:text-base font-semibold text-white text-left">
-                  Осталось оформить забор курьером
-                </span>
-                <span className="px-2.5 py-1 rounded-full bg-[#7CCDA1] text-white text-xs font-semibold whitespace-nowrap">
-                  Онлайн
-                </span>
+                выбрать вариант доставки
               </button>
-              <p className="text-xs md:text-sm text-[#6A6A6A] mt-2 text-center">
-                ⏱ 2-3 мин
-              </p>
             </div>
           )}
           {!isOfferOnlyMode && !isRecipientFlow && showCourierPickupCta && (
@@ -1690,7 +1616,7 @@ function OffersPage() {
                       typeof window.ym === "function"
                     ) {
                       window.ym(104664178, "params", {
-                        offers: "добавил_габарит",
+                        offers: "габарит_по_фото",
                       });
                     }
                     const updatedWizardData = {
@@ -1719,7 +1645,7 @@ function OffersPage() {
                       typeof window.ym === "function"
                     ) {
                       window.ym(104664178, "params", {
-                        offers: "добавил_габарит",
+                        offers: "габарит_указал",
                       });
                     }
                     const updatedWizardData = {
@@ -1977,17 +1903,7 @@ function OffersPage() {
 
                         {!isFromUrl && (
                           <button
-                            onClick={() => {
-                              if (
-                                typeof window !== "undefined" &&
-                                typeof window.ym === "function"
-                              ) {
-                                window.ym(104664178, "params", {
-                                  offers: "оформить_отправку",
-                                });
-                              }
-                              handleSelectOffer(offer);
-                            }}
+                            onClick={() => handleSelectOffer(offer)}
                             className={`w-full md:w-auto px-4 md:px-3 py-3 md:py-3 rounded-xl font-semibold transition-colors text-sm whitespace-nowrap
  ${
    isCheapest || isFastest
@@ -1995,7 +1911,7 @@ function OffersPage() {
      : "bg-[#F5F5F5] text-[#2D2D2D] hover:bg-[#E5E5E5]"
  }`}
                           >
-                            Оформить забор курьером
+                            Выбрать этот вариант
                           </button>
                         )}
                       </div>

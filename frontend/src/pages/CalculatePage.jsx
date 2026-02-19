@@ -167,15 +167,13 @@ function CalculatePage() {
   const handleSenderDelivery = () => {
     if (typeof window !== "undefined" && typeof window.ym === "function") {
       window.ym(104664178, "reachGoal", "sender_start");
+      window.ym(104664178, "params", { offers: "роль_отправитель" });
     }
     setSelectedGuideRole("sender");
   };
 
   const handleGuideContinue = () => {
     if (selectedGuideRole === "recipient") {
-      if (typeof window !== "undefined" && typeof window.ym === "function") {
-        window.ym(104664178, "reachGoal", "recipient_flow_started");
-      }
       navigate("/wizard?step=recipientRoute", {
         state: {
           wizardData: {
@@ -186,7 +184,7 @@ function CalculatePage() {
       return;
     }
 
-    navigate("/wizard?step=package", {
+    navigate("/wizard?step=recipientRoute", {
       state: {
         wizardData: {
           selectedRole: "sender",
@@ -459,6 +457,9 @@ function CalculatePage() {
                       </span>
                     </button>
                   </div>
+                  <p className="mt-4 text-sm md:text-base text-[#858585] text-center">
+                    ⏱️ 3 минуты · 👤 выбор роли
+                  </p>
                 </>
               ) : (
                 <div className="mt-2 md:mt-4">

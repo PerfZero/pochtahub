@@ -64,6 +64,24 @@ function PackageStep({
   const isUnknownValid = packageOption === "unknown" && Boolean(selectedSize);
   const isContinueDisabled =
     photoAnalyzing || !(isPhotoValid || isManualValid || isUnknownValid);
+  const applySizePreset = (option) => {
+    if (!option) {
+      return;
+    }
+
+    const dimensionsMatch = option.dimensions.match(/(\d+)х(\d+)х(\d+)/);
+    const weightMatch = option.weight.match(/(\d+)/);
+
+    onSelectedSizeChange(option.id);
+    if (dimensionsMatch) {
+      onLengthChange({ target: { value: dimensionsMatch[1] } });
+      onWidthChange({ target: { value: dimensionsMatch[2] } });
+      onHeightChange({ target: { value: dimensionsMatch[3] } });
+    }
+    if (weightMatch) {
+      onWeightChange({ target: { value: weightMatch[1] } });
+    }
+  };
 
   return (
     <>
@@ -127,25 +145,6 @@ function PackageStep({
           </div>
         </button>
       </div>
-
-      {!packageOption && (
-        <div className="text-center mb-8">
-          <button
-            onClick={() => {
-              if (
-                typeof window !== "undefined" &&
-                typeof window.ym === "function"
-              ) {
-                window.ym(104664178, "params", { offers: "габарит_не_помнит" });
-              }
-              onPackageOptionChange("unknown");
-            }}
-            className="text-sm text-[#0077FE] hover:underline"
-          >
-            Не знаю габариты
-          </button>
-        </div>
-      )}
 
       {packageOption === "photo" && (
         <div className="mb-8">
@@ -326,6 +325,39 @@ function PackageStep({
               onChange={onEstimatedValueChange}
               label="Оценочная стоимость"
             />
+          </div>
+          <div className="mb-6">
+            <p className="text-sm md:text-base font-semibold text-[#2D2D2D] mb-3">
+              Шаблоны размеров
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+              {sizeOptions.map((option) => (
+                <button
+                  key={option.id}
+                  onClick={() => applySizePreset(option)}
+                  className={`p-3 md:p-4 rounded-xl border transition-all ${
+                    selectedSize === option.id
+                      ? "border-[#0077FE] bg-[#F0F7FF]"
+                      : "border-[#E5E5E5] bg-white hover:border-[#0077FE]"
+                  }`}
+                >
+                  <div className="flex flex-col items-center gap-2 md:gap-3">
+                    <div className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center">
+                      <img src={option.icon} alt="" className="w-full h-full" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs md:text-sm font-semibold text-[#2D2D2D] mb-1">
+                        {option.name}
+                      </p>
+                      <p className="text-xs text-[#2D2D2D]">
+                        {option.dimensions}
+                      </p>
+                      <p className="text-xs text-[#2D2D2D]">{option.weight}</p>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
           <button
             onClick={onContinue}
