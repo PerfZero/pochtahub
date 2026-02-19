@@ -157,6 +157,7 @@ function RecipientAddressStep({
             typeof window !== "undefined" &&
             typeof window.ym === "function"
           ) {
+            window.ym(104664178, "reachGoal", "add_recipient");
             window.ym(104664178, "params", { offers: "указал_куда_доставить" });
           }
           onContinue();

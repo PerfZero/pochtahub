@@ -58,8 +58,6 @@ import PaymentStep from "./wizard/steps/PaymentStep";
 import RecipientAddressStep from "./wizard/steps/RecipientAddressStep";
 import RecipientFIOStep from "./wizard/steps/RecipientFIOStep";
 import DeliveryAddressStep from "./wizard/steps/DeliveryAddressStep";
-import SenderPhoneStep from "./wizard/steps/SenderPhoneStep";
-import SenderAddressStep from "./wizard/steps/SenderAddressStep";
 import RecipientRouteStep from "./wizard/steps/RecipientRouteStep";
 import SelectPvzStep from "./wizard/steps/SelectPvzStep";
 import OrderCompleteStep from "./wizard/steps/OrderCompleteStep";
@@ -105,10 +103,7 @@ function WizardPage() {
   const recipientSteps = new Set([
     "recipientRoute",
     "recipientUserPhone",
-    "senderPhone",
     "senderAddress",
-    "deliveryAddress",
-    "recipientFIO",
   ]);
 
   const getRoleForStep = (step) => {
@@ -246,7 +241,6 @@ function WizardPage() {
   // Pickup address data
   const [pickupAddress, setPickupAddress] = useState("");
   const [pickupSenderName, setPickupSenderName] = useState("");
-  const [pickupSenderNameFocused, setPickupSenderNameFocused] = useState(false);
 
   // Recipient phone data
   const [recipientPhone, setRecipientPhone] = useState("");
@@ -267,7 +261,6 @@ function WizardPage() {
   // Sender address data (for recipient flow)
   const [senderAddress, setSenderAddress] = useState("");
   const [senderFIO, setSenderFIO] = useState("");
-  const [senderFioFocused, setSenderFioFocused] = useState(false);
 
   // Recipient address data
   const [recipientAddress, setRecipientAddress] = useState("");
@@ -906,7 +899,7 @@ function WizardPage() {
     handleRecipientUserSendCode("sms");
   };
 
-  const handleSenderPhoneContinue = () => {
+  const handleSenderAddressContinue = () => {
     const trimmedAddress = senderAddress?.trim() || "";
     if (!trimmedAddress) {
       return;
@@ -937,36 +930,21 @@ function WizardPage() {
 
     if (selectedRole === "recipient") {
       const existingWizardData = location.state?.wizardData || {};
-      const wizardData = {
-        ...existingWizardData,
-        fromCity: resolvedFromCity,
-        toCity: toCity || existingWizardData.toCity || "",
-        senderAddress,
-        senderPhone,
-        senderFIO,
-        pickupSenderName: senderFIO,
-        selectedRole: "recipient",
-      };
-
-      navigate("/wizard?step=recipientFIO", {
-        state: { wizardData },
+      navigate("/wizard?step=recipientAddress", {
+        state: {
+          ...location.state,
+          wizardData: {
+            ...existingWizardData,
+            fromCity: resolvedFromCity,
+            toCity: toCity || existingWizardData.toCity || "",
+            senderAddress,
+            senderPhone,
+            senderFIO,
+            pickupSenderName: senderFIO,
+            selectedRole: "recipient",
+          },
+        },
       });
-    }
-  };
-
-  const handleSenderAddressContinue = () => {
-    const trimmedAddress = senderAddress?.trim() || "";
-    if (!trimmedAddress) {
-      return;
-    }
-
-    const hasHouseNumber = /\d/.test(trimmedAddress);
-    if (!hasHouseNumber) {
-      return;
-    }
-
-    if (selectedRole === "recipient") {
-      navigate("/wizard?step=senderPhone");
     }
   };
 
@@ -1648,6 +1626,83 @@ function WizardPage() {
     });
   };
 
+  const handleRecipientDataContinue = () => {
+    const trimmedAddress = deliveryAddress?.trim() || "";
+    const hasHouseNumber = /\d/.test(trimmedAddress);
+    const existingWizardData = location.state?.wizardData || {};
+    const savedDelivery = localStorage.getItem("filterCourierDelivery");
+    const filterCourierDelivery =
+      existingWizardData.filterCourierDelivery !== undefined
+        ? existingWizardData.filterCourierDelivery
+        : savedDelivery !== null
+          ? savedDelivery === "true"
+          : false;
+    const finalSelectedOffer =
+      selectedOffer ||
+      existingWizardData.selectedOffer ||
+      location.state?.selectedOffer;
+    const isPvzFlow = needsPvzSelection(
+      finalSelectedOffer,
+      filterCourierDelivery,
+    );
+
+    if (!recipientFIO?.trim() || !recipientUserPhone?.trim()) {
+      return;
+    }
+
+    if (!isPvzFlow && (!trimmedAddress || !hasHouseNumber)) {
+      return;
+    }
+
+    const resolvedFromCity = resolveCityFromInputs(fromCity, senderAddress);
+    const resolvedToCity = resolveCityFromInputs(
+      toCity,
+      isPvzFlow ? recipientDeliveryPointAddress || toCity : deliveryAddress,
+    );
+
+    if (!resolvedFromCity || !resolvedToCity) {
+      return;
+    }
+
+    if (!fromCity && resolvedFromCity) {
+      setFromCity(resolvedFromCity);
+    }
+    if (!toCity && resolvedToCity) {
+      setToCity(resolvedToCity);
+    }
+
+    navigate("/wizard?step=recipientUserPhone", {
+      state: {
+        ...location.state,
+        wizardData: {
+          ...existingWizardData,
+          fromCity: resolvedFromCity,
+          toCity: resolvedToCity,
+          senderAddress,
+          senderPhone,
+          senderFIO,
+          pickupSenderName: senderFIO,
+          deliveryAddress: isPvzFlow
+            ? recipientDeliveryPointAddress || ""
+            : deliveryAddress,
+          recipientAddress: isPvzFlow
+            ? recipientDeliveryPointAddress || ""
+            : deliveryAddress,
+          recipientDeliveryPointCode: recipientDeliveryPointCode || null,
+          recipientDeliveryPointAddress: recipientDeliveryPointAddress || "",
+          recipientPhone: recipientUserPhone,
+          recipientUserPhone,
+          contactPhone: recipientUserPhone,
+          recipientFIO,
+          selectedRole: "recipient",
+          selectedOffer: finalSelectedOffer,
+          filterCourierPickup: existingWizardData.filterCourierPickup,
+          filterCourierDelivery,
+        },
+      },
+    });
+  };
+
   const handleResendCode = async () => {
     if (contactPhone) {
       await handleSendCode("telegram");
@@ -1723,23 +1778,11 @@ function WizardPage() {
 
   const getProgress = () => {
     if (selectedRole === "recipient") {
-      const offer =
-        selectedOffer ||
-        location.state?.selectedOffer ||
-        location.state?.wizardData?.selectedOffer;
-      const filterCourierDelivery =
-        location.state?.wizardData?.filterCourierDelivery || false;
-      const needsDeliveryAddress = !needsPvzSelection(
-        offer,
-        filterCourierDelivery,
-      );
       const recipientStepOrder = [
         "recipientRoute",
         "package",
         "senderAddress",
-        "senderPhone",
-        "recipientFIO",
-        ...(needsDeliveryAddress ? ["deliveryAddress"] : []),
+        "recipientAddress",
         "recipientUserPhone",
       ];
       const stepIndex = recipientStepOrder.indexOf(currentStep);
@@ -1757,11 +1800,8 @@ function WizardPage() {
     if (currentStep === "email") return 95;
     if (currentStep === "selectPvz") return 90;
     if (currentStep === "recipientRoute") return 20;
-    if (currentStep === "senderAddress") return 70;
-    if (currentStep === "senderPhone") return 75;
-    if (currentStep === "recipientUserPhone") return 60;
-    if (currentStep === "deliveryAddress") return 50;
-    if (currentStep === "recipientFIO") return 40;
+    if (currentStep === "senderAddress") return 60;
+    if (currentStep === "recipientUserPhone") return 80;
     if (currentStep === "package") return 30;
     if (selectedRole) return 20;
     return 0;
@@ -1773,11 +1813,8 @@ function WizardPage() {
     if (currentStep === "selectPvz") return "Выбор пункта выдачи";
     if (currentStep === "recipientAddress") return "Данные получателя";
     if (currentStep === "recipientRoute") return "";
-    if (currentStep === "senderAddress") return "Откуда забрать посылку?";
-    if (currentStep === "senderPhone") return "Как связаться с отправителем?";
-    if (currentStep === "recipientUserPhone") return "Ваш телефон";
-    if (currentStep === "deliveryAddress") return "Куда доставить посылку?";
-    if (currentStep === "recipientFIO") return "Ваши данные";
+    if (currentStep === "senderAddress") return "Данные отправителя";
+    if (currentStep === "recipientUserPhone") return "Подтвердите телефон";
     if (currentStep === "payment") return "Кто оплатит доставку?";
     if (currentStep === "recipientPhone") return "Телефон получателя";
     if (currentStep === "pickupAddress") return "Данные отправителя";
@@ -1808,23 +1845,11 @@ function WizardPage() {
     if (!selectedRole || currentStep === "role") {
       stepOrder = ["role", "package"];
     } else if (selectedRole === "recipient") {
-      const offer =
-        selectedOffer ||
-        location.state?.selectedOffer ||
-        location.state?.wizardData?.selectedOffer;
-      const filterCourierDelivery =
-        location.state?.wizardData?.filterCourierDelivery || false;
-      const needsDeliveryAddress = !needsPvzSelection(
-        offer,
-        filterCourierDelivery,
-      );
       stepOrder = [
         "recipientRoute",
         "package",
         "senderAddress",
-        "senderPhone",
-        "recipientFIO",
-        ...(needsDeliveryAddress ? ["deliveryAddress"] : []),
+        "recipientAddress",
         "recipientUserPhone",
       ];
     } else if (isInviteRecipientFlow) {
@@ -1941,7 +1966,11 @@ function WizardPage() {
         },
       });
     } else if (currentStep === "recipientAddress") {
-      navigate("/wizard?step=pickupAddress");
+      if (selectedRole === "recipient") {
+        navigate("/wizard?step=senderAddress");
+      } else {
+        navigate("/wizard?step=pickupAddress");
+      }
     } else if (currentStep === "payment") {
       navigate("/wizard?step=recipientAddress");
     } else if (currentStep === "recipientPhone") {
@@ -1969,25 +1998,7 @@ function WizardPage() {
         setRecipientUserCodeError("");
         setRecipientUserTelegramSent(false);
       }
-      const offer =
-        selectedOffer ||
-        location.state?.selectedOffer ||
-        location.state?.wizardData?.selectedOffer;
-      const filterCourierDelivery =
-        location.state?.wizardData?.filterCourierDelivery || false;
-      const shouldReturnToDeliveryAddress = !needsPvzSelection(
-        offer,
-        filterCourierDelivery,
-      );
-      navigate(
-        shouldReturnToDeliveryAddress
-          ? "/wizard?step=deliveryAddress"
-          : "/wizard?step=recipientFIO",
-      );
-    } else if (currentStep === "deliveryAddress") {
-      navigate("/wizard?step=recipientFIO");
-    } else if (currentStep === "recipientFIO") {
-      navigate("/wizard?step=senderPhone");
+      navigate("/wizard?step=recipientAddress");
     } else if (currentStep === "package") {
       if (selectedRole) {
         navigate("/wizard?step=recipientRoute");
@@ -2149,8 +2160,9 @@ function WizardPage() {
           phone={recipientUserPhone}
           onPhoneChange={(e) => setRecipientUserPhone(e.target.value)}
           selectedRole={selectedRole}
-          title="Ваш телефон"
-          description="Это необходимо для оформления заказа"
+          title="Подтвердите телефон получателя"
+          description="Нужен код из SMS для подтверждения оформления"
+          phoneLocked
           auth={{
             codeSent: recipientUserCodeSent,
             codeLoading: recipientUserCodeLoading,
@@ -2171,30 +2183,39 @@ function WizardPage() {
           onContinue={handleRecipientUserPhoneContinue}
           onRoleChange={handleRoleToggle}
         />
-      ) : currentStep === "senderPhone" && selectedRole === "recipient" ? (
-        <SenderPhoneStep
+      ) : currentStep === "senderAddress" && selectedRole === "recipient" ? (
+        <PickupAddressStep
+          pickupAddress={senderAddress}
+          onPickupAddressChange={(e) => setSenderAddress(e.target.value)}
+          pickupSenderName={senderFIO}
+          onPickupSenderNameChange={(e) => setSenderFIO(e.target.value)}
           senderPhone={senderPhone}
           onSenderPhoneChange={(e) => setSenderPhone(e.target.value)}
-          senderFIO={senderFIO}
-          onSenderFIOChange={(e) => setSenderFIO(e.target.value)}
-          fioFocused={senderFioFocused}
-          onFioFocus={() => setSenderFioFocused(true)}
-          onFioBlur={() => setSenderFioFocused(false)}
-          onContinue={handleSenderPhoneContinue}
-        />
-      ) : currentStep === "senderAddress" && selectedRole === "recipient" ? (
-        <SenderAddressStep
-          senderAddress={senderAddress}
-          onSenderAddressChange={(e) => setSenderAddress(e.target.value)}
           fromCity={fromCity}
+          toCity={toCity}
+          selectedOffer={senderSelectedOffer}
+          filterCourierDelivery={senderFilterCourierDelivery}
           onContinue={handleSenderAddressContinue}
         />
-      ) : currentStep === "recipientAddress" && selectedRole === "sender" ? (
+      ) : currentStep === "recipientAddress" &&
+        (selectedRole === "sender" || selectedRole === "recipient") ? (
         <RecipientAddressStep
-          recipientAddress={recipientAddress}
-          onRecipientAddressChange={(e) => setRecipientAddress(e.target.value)}
-          recipientPhone={recipientPhone}
-          onRecipientPhoneChange={(e) => setRecipientPhone(e.target.value)}
+          recipientAddress={
+            selectedRole === "recipient" ? deliveryAddress : recipientAddress
+          }
+          onRecipientAddressChange={(e) =>
+            selectedRole === "recipient"
+              ? setDeliveryAddress(e.target.value)
+              : setRecipientAddress(e.target.value)
+          }
+          recipientPhone={
+            selectedRole === "recipient" ? recipientUserPhone : recipientPhone
+          }
+          onRecipientPhoneChange={(e) =>
+            selectedRole === "recipient"
+              ? setRecipientUserPhone(e.target.value)
+              : setRecipientPhone(e.target.value)
+          }
           recipientFIO={recipientFIO}
           onRecipientFIOChange={(e) => setRecipientFIO(e.target.value)}
           recipientFioFocused={recipientFioFocused}
@@ -2206,7 +2227,11 @@ function WizardPage() {
           filterCourierDelivery={senderFilterCourierDelivery}
           isPvzFlow={senderPvzFlow}
           selectedPvzAddress={recipientDeliveryPointAddress}
-          onContinue={handleRecipientAddressContinue}
+          onContinue={
+            selectedRole === "recipient"
+              ? handleRecipientDataContinue
+              : handleRecipientAddressContinue
+          }
         />
       ) : currentStep === "selectPvz" &&
         selectedOffer &&

@@ -77,6 +77,15 @@ function RoleSelectStep({ onRoleSelect, selectedRole }) {
           </div>
         </button>
       </div>
+      <div className="text-center mb-8">
+        <button
+          type="button"
+          onClick={() => onRoleSelect("recipient")}
+          className="text-sm md:text-base text-[#0077FE] hover:underline"
+        >
+          Оформить получателем
+        </button>
+      </div>
     </>
   );
 }
