@@ -120,7 +120,29 @@ function PaymentPage() {
     return `${city}, ${address}`;
   };
 
+  const sendYmGoalWithRetry = (
+    goalName,
+    { retries = 8, retryDelayMs = 250 } = {},
+  ) => {
+    if (typeof window === "undefined") return;
+
+    let attempts = 0;
+    const trySendGoal = () => {
+      if (typeof window.ym === "function") {
+        window.ym(104664178, "reachGoal", goalName);
+        return;
+      }
+      attempts += 1;
+      if (attempts < retries) {
+        window.setTimeout(trySendGoal, retryDelayMs);
+      }
+    };
+
+    trySendGoal();
+  };
+
   const handlePayment = async () => {
+    sendYmGoalWithRetry("заказ!");
     alert("Оплата временно недоступна для всех служб доставки.");
     return;
     const senderName = wizardData.senderFIO || wizardData.senderName;
@@ -169,9 +191,6 @@ function PaymentPage() {
       return;
     }
 
-    if (typeof window !== "undefined" && typeof window.ym === "function") {
-      window.ym(104664178, "reachGoal", "заказ!");
-    }
     setLoading(true);
     try {
       const userEmail = wizardData.email || null;
