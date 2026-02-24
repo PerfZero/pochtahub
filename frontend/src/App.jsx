@@ -13,6 +13,8 @@ import TestPage from "./pages/TestPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import RecipientInvitePage from "./pages/RecipientInvitePage";
 import InviteRedirectPage from "./pages/InviteRedirectPage";
+import BusinessPage from "./pages/BusinessPage";
+import BusinessToolPage from "./pages/BusinessToolPage";
 import "./App.css";
 
 function App() {
@@ -43,6 +45,8 @@ function App() {
         <Route path="/order" element={<OrderPage />} />
         <Route path="/o/:token" element={<InviteRedirectPage />} />
         <Route path="/recipient" element={<RecipientInvitePage />} />
+        <Route path="/business" element={<BusinessPage />} />
+        <Route path="/business/tool" element={<BusinessToolPage />} />
         <Route path="/confirmation/:orderId" element={<ConfirmationPage />} />
         <Route path="/test" element={<TestPage />} />
         <Route

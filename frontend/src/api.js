@@ -71,4 +71,9 @@ export const usersAPI = {
   updateProfile: (data) => api.patch("/users/profile/", data),
 };
 
+export const businessAPI = {
+  trackEvent: (data) => api.post("/business/events/", data),
+  getTrialStatus: () => api.get("/business/trial-status/"),
+};
+
 export default api;

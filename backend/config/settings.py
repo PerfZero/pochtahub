@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     'apps.tariffs',
     'apps.orders',
     'apps.payment',
+    'apps.business',
 ]
 
 MIDDLEWARE = [

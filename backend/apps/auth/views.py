@@ -6,6 +6,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from django.core.cache import cache
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from .serializers import RegisterSerializer, LoginSerializer
 import requests
 import random
@@ -265,6 +266,9 @@ class VerifyCodeView(APIView):
             )
             logger.info(f'Создан новый пользователь: {user.id}, {user.username}')
 
+        user.last_login = timezone.now()
+        user.save(update_fields=['last_login'])
+
         refresh = RefreshToken.for_user(user)
         return Response({
             'success': True,
@@ -336,6 +340,9 @@ class LoginView(generics.GenericAPIView):
                 {'error': 'Неверные учетные данные'},
                 status=status.HTTP_401_UNAUTHORIZED
             )
+
+        user.last_login = timezone.now()
+        user.save(update_fields=['last_login'])
 
         refresh = RefreshToken.for_user(user)
         return Response({

@@ -27,6 +27,7 @@ urlpatterns = [
     path('api/tariffs/', include('apps.tariffs.urls')),
     path('api/orders/', include('apps.orders.urls')),
     path('api/payment/', include('apps.payment.urls')),
+    path('api/business/', include('apps.business.urls')),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
 ]
