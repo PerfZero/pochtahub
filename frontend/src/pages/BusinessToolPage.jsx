@@ -142,6 +142,10 @@ function BusinessToolPage() {
     setError("");
     setActionMessage("");
     setResult(null);
+    const startedAt =
+      typeof performance !== "undefined" && typeof performance.now === "function"
+        ? performance.now()
+        : Date.now();
 
     try {
       const analyses = [];
@@ -187,6 +191,11 @@ function BusinessToolPage() {
 
       await trackBusinessEvent("business_calc_success", {
         countPhotos: photoCount,
+        durationMs: Math.round(
+          (typeof performance !== "undefined" && typeof performance.now === "function"
+            ? performance.now()
+            : Date.now()) - startedAt,
+        ),
         result: {
           length: nextResult.length,
           width: nextResult.width,
@@ -202,6 +211,13 @@ function BusinessToolPage() {
       setError(message);
       await trackBusinessEvent("business_calc_error", {
         countPhotos: photoCount,
+        durationMs: Math.round(
+          (typeof performance !== "undefined" && typeof performance.now === "function"
+            ? performance.now()
+            : Date.now()) - startedAt,
+        ),
+        errorCode: err.response?.status ? String(err.response.status) : "calc_error",
+        errorMessage: message,
         metadata: { error: message },
       });
     } finally {

@@ -23,7 +23,7 @@ function BusinessPage() {
   );
 
   useEffect(() => {
-    trackBusinessEvent("business_page_view");
+    trackBusinessEvent("business_page_view", {}, { oncePerSession: true });
   }, []);
 
   useEffect(() => {
