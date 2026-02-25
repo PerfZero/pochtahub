@@ -233,6 +233,9 @@ function CalculatePage() {
 
             <ul className="mt-6 md:mt-7 grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 text-base md:text-xl text-[#E5EDF9]">
               <li className="rounded-xl border border-white/15 bg-white/5 px-4 py-3">
+                когда самовывоз
+              </li>
+              <li className="rounded-xl border border-white/15 bg-white/5 px-4 py-3">
                 неудобно напоминать отправителю
               </li>
               <li className="rounded-xl border border-white/15 bg-white/5 px-4 py-3">
