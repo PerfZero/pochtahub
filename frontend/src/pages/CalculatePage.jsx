@@ -110,10 +110,6 @@ function CalculatePage() {
 
             <div className="relative grid md:grid-cols-[1.1fr_0.9fr] gap-8 md:gap-10 items-center">
               <div>
-                <span className="inline-flex rounded-full border border-white/35 bg-white/15 px-4 py-1.5 text-[11px] uppercase tracking-[0.14em] text-white/90">
-                  Спокойный запуск
-                </span>
-
                 <h1 className="mt-5 text-[34px] leading-[1.02] md:text-[64px] font-bold tracking-[-0.02em] text-white">
                   Ты не оформляешь
                   <br />
@@ -199,6 +195,7 @@ function CalculatePage() {
           </div>
         </section>
 
+        {/*
         <section className="pt-10 md:pt-14">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
             <article className="rounded-2xl border border-[#D5DDE8] bg-[#F8FBFF] px-6 md:px-7 py-6 md:py-7">
@@ -224,27 +221,28 @@ function CalculatePage() {
             </article>
           </div>
         </section>
+        */}
 
         <section className="pt-10 md:pt-14">
-          <div className="rounded-2xl border border-[#202B3A] bg-gradient-to-br from-[#1C2533] to-[#121A26] px-6 md:px-8 py-7 md:py-9 text-white">
-            <h2 className="text-2xl md:text-[42px] leading-[1.08] font-bold text-center md:text-left">
+          <div className="rounded-2xl border border-[#D7DEE8] bg-[#F5F9FF] px-6 md:px-8 py-7 md:py-9">
+            <h2 className="text-2xl md:text-[42px] leading-[1.08] font-bold text-center md:text-left text-[#1F2B3D]">
               Pochtahub — когда
             </h2>
 
-            <ul className="mt-6 md:mt-7 grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 text-base md:text-xl text-[#E5EDF9]">
-              <li className="rounded-xl border border-white/15 bg-white/5 px-4 py-3">
-                когда самовывоз
+            <ul className="mt-6 md:mt-7 grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 text-base md:text-xl text-[#304154]">
+              <li className="rounded-xl border border-[#D2DEEE] bg-white px-4 py-3">
+                самовывоз
               </li>
-              <li className="rounded-xl border border-white/15 bg-white/5 px-4 py-3">
+              <li className="rounded-xl border border-[#D2DEEE] bg-white px-4 py-3">
                 неудобно напоминать отправителю
               </li>
-              <li className="rounded-xl border border-white/15 bg-white/5 px-4 py-3">
+              <li className="rounded-xl border border-[#D2DEEE] bg-white px-4 py-3">
                 устал ждать
               </li>
-              <li className="rounded-xl border border-white/15 bg-white/5 px-4 py-3">
+              <li className="rounded-xl border border-[#D2DEEE] bg-white px-4 py-3">
                 обычные сервисы не подходят
               </li>
-              <li className="rounded-xl border border-white/15 bg-white/5 px-4 py-3">
+              <li className="rounded-xl border border-[#D2DEEE] bg-white px-4 py-3">
                 не хочется разбираться
               </li>
             </ul>
@@ -271,10 +269,6 @@ function CalculatePage() {
 
         <section id="launch" className="pt-10 md:pt-14">
           <div className="rounded-[30px] border border-[#CBD4E2] bg-[#F7F3EA] px-6 md:px-10 py-10 md:py-12 text-center">
-            <span className="inline-flex rounded-full border border-[#D8CDB5] bg-[#FFF8EA] px-4 py-1.5 text-xs uppercase tracking-[0.12em] text-[#907B51]">
-              Финальный шаг
-            </span>
-
             <p className="mt-5 text-3xl md:text-[52px] leading-[1.02] tracking-[-0.02em] font-bold text-[#202938]">
               До запуска доставки — один шаг
             </p>
