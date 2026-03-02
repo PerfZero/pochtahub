@@ -147,10 +147,6 @@ function AbcLandingPage() {
               <img src={iconTelegram} alt="" className="h-4 w-4" />
               Telegram
             </a>
-
-            <div className="rounded-full border border-[#B6CCE4] bg-white/75 px-3 py-2 text-xs font-semibold tracking-[0.18em] text-[#516171] backdrop-blur-sm">
-              Вариант {variant.label}
-            </div>
           </div>
         </div>
       </header>
