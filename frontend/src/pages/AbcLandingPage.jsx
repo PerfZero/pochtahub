@@ -1,61 +1,52 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
+import PhoneInput from "../components/PhoneInput";
 import iconTelegram from "../assets/images/icon-telegram.svg";
 import logoSvg from "../assets/images/logo.svg";
 
 const METRIKA_ID = 104664178;
 const STORAGE_KEY = "abc_landing_variant";
-const PRIMARY_CTA_TEXT = "Запустить доставку";
 
 const OFFER_VARIANTS = {
   a: {
-    label: "A",
-    eyebrow: "Без давления на отправителя",
-    title: "Не нужно уговаривать отправителя заниматься доставкой.",
-    subtitle:
-      "Ты просто запускаешь доставку, а мы сами связываемся, объясняем процесс и доводим его до забора посылки.",
-    accent: "Подходит, когда отправитель тянет, забывает или не хочет разбираться.",
-    bullets: [
-      "Ты запускаешь доставку",
-      "Мы общаемся с отправителем",
-      "Курьер сам забирает посылку",
+    title: "ОБЕЩАЛ ОТПРАВИТЬ - И ТИШИНА?",
+    lead: "Вы ждёте, а ничего не происходит.",
+    body: [
+      "Так бывает.",
+      "Договорённость есть, но действие остаётся не у вас.",
+      "Вы ещё не ошиблись и не опоздали.",
     ],
-    panelTitle: "Почему это работает",
-    panelText:
-      "Пользователь не спорит, не напоминает и не координирует всё вручную.",
+    ctaPrompt:
+      "Хотите понять, что можно сделать дальше, пока ситуация не стала конфликтом?",
+    ctaText: "Показать, как вернуть контроль",
+    footnote: "Никаких оплат. Просто разберём ситуацию.",
   },
   b: {
-    label: "B",
-    eyebrow: "Когда самовывоз не хочется даже рассматривать",
-    title: "Не надо ехать за посылкой самому.",
-    subtitle:
-      "Если самовывоз неудобен, далеко или просто не хочется тратить полдня, Pochtahub запускает доставку за тебя.",
-    accent: "Особенно полезно, когда посылка в другом городе или у занятого отправителя.",
-    bullets: [
-      "Ты оставляешь маршрут",
-      "Мы организуем контакт и забор",
-      "Ты подключаешься только на подтверждении",
+    title: "ДОГОВОРИЛИСЬ ОБ ОТПРАВКЕ, НО ВСЁ ЗАСТРЯЛО?",
+    lead: "Посылка не едет, а вы остаетесь в ожидании.",
+    body: [
+      "Это обычная ситуация.",
+      "Отправить вроде обещали, но следующий шаг зависит не от вас.",
+      "Сейчас ещё можно спокойно вернуть процесс под контроль.",
     ],
-    panelTitle: "Что снимается сразу",
-    panelText:
-      "Неловкие договорённости, поездки через город и контроль каждого шага вручную.",
+    ctaPrompt:
+      "Хотите быстро понять, как сдвинуть отправку с места без лишнего напряжения?",
+    ctaText: "Показать следующий шаг",
+    footnote: "Без оплат и обязательств. Просто покажем, как действовать.",
   },
   c: {
-    label: "C",
-    eyebrow: "Когда обычные сервисы только добавляют трение",
-    title: "Ты не оформляешь доставку. Ты просто запускаешь её.",
-    subtitle:
-      "Без выбора ролей, без длинных объяснений отправителю и без ощущения, что сейчас ошибёшься в форме.",
-    accent: "Один сценарий: запустил, подтвердил, получил.",
-    bullets: [
-      "Без сложного выбора",
-      "Без лишних касаний с отправителем",
-      "Без ручной координации доставки",
+    title: "ПОСЫЛКУ ДОЛЖНЫ БЫЛИ ОТПРАВИТЬ, НО НИЧЕГО НЕ МЕНЯЕТСЯ?",
+    lead: "Вы ждёте подтверждения, а процесс так и не начался.",
+    body: [
+      "Такое случается часто.",
+      "Сама договорённость уже есть, но управление остаётся у другой стороны.",
+      "Это можно исправить до того, как ситуация станет неприятной.",
     ],
-    panelTitle: "Главный паттерн",
-    panelText:
-      "Сервис берёт на себя самую неприятную часть процесса, а не перекладывает её на пользователя.",
+    ctaPrompt:
+      "Хотите увидеть, как аккуратно вернуть себе контроль над отправкой?",
+    ctaText: "Показать, что делать дальше",
+    footnote: "Никаких оплат. Только понятный следующий шаг.",
   },
 };
 
@@ -83,6 +74,7 @@ function AbcLandingPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [variantKey, setVariantKey] = useState("a");
+  const [phone, setPhone] = useState("");
 
   useEffect(() => {
     const forcedVariant = getSearchVariant(location.search);
@@ -107,10 +99,14 @@ function AbcLandingPage() {
     trackMetrika("abc_view", { variant: variantKey, source: "abc" });
   }, [variantKey]);
 
-  const variant = useMemo(() => OFFER_VARIANTS[variantKey], [variantKey]);
+  const variant = OFFER_VARIANTS[variantKey];
 
-  const handleStartDelivery = () => {
-    trackMetrika("abc_cta_click", { variant: variantKey, source: "abc" });
+  const handleContinue = () => {
+    trackMetrika("abc_cta_click", {
+      variant: variantKey,
+      source: "abc",
+      has_phone: Boolean(phone.trim()),
+    });
 
     navigate("/wizard?step=recipientRoute", {
       state: {
@@ -118,111 +114,84 @@ function AbcLandingPage() {
           selectedRole: "recipient",
           source: "abc",
           abcVariant: variantKey,
+          contactPhone: phone,
         },
       },
     });
   };
 
   return (
-    <div className="min-h-screen overflow-hidden bg-[linear-gradient(135deg,#F7EFE2_0%,#F7FAFF_42%,#E8F3FF_100%)] text-[#1E2837]">
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute left-[-8%] top-[-10%] h-[320px] w-[320px] rounded-full bg-[#FFD8A8]/45 blur-3xl" />
-        <div className="absolute right-[-4%] top-[12%] h-[360px] w-[360px] rounded-full bg-[#8BC4FF]/35 blur-3xl" />
-        <div className="absolute bottom-[-12%] left-[25%] h-[280px] w-[280px] rounded-full bg-[#C7E7FF]/45 blur-3xl" />
-      </div>
-
-      <header className="relative z-10">
-        <div className="mx-auto flex max-w-[1180px] items-center gap-4 px-4 py-5 md:px-6 md:py-6">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#1E3557_0%,#10233D_48%,#0A1426_100%)] text-white">
+      <div className="mx-auto flex min-h-screen max-w-[1280px] flex-col px-4 pb-8 pt-5 md:px-6 md:pb-12 md:pt-6">
+        <header className="flex items-center gap-4">
           <Link to="/calculate" aria-label="Pochtahub главная">
-            <img src={logoSvg} alt="Pochtahub" className="h-7 md:h-9" />
+            <img src={logoSvg} alt="Pochtahub" className="h-7 md:h-9 brightness-[6]" />
           </Link>
 
-          <div className="ml-auto flex items-center gap-2">
-            <a
-              href="https://t.me/pochtahub_bot"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden md:inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/70 px-3 py-2 text-xs font-medium text-[#5D6877] backdrop-blur-sm transition-colors hover:bg-white"
-            >
-              <img src={iconTelegram} alt="" className="h-4 w-4" />
-              Telegram
-            </a>
-          </div>
-        </div>
-      </header>
+          <a
+            href="https://t.me/pochtahub_bot"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ml-auto hidden items-center gap-2 rounded-full border border-white/15 bg-white/8 px-3 py-2 text-xs font-medium text-white/75 transition-colors hover:bg-white/12 md:inline-flex"
+          >
+            <img src={iconTelegram} alt="" className="h-4 w-4" />
+            Telegram
+          </a>
+        </header>
 
-      <main className="relative z-10 mx-auto flex min-h-[calc(100vh-84px)] max-w-[1180px] items-center px-4 pb-10 md:px-6 md:pb-14">
-        <section className="grid w-full gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="rounded-[32px] border border-white/70 bg-white/78 p-6 shadow-[0_30px_120px_rgba(35,57,93,0.14)] backdrop-blur-xl md:p-10">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#7C8796]">
-              {variant.eyebrow}
-            </p>
+        <main className="flex flex-1 items-center justify-center py-6 md:py-10">
+          <section className="w-full max-w-[760px] overflow-hidden rounded-[34px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06)_0%,rgba(255,255,255,0.02)_100%)] shadow-[0_35px_120px_rgba(0,0,0,0.32)] backdrop-blur-sm">
+            <div className="px-6 py-8 md:px-10 md:py-11">
+              <h1 className="max-w-[560px] text-[30px] font-bold uppercase leading-[1.02] tracking-[-0.03em] text-white md:text-[54px]">
+                {variant.title}
+              </h1>
 
-            <h1 className="mt-4 max-w-[720px] text-[34px] font-bold leading-[0.96] tracking-[-0.04em] text-[#132033] md:text-[68px]">
-              {variant.title}
-            </h1>
-
-            <p className="mt-5 max-w-[640px] text-base leading-[1.5] text-[#445064] md:text-[22px] md:leading-[1.38]">
-              {variant.subtitle}
-            </p>
-
-            <div className="mt-6 inline-flex max-w-[680px] rounded-2xl border border-[#D7E5F6] bg-[#F3F8FF] px-4 py-3 text-sm text-[#355070] md:text-base">
-              {variant.accent}
+              <p className="mt-6 max-w-[460px] text-lg leading-[1.35] text-[#D9E6F7] md:text-[27px]">
+                {variant.lead}
+              </p>
             </div>
 
-            <div className="mt-8 flex flex-col items-start gap-4 md:flex-row md:items-center">
+            <div className="h-px bg-white/12" />
+
+            <div className="px-6 py-8 md:px-10 md:py-10">
+              <div className="max-w-[520px] space-y-4 text-base leading-7 text-[#E5EDF8] md:text-[24px] md:leading-[1.45]">
+                {variant.body.map((paragraph) => (
+                  <p key={paragraph}>{paragraph}</p>
+                ))}
+              </div>
+            </div>
+
+            <div className="h-px bg-white/12" />
+
+            <div className="px-6 py-8 md:px-10 md:py-10">
+              <p className="max-w-[560px] text-lg leading-[1.45] text-white md:text-[30px] md:leading-[1.26]">
+                {variant.ctaPrompt}
+              </p>
+
+              <div className="mt-6 max-w-[420px]">
+                <PhoneInput
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                  label="Телефон"
+                />
+              </div>
+
               <button
                 type="button"
-                onClick={handleStartDelivery}
-                className="inline-flex min-h-[58px] items-center justify-center rounded-2xl bg-[#1573FF] px-8 py-4 text-base font-semibold text-white shadow-[0_20px_50px_rgba(21,115,255,0.3)] transition-all hover:-translate-y-0.5 hover:bg-[#0F67E5]"
+                onClick={handleContinue}
+                className="mt-5 inline-flex items-center gap-3 rounded-full border border-[#7FB6FF] bg-[#1683FF] px-6 py-4 text-left text-base font-semibold text-white shadow-[0_18px_40px_rgba(22,131,255,0.28)] transition-all hover:-translate-y-0.5 hover:bg-[#0F76EF] md:text-xl"
               >
-                {PRIMARY_CTA_TEXT}
+                <span className="text-xl leading-none md:text-2xl">⌄</span>
+                {variant.ctaText}
               </button>
 
-              <p className="text-sm text-[#667384] md:text-base">
-                Один экран. Один CTA. Сразу в сценарий запуска.
+              <p className="mt-6 text-sm text-[#9FB4CB] md:text-base">
+                * {variant.footnote}
               </p>
             </div>
-          </div>
-
-          <div className="grid gap-4">
-            <article className="rounded-[28px] border border-[#D9E5F2] bg-[#13294B] p-6 text-white shadow-[0_24px_80px_rgba(17,42,84,0.22)] md:p-8">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#96BFFF]">
-                Что получает пользователь
-              </p>
-
-              <ul className="mt-5 space-y-3">
-                {variant.bullets.map((bullet, index) => (
-                  <li
-                    key={bullet}
-                    className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-4"
-                  >
-                    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/12 text-sm font-semibold text-[#D9E8FF]">
-                      {index + 1}
-                    </span>
-                    <span className="text-sm leading-6 text-[#EEF5FF] md:text-base">
-                      {bullet}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </article>
-
-            <article className="rounded-[28px] border border-[#D8E2EE] bg-[#FFF7EA] p-6 text-[#2B3442] shadow-[0_20px_60px_rgba(55,71,98,0.08)] md:p-8">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#8F6A2A]">
-                {variant.panelTitle}
-              </p>
-              <p className="mt-4 text-lg font-semibold leading-[1.2] md:text-[28px]">
-                {variant.panelText}
-              </p>
-              <p className="mt-5 text-sm leading-6 text-[#5B6675] md:text-base">
-                Если захочешь посмотреть конкретный вариант вручную, используй
-                `?variant=a`, `?variant=b` или `?variant=c`.
-              </p>
-            </article>
-          </div>
-        </section>
-      </main>
+          </section>
+        </main>
+      </div>
     </div>
   );
 }
