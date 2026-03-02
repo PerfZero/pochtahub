@@ -23,6 +23,7 @@ function AbcLandingPage() {
   }, []);
 
   const handleContinue = () => {
+    trackMetrika("ожидание_шаг");
     trackMetrika("abc_cta_click", {
       source: PAGE_SOURCE,
       has_phone: Boolean(phone.trim()),
