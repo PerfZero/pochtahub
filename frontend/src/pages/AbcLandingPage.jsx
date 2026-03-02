@@ -121,77 +121,127 @@ function AbcLandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#1E3557_0%,#10233D_48%,#0A1426_100%)] text-white">
-      <div className="mx-auto flex min-h-screen max-w-[1280px] flex-col px-4 pb-8 pt-5 md:px-6 md:pb-12 md:pt-6">
-        <header className="flex items-center gap-4">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_10%_5%,#E9F4FF_0%,#F7FAFF_30%,#F4F6FA_55%,#F7F3EC_100%)] text-[#1F2630]">
+      <header className="w-full sticky top-0 z-20 border-b border-[#DCE2EB] bg-white/70 backdrop-blur-md">
+        <div className="mx-auto flex h-[72px] max-w-[1128px] items-center gap-4 px-4 md:h-[84px] md:px-6">
           <Link to="/calculate" aria-label="Pochtahub главная">
-            <img src={logoSvg} alt="Pochtahub" className="h-7 md:h-9 brightness-[6]" />
+            <img src={logoSvg} alt="Pochtahub" className="h-7 md:h-9" />
           </Link>
 
           <a
             href="https://t.me/pochtahub_bot"
             target="_blank"
             rel="noopener noreferrer"
-            className="ml-auto hidden items-center gap-2 rounded-full border border-white/15 bg-white/8 px-3 py-2 text-xs font-medium text-white/75 transition-colors hover:bg-white/12 md:inline-flex"
+            className="ml-auto hidden items-center gap-2 text-xs font-medium text-[#6F7785] hover:text-[#4F5968] md:inline-flex"
           >
             <img src={iconTelegram} alt="" className="h-4 w-4" />
             Telegram
           </a>
-        </header>
+        </div>
+      </header>
 
-        <main className="flex flex-1 items-center justify-center py-6 md:py-10">
-          <section className="w-full max-w-[760px] overflow-hidden rounded-[34px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06)_0%,rgba(255,255,255,0.02)_100%)] shadow-[0_35px_120px_rgba(0,0,0,0.32)] backdrop-blur-sm">
-            <div className="px-6 py-8 md:px-10 md:py-11">
-              <h1 className="max-w-[560px] text-[30px] font-bold uppercase leading-[1.02] tracking-[-0.03em] text-white md:text-[54px]">
+      <main className="mx-auto max-w-[1128px] px-4 pb-10 pt-6 md:px-6 md:pb-16 md:pt-10">
+        <section className="relative overflow-hidden rounded-[30px] border border-[#1D6DE8]/20 bg-gradient-to-br from-[#0D69EA] via-[#1B80FF] to-[#4EA7FF] px-6 py-8 shadow-[0_30px_90px_rgba(15,93,207,0.25)] md:px-10 md:py-11">
+          <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/15 blur-2xl" />
+          <div className="absolute -left-16 -bottom-20 h-56 w-56 rounded-full bg-[#9BC9FF]/35 blur-2xl" />
+
+          <div className="relative grid items-start gap-6 md:grid-cols-[1fr_0.92fr] md:gap-8">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#D7EAFF]">
+                Сценарий ожидания
+              </p>
+
+              <h1 className="mt-5 max-w-[620px] text-[34px] font-bold leading-[1.02] tracking-[-0.03em] text-white md:text-[62px]">
                 {variant.title}
               </h1>
 
-              <p className="mt-6 max-w-[460px] text-lg leading-[1.35] text-[#D9E6F7] md:text-[27px]">
+              <p className="mt-5 max-w-[520px] text-base leading-[1.35] text-[#EAF4FF] md:text-[28px]">
                 {variant.lead}
               </p>
             </div>
 
-            <div className="h-px bg-white/12" />
-
-            <div className="px-6 py-8 md:px-10 md:py-10">
-              <div className="max-w-[520px] space-y-4 text-base leading-7 text-[#E5EDF8] md:text-[24px] md:leading-[1.45]">
-                {variant.body.map((paragraph) => (
-                  <p key={paragraph}>{paragraph}</p>
+            <div className="rounded-3xl border border-white/25 bg-white/12 p-5 backdrop-blur-sm md:p-6">
+              <p className="text-xs uppercase tracking-[0.12em] text-[#D9EBFF]">
+                Что происходит
+              </p>
+              <div className="mt-4 space-y-3">
+                {variant.body.map((paragraph, index) => (
+                  <div
+                    key={paragraph}
+                    className="flex items-start gap-3 text-sm text-white md:text-base"
+                  >
+                    <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/20 text-xs font-bold">
+                      {index + 1}
+                    </span>
+                    <p>{paragraph}</p>
+                  </div>
                 ))}
               </div>
             </div>
+          </div>
+        </section>
 
-            <div className="h-px bg-white/12" />
+        <section className="pt-8 md:pt-10">
+          <div className="grid gap-4 md:grid-cols-[0.95fr_1.05fr] md:gap-5">
+            <article className="rounded-2xl border border-[#D7DEE8] bg-white/85 px-5 py-6 shadow-[0_10px_30px_rgba(16,41,77,0.06)] md:px-6 md:py-7">
+              <p className="text-sm uppercase tracking-[0.08em] text-[#748095]">
+                Что это значит
+              </p>
+              <p className="mt-3 text-lg font-semibold leading-[1.25] text-[#273142] md:text-2xl">
+                Договорённость есть, но управление процессом пока не у вас.
+              </p>
+              <p className="mt-3 text-sm leading-6 text-[#5F6C7B] md:text-base">
+                Ваша задача здесь не давить, а аккуратно вернуть понятный
+                следующий шаг.
+              </p>
+            </article>
 
-            <div className="px-6 py-8 md:px-10 md:py-10">
-              <p className="max-w-[560px] text-lg leading-[1.45] text-white md:text-[30px] md:leading-[1.26]">
+            <article className="rounded-2xl border border-[#D5DDE8] bg-[#F7F3EA] px-5 py-6 shadow-[0_10px_30px_rgba(16,41,77,0.05)] md:px-6 md:py-7">
+              <p className="text-sm uppercase tracking-[0.08em] text-[#8A7350]">
+                Спокойный выход
+              </p>
+              <p className="mt-3 text-lg font-semibold leading-[1.25] text-[#2E2A22] md:text-2xl">
+                Сначала понять, что делать дальше. Потом уже запускать действие.
+              </p>
+              <p className="mt-3 text-sm leading-6 text-[#6E6253] md:text-base">
+                Поэтому здесь не продажа и не оплата, а вход в сценарий, который
+                снимает подвешенность.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section className="pt-8 md:pt-10">
+          <div className="rounded-[30px] border border-[#CBD4E2] bg-white px-6 py-8 shadow-[0_18px_40px_rgba(16,41,77,0.08)] md:px-10 md:py-10">
+            <div className="max-w-[720px]">
+              <p className="text-2xl font-bold leading-[1.15] text-[#202938] md:text-[42px]">
                 {variant.ctaPrompt}
               </p>
-
-              <div className="mt-6 max-w-[420px]">
-                <PhoneInput
-                  value={phone}
-                  onChange={(event) => setPhone(event.target.value)}
-                  label="Телефон"
-                />
-              </div>
-
-              <button
-                type="button"
-                onClick={handleContinue}
-                className="mt-5 inline-flex items-center gap-3 rounded-full border border-[#7FB6FF] bg-[#1683FF] px-6 py-4 text-left text-base font-semibold text-white shadow-[0_18px_40px_rgba(22,131,255,0.28)] transition-all hover:-translate-y-0.5 hover:bg-[#0F76EF] md:text-xl"
-              >
-                <span className="text-xl leading-none md:text-2xl">⌄</span>
-                {variant.ctaText}
-              </button>
-
-              <p className="mt-6 text-sm text-[#9FB4CB] md:text-base">
-                * {variant.footnote}
-              </p>
             </div>
-          </section>
-        </main>
-      </div>
+
+            <div className="mt-6 max-w-[420px]">
+              <PhoneInput
+                value={phone}
+                onChange={(event) => setPhone(event.target.value)}
+                label="Телефон"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={handleContinue}
+              className="mt-5 inline-flex items-center gap-3 rounded-2xl bg-[#0077FE] px-6 py-4 text-left text-base font-semibold text-white transition-colors hover:bg-[#0066D9] md:text-lg"
+            >
+              <span className="text-lg leading-none">⌄</span>
+              {variant.ctaText}
+            </button>
+
+            <p className="mt-4 text-sm text-[#7A828E] md:text-base">
+              * {variant.footnote}
+            </p>
+          </div>
+        </section>
+      </main>
     </div>
   );
 }
