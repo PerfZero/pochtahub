@@ -895,7 +895,15 @@ function OffersPage() {
       wizardData.inviteRecipient &&
       wizardData.recipientPhone &&
       wizardData.selectedRole === "sender";
-    const hasCompletedFlow =
+    const hasCompletedRecipientFlow =
+      wizardData.selectedRole === "recipient" &&
+      (wizardData.recipientPhone || wizardData.recipientUserPhone) &&
+      wizardData.recipientFIO &&
+      wizardData.paymentPayer &&
+      (wizardData.recipientAddress ||
+        wizardData.deliveryAddress ||
+        selectedOfferNeedsPvz);
+    const hasCompletedSenderFlow =
       (wizardData.pickupAddress || wizardData.senderAddress) &&
       wizardData.recipientPhone &&
       wizardData.recipientFIO &&
@@ -903,6 +911,8 @@ function OffersPage() {
       (wizardData.recipientAddress ||
         wizardData.deliveryAddress ||
         selectedOfferNeedsPvz);
+    const hasCompletedFlow =
+      hasCompletedRecipientFlow || hasCompletedSenderFlow;
 
     const navigateState = {
       wizardData: updatedWizardData,
@@ -932,7 +942,7 @@ function OffersPage() {
       } else if (!updatedWizardData.packageDataCompleted) {
         navigationPath = "/wizard?step=package";
       } else if (updatedWizardData.selectedRole === "recipient") {
-        navigationPath = "/wizard?step=senderAddress";
+        navigationPath = "/wizard?step=recipientAddress";
       } else {
         navigationPath = "/wizard?step=pickupAddress";
       }

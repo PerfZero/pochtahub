@@ -1671,6 +1671,14 @@ function WizardPage() {
       setToCity(resolvedToCity);
     }
 
+    // После ввода данных получателя сразу показываем шаг ввода кода,
+    // без дополнительного экрана "только номер телефона".
+    setRecipientUserCodeSent(true);
+    setRecipientUserSmsCode("");
+    setRecipientUserCodeError("");
+    setRecipientUserTelegramSent(false);
+    void handleRecipientUserSendCode("sms");
+
     navigate("/wizard?step=recipientUserPhone", {
       state: {
         ...location.state,
@@ -1781,7 +1789,6 @@ function WizardPage() {
       const recipientStepOrder = [
         "recipientRoute",
         "package",
-        "senderAddress",
         "recipientAddress",
         "recipientUserPhone",
       ];
@@ -1801,7 +1808,7 @@ function WizardPage() {
     if (currentStep === "selectPvz") return 90;
     if (currentStep === "recipientRoute") return 20;
     if (currentStep === "senderAddress") return 60;
-    if (currentStep === "recipientUserPhone") return 80;
+    if (currentStep === "recipientUserPhone") return 100;
     if (currentStep === "package") return 30;
     if (selectedRole) return 20;
     return 0;
@@ -1848,7 +1855,6 @@ function WizardPage() {
       stepOrder = [
         "recipientRoute",
         "package",
-        "senderAddress",
         "recipientAddress",
         "recipientUserPhone",
       ];
@@ -1967,7 +1973,52 @@ function WizardPage() {
       });
     } else if (currentStep === "recipientAddress") {
       if (selectedRole === "recipient") {
-        navigate("/wizard?step=senderAddress");
+        const existingWizardData = location.state?.wizardData || {};
+        navigate("/offers", {
+          state: {
+            wizardData: {
+              ...existingWizardData,
+              fromCity,
+              toCity,
+              selectedRole: "recipient",
+              deliveryAddress: deliveryAddress || existingWizardData.deliveryAddress,
+              recipientAddress:
+                deliveryAddress || existingWizardData.recipientAddress,
+              recipientFIO: recipientFIO || existingWizardData.recipientFIO,
+              recipientUserPhone:
+                recipientUserPhone || existingWizardData.recipientUserPhone,
+              recipientPhone:
+                recipientUserPhone ||
+                existingWizardData.recipientPhone ||
+                existingWizardData.recipientUserPhone,
+              recipientDeliveryPointCode:
+                recipientDeliveryPointCode ||
+                existingWizardData.recipientDeliveryPointCode ||
+                null,
+              recipientDeliveryPointAddress:
+                recipientDeliveryPointAddress ||
+                existingWizardData.recipientDeliveryPointAddress ||
+                "",
+              contactPhone:
+                recipientUserPhone ||
+                existingWizardData.contactPhone ||
+                existingWizardData.recipientUserPhone,
+              selectedOffer:
+                selectedOffer || existingWizardData.selectedOffer || null,
+              weight: weight || existingWizardData.weight,
+              length: length || existingWizardData.length,
+              width: width || existingWizardData.width,
+              height: height || existingWizardData.height,
+              packageOption: packageOption || existingWizardData.packageOption,
+              selectedSize: selectedSize || existingWizardData.selectedSize,
+              estimatedValue:
+                estimatedValue || existingWizardData.estimatedValue,
+              photoUrl: photoUrl || existingWizardData.photoUrl,
+              filterCourierPickup: existingWizardData.filterCourierPickup,
+              filterCourierDelivery: existingWizardData.filterCourierDelivery,
+            },
+          },
+        });
       } else {
         navigate("/wizard?step=pickupAddress");
       }
@@ -1976,7 +2027,35 @@ function WizardPage() {
     } else if (currentStep === "recipientPhone") {
       navigate("/wizard?step=pickupAddress");
     } else if (currentStep === "pickupAddress") {
-      navigate("/wizard?step=package");
+      const existingWizardData = location.state?.wizardData || {};
+      navigate("/offers", {
+        state: {
+          wizardData: {
+            ...existingWizardData,
+            fromCity,
+            toCity,
+            selectedRole: "sender",
+            senderAddress: pickupAddress || existingWizardData.senderAddress,
+            pickupAddress: pickupAddress || existingWizardData.pickupAddress,
+            pickupSenderName:
+              pickupSenderName || existingWizardData.pickupSenderName,
+            contactPhone: contactPhone || existingWizardData.contactPhone,
+            recipientPhone: recipientPhone || existingWizardData.recipientPhone,
+            weight: weight || existingWizardData.weight,
+            length: length || existingWizardData.length,
+            width: width || existingWizardData.width,
+            height: height || existingWizardData.height,
+            packageOption: packageOption || existingWizardData.packageOption,
+            selectedSize: selectedSize || existingWizardData.selectedSize,
+            estimatedValue: estimatedValue || existingWizardData.estimatedValue,
+            photoUrl: photoUrl || existingWizardData.photoUrl,
+            selectedOffer:
+              selectedOffer || existingWizardData.selectedOffer || null,
+            filterCourierPickup: existingWizardData.filterCourierPickup,
+            filterCourierDelivery: existingWizardData.filterCourierDelivery,
+          },
+        },
+      });
     } else if (currentStep === "contactPhone") {
       navigate("/wizard?step=package");
       if (codeSent) {
@@ -1990,7 +2069,51 @@ function WizardPage() {
     } else if (currentStep === "senderPhone") {
       navigate("/wizard?step=senderAddress");
     } else if (currentStep === "senderAddress") {
-      navigate("/wizard?step=package");
+      const existingWizardData = location.state?.wizardData || {};
+      navigate("/offers", {
+        state: {
+          wizardData: {
+            ...existingWizardData,
+            fromCity,
+            toCity,
+            selectedRole: "recipient",
+            senderAddress: senderAddress || existingWizardData.senderAddress,
+            senderPhone: senderPhone || existingWizardData.senderPhone,
+            senderFIO: senderFIO || existingWizardData.senderFIO,
+            pickupSenderName:
+              senderFIO ||
+              existingWizardData.pickupSenderName ||
+              existingWizardData.senderFIO,
+            deliveryAddress:
+              deliveryAddress || existingWizardData.deliveryAddress,
+            recipientAddress:
+              deliveryAddress || existingWizardData.recipientAddress,
+            recipientFIO: recipientFIO || existingWizardData.recipientFIO,
+            recipientUserPhone:
+              recipientUserPhone || existingWizardData.recipientUserPhone,
+            recipientPhone:
+              recipientUserPhone ||
+              existingWizardData.recipientPhone ||
+              existingWizardData.recipientUserPhone,
+            contactPhone:
+              recipientUserPhone ||
+              existingWizardData.contactPhone ||
+              existingWizardData.recipientUserPhone,
+            weight: weight || existingWizardData.weight,
+            length: length || existingWizardData.length,
+            width: width || existingWizardData.width,
+            height: height || existingWizardData.height,
+            packageOption: packageOption || existingWizardData.packageOption,
+            selectedSize: selectedSize || existingWizardData.selectedSize,
+            estimatedValue: estimatedValue || existingWizardData.estimatedValue,
+            photoUrl: photoUrl || existingWizardData.photoUrl,
+            selectedOffer:
+              selectedOffer || existingWizardData.selectedOffer || null,
+            filterCourierPickup: existingWizardData.filterCourierPickup,
+            filterCourierDelivery: existingWizardData.filterCourierDelivery,
+          },
+        },
+      });
     } else if (currentStep === "recipientUserPhone") {
       if (recipientUserCodeSent) {
         setRecipientUserCodeSent(false);
