@@ -10,6 +10,7 @@ const PRIMARY_CTA_TEXT = "Запустить доставку";
 function CalculatePage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [showStartPopup, setShowStartPopup] = useState(false);
 
   const [isAuthenticated, setIsAuthenticated] = useState(
     () => Boolean(localStorage.getItem("access_token")),
@@ -46,11 +47,29 @@ function CalculatePage() {
     });
   }, [location.hash]);
 
+  useEffect(() => {
+    if (!showStartPopup) {
+      return;
+    }
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [showStartPopup]);
+
   const handleStartDelivery = () => {
+    setShowStartPopup(true);
+  };
+
+  const handleStartPopupContinue = () => {
     if (typeof window !== "undefined" && typeof window.ym === "function") {
       window.ym(104664178, "reachGoal", "recipient_start");
     }
 
+    setShowStartPopup(false);
     navigate("/wizard?step=recipientRoute", {
       state: {
         wizardData: {
@@ -332,6 +351,41 @@ function CalculatePage() {
           </div>
         </div>
       </footer>
+
+      {showStartPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#10213A]/55 px-4 py-6 backdrop-blur-sm">
+          <div className="w-full max-w-[900px] overflow-hidden rounded-[28px] border border-[#D6DEEA] bg-white shadow-[0_30px_80px_rgba(16,41,77,0.24)]">
+            <div className="flex items-center justify-end px-4 pt-4">
+              <button
+                type="button"
+                onClick={() => setShowStartPopup(false)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[#7A8594] transition-colors hover:bg-[#F2F5F9] hover:text-[#223047]"
+                aria-label="Закрыть"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="px-4 pb-4 md:px-6 md:pb-6">
+              <img
+                src="/pop.jpg"
+                alt="Подсказка перед запуском"
+                className="w-full rounded-[22px] border border-[#E2E8F0]"
+              />
+
+              <div className="mt-5 flex justify-center">
+                <button
+                  type="button"
+                  onClick={handleStartPopupContinue}
+                  className="inline-flex items-center justify-center rounded-2xl bg-[#0077FE] px-8 py-4 text-base font-semibold text-white transition-colors hover:bg-[#0066D9] md:text-lg"
+                >
+                  Далее
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
