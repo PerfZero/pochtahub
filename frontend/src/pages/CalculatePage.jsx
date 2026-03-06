@@ -354,7 +354,7 @@ function CalculatePage() {
 
       {showStartPopup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#10213A]/55 px-4 py-6 backdrop-blur-sm">
-          <div className="w-full max-w-[640px] overflow-hidden rounded-[28px] border border-[#D6DEEA] bg-white shadow-[0_30px_80px_rgba(16,41,77,0.24)]">
+          <div className="w-full max-w-[900px] overflow-hidden rounded-[28px] border border-[#D6DEEA] bg-white shadow-[0_30px_80px_rgba(16,41,77,0.24)]">
             <div className="flex items-center justify-end px-4 pt-4">
               <button
                 type="button"
@@ -366,31 +366,22 @@ function CalculatePage() {
               </button>
             </div>
 
-            <div className="px-6 pb-8 pt-2 text-center md:px-10 md:pb-10">
-              <h2 className="mx-auto max-w-[460px] text-[30px] font-bold leading-[1.02] tracking-[-0.03em] text-[#1F2A39] md:text-[48px]">
-                Не устраивает доставка, которую предлагают?
-              </h2>
+            <div className="px-4 pb-4 md:px-6 md:pb-6">
+              <img
+                src="/pop.jpg"
+                alt="Подсказка перед запуском"
+                className="w-full rounded-[22px] border border-[#E2E8F0]"
+              />
 
-              <p className="mx-auto mt-5 max-w-[440px] text-base leading-[1.45] text-[#566375] md:text-[24px] md:leading-[1.3]">
-                Вы можете сами оформить доставку — курьер заберет товар у
-                продавца.
-              </p>
-
-              <div className="mt-8 flex justify-center">
+              <div className="mt-5 flex justify-center">
                 <button
                   type="button"
                   onClick={handleStartPopupContinue}
                   className="inline-flex items-center justify-center rounded-2xl bg-[#0077FE] px-8 py-4 text-base font-semibold text-white transition-colors hover:bg-[#0066D9] md:text-lg"
                 >
-                  Посмотреть варианты доставки
+                  Далее
                 </button>
               </div>
-
-              <p className="mt-4 text-sm leading-6 text-[#7D8896] md:text-base">
-                Без регистрации.
-                <br />
-                Просто укажите города.
-              </p>
             </div>
           </div>
         </div>
