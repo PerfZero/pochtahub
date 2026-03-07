@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import AddressInput from "../../../components/AddressInput";
 import PhoneInput from "../../../components/PhoneInput";
 import { isValidFullName } from "../../../utils/validation";
@@ -34,6 +34,7 @@ function RecipientAddressStep({
   const isPhoneValid = Boolean(recipientPhoneTrimmed);
   const isDisabled = !isAddressValid || !isFioValid || !isPhoneValid;
   const route = [fromCity, toCity].filter(Boolean).join(" → ");
+  const hasTrackedRecipientPhoneGoal = useRef(false);
   const serviceLine = selectedOffer?.company_name
     ? `${selectedOffer.company_name} · ${
         filterCourierDelivery ? "курьер / курьер" : "курьер / пункт выдачи"
@@ -43,6 +44,25 @@ function RecipientAddressStep({
     selectedOffer?.price !== undefined && selectedOffer?.price !== null
       ? `${Number(selectedOffer.price).toLocaleString("ru-RU")} ₽`
       : "";
+
+  const trackRecipientGoalOnce = () => {
+    if (hasTrackedRecipientPhoneGoal.current) {
+      return;
+    }
+    if (typeof window === "undefined" || typeof window.ym !== "function") {
+      return;
+    }
+    window.ym(104664178, "reachGoal", "poluchatel_ukazan");
+    hasTrackedRecipientPhoneGoal.current = true;
+  };
+
+  const handleRecipientPhoneChange = (event) => {
+    onRecipientPhoneChange(event);
+    const digits = (event?.target?.value || "").replace(/\D/g, "");
+    if (digits.length >= 11) {
+      trackRecipientGoalOnce();
+    }
+  };
 
   return (
     <div className="mb-8">
@@ -119,7 +139,7 @@ function RecipientAddressStep({
       <div className="mb-6">
         <PhoneInput
           value={recipientPhone}
-          onChange={onRecipientPhoneChange}
+          onChange={handleRecipientPhoneChange}
           label="Телефон"
         />
       </div>
@@ -153,11 +173,8 @@ function RecipientAddressStep({
       )}
       <button
         onClick={() => {
-          if (
-            typeof window !== "undefined" &&
-            typeof window.ym === "function"
-          ) {
-            window.ym(104664178, "reachGoal", "add_recipient");
+          if (typeof window !== "undefined" && typeof window.ym === "function") {
+            trackRecipientGoalOnce();
             window.ym(104664178, "params", { offers: "указал_куда_доставить" });
           }
           onContinue();
