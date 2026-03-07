@@ -22,7 +22,6 @@ export const decodeInviteData = (encoded) => {
     const decoded = new TextDecoder("utf-8").decode(bytes);
     return JSON.parse(decoded);
   } catch (error) {
-    console.error("Ошибка декодирования данных приглашения:", error);
     return null;
   }
 };

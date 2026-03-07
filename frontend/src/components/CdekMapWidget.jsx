@@ -60,9 +60,7 @@ function ListAccordion({ options, selectedPoint, onSelect, recipientAddress, cit
           address: suggestion.value
         }
       }
-    } catch (error) {
-      console.error('Ошибка геокодирования адреса:', error)
-    }
+    } catch {}
     return null
   }
 
@@ -286,8 +284,7 @@ function CdekMapWidget({
         setMapReady(true)
         setMapLoading(false)
       })
-      .catch((err) => {
-        console.error('Ошибка загрузки Яндекс Карт:', err)
+      .catch(() => {
         setMapLoading(false)
       })
   }, [])
@@ -335,8 +332,7 @@ function CdekMapWidget({
       if (formattedOptions.length === 0) {
         setError('ПВЗ в этом городе не найдены')
       }
-    } catch (err) {
-      console.error('Ошибка загрузки ПВЗ:', err)
+    } catch {
       setError('Не удалось загрузить список ПВЗ')
       setOptions([])
     } finally {

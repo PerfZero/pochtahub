@@ -31,7 +31,6 @@ function ConfirmationPage() {
 
   const loadOrder = async () => {
     if (!orderId || orderId === "undefined") {
-      console.error("OrderId is undefined");
       setLoading(false);
       return;
     }
@@ -40,19 +39,15 @@ function ConfirmationPage() {
       const response = await ordersAPI.getOrder(orderId);
       setOrder(response.data);
     } catch (error) {
-      console.error("Ошибка загрузки заказа:", error);
     } finally {
       setLoading(false);
     }
   };
 
   const handlePayment = async () => {
-    console.log("[PAYMENT FRONTEND] Начало оплаты для заказа:", orderId);
     setPaying(true);
     try {
-      console.log("[PAYMENT FRONTEND] Отправка запроса на опл1ату...");
       const response = await paymentAPI.createPayment(orderId);
-      console.log("[PAYMENT FRONTEND] Ответ от сервера:", response);
       const confirmationUrl = response?.data?.confirmation_url;
       if (confirmationUrl) {
         window.location.href = confirmationUrl;
@@ -61,8 +56,6 @@ function ConfirmationPage() {
       await loadOrder();
       alert("Платеж создан, но ссылка на оплату не получена.");
     } catch (error) {
-      console.error("[PAYMENT FRONTEND] Ошибка оплаты:", error);
-      console.error("[PAYMENT FRONTEND] Детали ошибки:", error.response?.data);
       alert(
         `Ошибка при оплате: ${error.response?.data?.error || error.message}`,
       );
@@ -78,7 +71,6 @@ function ConfirmationPage() {
       await loadOrder();
       alert("Статус заказа обновлен!");
     } catch (error) {
-      console.error("Ошибка обновления статуса:", error);
       alert(
         `Ошибка обновления статуса: ${error.response?.data?.error || error.message}`,
       );
@@ -96,7 +88,6 @@ function ConfirmationPage() {
       const response = await ordersAPI.getOrderTracking(orderId);
       setTracking(response.data);
     } catch (error) {
-      console.error("Ошибка загрузки трекинга:", error);
     } finally {
       setLoadingTracking(false);
     }
@@ -125,7 +116,6 @@ function ConfirmationPage() {
         alert("Не удалось получить документы");
       }
     } catch (error) {
-      console.error("Ошибка получения документов:", error);
       alert(
         `Ошибка получения документов: ${error.response?.data?.error || error.message}`,
       );
@@ -542,10 +532,6 @@ function ConfirmationPage() {
                   alt="Фото посылки"
                   className="max-w-full h-auto rounded-lg max-h-96 border border-[#C8C7CC] shadow-sm"
                   onError={(e) => {
-                    console.error(
-                      "Ошибка загрузки изображения:",
-                      order.package_image,
-                    );
                     e.target.style.display = "none";
                   }}
                 />

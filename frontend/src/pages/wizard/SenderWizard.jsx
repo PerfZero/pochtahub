@@ -289,7 +289,6 @@ function SenderWizard() {
 
       navigate("/offers", { state: { wizardData: wizardDataForOffers } });
     } catch (err) {
-      console.error("Ошибка навигации:", err);
     } finally {
       setLoadingOffers(false);
     }

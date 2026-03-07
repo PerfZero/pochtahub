@@ -50,7 +50,6 @@ function OffersPage() {
         const decoded = new TextDecoder("utf-8").decode(bytes);
         return JSON.parse(decoded);
       } catch (err) {
-        console.error("Ошибка декодирования данных:", err);
         return {};
       }
     }
@@ -144,7 +143,6 @@ function OffersPage() {
           }
         }
       } catch (error) {
-        console.error("Ошибка загрузки настроек упаковки:", error);
       }
     };
     fetchSettings();
@@ -247,7 +245,6 @@ function OffersPage() {
             finalHeight = response.data.height || "";
           }
         } catch (err) {
-          console.error("Ошибка анализа изображения:", err);
         }
       }
 
@@ -290,11 +287,9 @@ function OffersPage() {
           setOffers(response.data.options);
           setError("");
         } else {
-          console.error("Нет предложений в ответе (photo)");
           setError("Не удалось получить предложения");
         }
       } catch (err) {
-        console.error("Ошибка при пересчете офферов (photo):", err);
         setError(err.response?.data?.error || "Ошибка при пересчете офферов");
       } finally {
         setRecalculating(false);
@@ -343,11 +338,9 @@ function OffersPage() {
           setOffers(response.data.options);
           setError("");
         } else {
-          console.error("Нет предложений в ответе (manual)");
           setError("Не удалось получить предложения");
         }
       } catch (err) {
-        console.error("Ошибка при пересчете офферов (manual):", err);
         setError(err.response?.data?.error || "Ошибка при пересчете офферов");
       } finally {
         setRecalculating(false);
@@ -408,25 +401,14 @@ function OffersPage() {
           setOffers(response.data.options);
           setError("");
         } else {
-          console.error("Нет предложений в ответе (unknown)");
           setError("Не удалось получить предложения");
         }
       } catch (err) {
-        console.error("Ошибка при пересчете офферов (unknown):", err);
         setError(err.response?.data?.error || "Ошибка при пересчете офферов");
       } finally {
         setRecalculating(false);
       }
     } else {
-      console.error("Не выполнено ни одно условие для пересчета", {
-        packageOption,
-        photoPreview,
-        length,
-        width,
-        height,
-        weight,
-        selectedSize,
-      });
       setRecalculating(false);
     }
   };
@@ -476,10 +458,6 @@ function OffersPage() {
           setPhotoUrl(uploadResponse.data.image_url);
         }
       } catch (uploadError) {
-        console.warn(
-          "Ошибка загрузки изображения, продолжаем анализ:",
-          uploadError,
-        );
       }
 
       const analyzeFormData = new FormData();
@@ -503,7 +481,6 @@ function OffersPage() {
       }
     } catch (err) {
       if (requestId !== photoRequestIdRef.current) return;
-      console.error("Ошибка обработки изображения:", err);
       setPhotoError(
         err.response?.data?.error || "Ошибка обработки изображения",
       );
@@ -569,25 +546,14 @@ function OffersPage() {
       setFilterCourierPickup(true);
       if (currentWizardData.filterCourierDelivery !== undefined) {
         const value = currentWizardData.filterCourierDelivery;
-        console.log(
-          "📥 Инициализация filterCourierDelivery из wizardData:",
-          value,
-        );
         setFilterCourierDelivery(value);
         localStorage.setItem("filterCourierDelivery", String(value));
       } else {
         const saved = localStorage.getItem("filterCourierDelivery");
         if (saved !== null) {
           const value = saved === "true";
-          console.log(
-            "📥 Инициализация filterCourierDelivery из localStorage:",
-            value,
-          );
           setFilterCourierDelivery(value);
         } else {
-          console.log(
-            "📥 Инициализация filterCourierDelivery: значение по умолчанию false",
-          );
         }
       }
     } else if (location.search) {
@@ -604,22 +570,14 @@ function OffersPage() {
         setFilterCourierPickup(true);
         if (urlData.filterCourierDelivery !== undefined) {
           const value = urlData.filterCourierDelivery;
-          console.log("📥 Инициализация filterCourierDelivery из URL:", value);
           setFilterCourierDelivery(value);
           localStorage.setItem("filterCourierDelivery", String(value));
         } else {
           const saved = localStorage.getItem("filterCourierDelivery");
           if (saved !== null) {
             const value = saved === "true";
-            console.log(
-              "📥 Инициализация filterCourierDelivery из localStorage (URL):",
-              value,
-            );
             setFilterCourierDelivery(value);
           } else {
-            console.log(
-              "📥 Инициализация filterCourierDelivery: значение по умолчанию false (URL)",
-            );
           }
         }
       }
@@ -725,11 +683,6 @@ function OffersPage() {
       if (newWizardData.packageOption) {
         setSelectedPackageOption(newWizardData.packageOption);
       }
-      console.log("📦 Обновление wizardData из location.state:", {
-        hasSelectedOffer: !!newWizardData.selectedOffer,
-        selectedOffer: newWizardData.selectedOffer,
-        returnToPayment: newWizardData.returnToPayment,
-      });
     }
   }, [location.state]);
 
@@ -808,7 +761,6 @@ function OffersPage() {
         },
       );
     } catch (err) {
-      console.error("Ошибка кодирования данных:", err);
       navigate(`/wizard?step=${targetStep}`, {
         state: {
           wizardData: updatedWizardData,
@@ -974,14 +926,6 @@ function OffersPage() {
           pendingOfferNavigation.state.wizardData.estimatedValue ||
           "10", // Сохраняем estimatedValue
       };
-      console.log("📦 handlePackagingChoice:", {
-        needsPackaging,
-        updatedWizardData: {
-          ...updatedWizardData,
-          needsPackaging: updatedWizardData.needsPackaging,
-        },
-        navigationPath: pendingOfferNavigation.path,
-      });
       navigate(pendingOfferNavigation.path, {
         state: {
           ...pendingOfferNavigation.state,
@@ -1129,7 +1073,6 @@ function OffersPage() {
       setShareSuccess(true);
       setTimeout(() => setShareSuccess(false), 3000);
     } catch (err) {
-      console.error("Ошибка копирования:", err);
     }
   };
 
@@ -1736,10 +1679,6 @@ function OffersPage() {
                         ) {
                           window.ym(104664178, "params", { offers: "курьер" });
                         }
-                        console.log('🔄 Изменение "Курьер привезет":', {
-                          староеЗначение: filterCourierDelivery,
-                          новоеЗначение: newValue,
-                        });
                         setFilterCourierDelivery(newValue);
                         localStorage.setItem(
                           "filterCourierDelivery",
@@ -1750,7 +1689,6 @@ function OffersPage() {
                             ...prev,
                             filterCourierDelivery: newValue,
                           };
-                          console.log("📦 Обновленный wizardData:", updated);
                           return updated;
                         });
                       }}

@@ -171,7 +171,6 @@ function OrderCompleteStep({ wizardData: wizardDataProp = null }) {
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2500);
     } catch (error) {
-      console.error("Ошибка копирования ссылки:", error);
     }
   };
 

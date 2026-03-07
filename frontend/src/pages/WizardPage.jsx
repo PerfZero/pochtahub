@@ -16,7 +16,6 @@ const logWizardStep = (step, data) => {
   localStorage.setItem("wizard_logs", JSON.stringify(existingLogs));
 
   // Выводим в консоль
-  console.log(`📝 [WIZARD LOG] Step: ${step}`, logEntry);
 
   // Ограничиваем размер (храним последние 100 записей)
   if (existingLogs.length > 100) {
@@ -38,7 +37,6 @@ const exportWizardLogs = () => {
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
-  console.log("✅ Логи экспортированы в файл");
 };
 
 // Добавляем функцию в window для доступа из консоли
@@ -46,7 +44,6 @@ if (typeof window !== "undefined") {
   window.exportWizardLogs = exportWizardLogs;
   window.clearWizardLogs = () => {
     localStorage.removeItem("wizard_logs");
-    console.log("🗑️ Логи очищены");
   };
 }
 import WizardLayout from "../components/wizard/WizardLayout";
@@ -498,7 +495,6 @@ function WizardPage() {
             }
           }
         } catch (err) {
-          console.error("Ошибка обработки изображения:", err);
           setPhotoError(
             err.response?.data?.error || "Ошибка обработки изображения",
           );
@@ -679,11 +675,6 @@ function WizardPage() {
           setRecipientUserTelegramSent(true);
         }
         setRecipientUserCodeLoading(false);
-        console.log(
-          "🔧 Тестовый режим: код отправлен для номера",
-          recipientUserPhone,
-        );
-        console.log("🔧 Тестовый код:", TEST_CODE);
       }, 500);
       return;
     }
@@ -852,7 +843,6 @@ function WizardPage() {
         setRecipientUserCodeError("");
         setRecipientUserTelegramSent(false);
         setRecipientUserCodeLoading(false);
-        console.log("🔧 Тестовый режим: код верифицирован успешно");
         if (selectedRole === "recipient") {
           completeRecipientFlow();
         }
@@ -973,11 +963,6 @@ function WizardPage() {
           setTelegramSent(true);
         }
         setCodeLoading(false);
-        console.log(
-          "🔧 Тестовый режим: код отправлен для номера",
-          contactPhone,
-        );
-        console.log("🔧 Тестовый код:", TEST_CODE);
       }, 500);
       return;
     }
@@ -1029,9 +1014,6 @@ function WizardPage() {
         const testRefreshToken = "test_refresh_token_" + Date.now();
         localStorage.setItem("access_token", testAccessToken);
         localStorage.setItem("refresh_token", testRefreshToken);
-        console.log(
-          "🔧 Тестовый режим: код верифицирован успешно, токены сохранены",
-        );
         window.dispatchEvent(new CustomEvent("authChange"));
         setCodeSent(false);
         setSmsCode("");
@@ -1082,24 +1064,13 @@ function WizardPage() {
     setCodeLoading(true);
     setCodeError("");
     try {
-      console.log("🔐 Начало верификации кода для телефона:", contactPhone);
       const response = await authAPI.verifyCode(contactPhone, codeToVerify);
-      console.log("🔐 Ответ от API верификации:", response.data);
       if (response.data && response.data.tokens) {
-        console.log("✅ Токены получены:", {
-          access: response.data.tokens.access ? "есть" : "нет",
-          refresh: response.data.tokens.refresh ? "есть" : "нет",
-        });
         localStorage.setItem("access_token", response.data.tokens.access);
         localStorage.setItem("refresh_token", response.data.tokens.refresh);
         const savedToken = localStorage.getItem("access_token");
-        console.log(
-          "💾 Токен сохранен в localStorage:",
-          savedToken ? "ДА (длина: " + savedToken.length + ")" : "НЕТ",
-        );
         window.dispatchEvent(new CustomEvent("authChange"));
       } else {
-        console.log("⚠️ Токены не получены в ответе");
       }
       setCodeSent(false);
       setSmsCode("");
@@ -1229,20 +1200,7 @@ function WizardPage() {
         needsPackaging: existingWizardData.needsPackaging === true,
       };
 
-      console.log("📊 handlePaymentContinue:", {
-        paymentPayer,
-        inviteRecipient,
-        needsPackaging: updatedWizardData.needsPackaging,
-        selectedOffer: selectedOffer
-          ? {
-              company_name: selectedOffer.company_name,
-              tariff_code: selectedOffer.tariff_code,
-            }
-          : null,
-      });
-
       // Когда получатель платит - сразу переходим к завершению, без выбора ПВЗ
-      console.log("🚀 Переход на orderComplete (recipient payer)");
       navigate("/wizard?step=orderComplete", {
         state: {
           ...location.state,
@@ -1339,56 +1297,29 @@ function WizardPage() {
   };
 
   const needsPvzSelection = (offer, filterCourierDelivery = false) => {
-    console.log("🔍 WizardPage needsPvzSelection check:", {
-      offer: offer
-        ? {
-            company_name: offer.company_name,
-            company_code: offer.company_code,
-            tariff_code: offer.tariff_code,
-          }
-        : null,
-      filterCourierDelivery,
-    });
-
     if (!offer) {
-      console.log("❌ ПВЗ не нужен: нет оффера");
       return false;
     }
 
     if (filterCourierDelivery) {
-      console.log("❌ ПВЗ не нужен: filterCourierDelivery = true");
       return false;
     }
 
     const isCDEK =
       offer.company_name === "CDEK" || offer.company_code === "cdek";
     if (!isCDEK) {
-      console.log("❌ ПВЗ не нужен: не CDEK");
       return false;
     }
 
     const tariffCode = offer.tariff_code;
     if (!tariffCode) {
-      console.log("❌ ПВЗ не нужен: нет tariff_code");
       return false;
     }
 
     const PVZ_TARIFFS = [
       136, 138, 62, 63, 233, 234, 235, 236, 237, 238, 239, 240,
     ];
-    const needsPvz = PVZ_TARIFFS.includes(tariffCode);
-
-    if (needsPvz) {
-      console.log("✅ ПВЗ нужен: тариф", tariffCode, "в списке ПВЗ тарифов");
-    } else {
-      console.log(
-        "❌ ПВЗ не нужен: тариф",
-        tariffCode,
-        "не в списке ПВЗ тарифов",
-      );
-    }
-
-    return needsPvz;
+    return PVZ_TARIFFS.includes(tariffCode);
   };
 
   const handleSelectPvzContinue = () => {
@@ -1435,7 +1366,6 @@ function WizardPage() {
       needsPackaging: existingWizardData.needsPackaging === true,
     };
     if (!selectedOffer) {
-      console.error("Оффер не выбран");
       return;
     }
 
@@ -1490,10 +1420,6 @@ function WizardPage() {
         photoUrl,
         needsPackaging: existingWizardDataRecipient.needsPackaging === true,
       };
-      console.log("📦 Формирование wizardDataForPayment (recipient):", {
-        needsPackagingFromState: existingWizardDataRecipient.needsPackaging,
-        finalNeedsPackaging: wizardDataForPayment.needsPackaging,
-      });
     } else {
       wizardDataForPayment = {
         fromCity,
@@ -1524,10 +1450,6 @@ function WizardPage() {
         photoUrl,
         needsPackaging: existingWizardDataForPayment.needsPackaging === true,
       };
-      console.log("📦 Формирование wizardDataForPayment (sender):", {
-        needsPackagingFromState: existingWizardDataForPayment.needsPackaging,
-        finalNeedsPackaging: wizardDataForPayment.needsPackaging,
-      });
     }
 
     navigate("/payment", {

@@ -45,21 +45,11 @@ export const useWizardAuth = () => {
     setCodeLoading(true)
     setCodeError('')
     try {
-      console.log('🔐 [useWizardAuth] Начало верификации кода для телефона:', phone)
       const response = await authAPI.verifyCode(phone, code)
-      console.log('🔐 [useWizardAuth] Ответ от API верификации:', response.data)
       if (response.data && response.data.tokens) {
-        console.log('✅ [useWizardAuth] Токены получены:', {
-          access: response.data.tokens.access ? 'есть' : 'нет',
-          refresh: response.data.tokens.refresh ? 'есть' : 'нет'
-        })
         localStorage.setItem('access_token', response.data.tokens.access)
         localStorage.setItem('refresh_token', response.data.tokens.refresh)
-        const savedToken = localStorage.getItem('access_token')
-        console.log('💾 [useWizardAuth] Токен сохранен в localStorage:', savedToken ? 'ДА (длина: ' + savedToken.length + ')' : 'НЕТ')
         window.dispatchEvent(new CustomEvent('authChange'))
-      } else {
-        console.log('⚠️ [useWizardAuth] Токены не получены в ответе')
       }
       setCodeSent(false)
       setSmsCode('')
@@ -94,6 +84,4 @@ export const useWizardAuth = () => {
     resetCodeState,
   }
 }
-
-
 

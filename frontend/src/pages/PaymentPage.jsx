@@ -40,16 +40,6 @@ function PaymentPage() {
     insurance_cost: orderData.insuranceCost || null,
   };
 
-  console.log("PaymentPage wizardData:", {
-    ...wizardData,
-    photoUrl: wizardData.photoUrl || "НЕТ URL",
-    needsPackaging: wizardData.needsPackaging,
-  });
-  console.log("PaymentPage offer:", {
-    ...offer,
-    insurance_cost: offer.insurance_cost,
-  });
-
   const isCDEK =
     offer.company_code?.toLowerCase() === "cdek" ||
     offer.company_name?.toLowerCase().includes("сдэк");
@@ -80,7 +70,6 @@ function PaymentPage() {
           setSettings(data);
         }
       } catch (error) {
-        console.error("Ошибка загрузки настроек:", error);
       }
     };
     fetchSettings();
@@ -178,13 +167,6 @@ function PaymentPage() {
     }
 
     if (!senderName || !senderPhone || !recipientName || !recipientPhone) {
-      console.log("Проверка полей:", {
-        senderName,
-        senderPhone,
-        recipientName,
-        recipientPhone,
-        wizardData,
-      });
       alert(
         "Заполните все обязательные поля: имя и телефон отправителя и получателя",
       );
@@ -228,15 +210,6 @@ function PaymentPage() {
         selected_role: selectedRole,
         needs_packaging: needsPackaging,
       };
-
-      console.log("📦 Создание заказа с needs_packaging:", needsPackaging);
-
-      console.log("Создание заказа с данными:", {
-        ...orderData,
-        package_image: orderData.package_image
-          ? "URL присутствует"
-          : "URL отсутствует",
-      });
 
       const orderDataWithPrices = {
         ...orderData,
@@ -486,20 +459,6 @@ function PaymentPage() {
                 },
               }}
               onClick={(e) => {
-                console.log("🔗 Переход на /offers с PaymentPage:", {
-                  wizardDataSelectedOffer: wizardData.selectedOffer,
-                  offerFromOrderData: offer,
-                  finalSelectedOffer: wizardData.selectedOffer || {
-                    company_id: offer.company_id,
-                    company_name: offer.company_name,
-                    company_code: offer.company_code,
-                    company_logo: offer.company_logo,
-                    price: offer.price,
-                    tariff_code: offer.tariff_code,
-                    tariff_name: offer.tariff_name,
-                    delivery_time: offer.delivery_time,
-                  },
-                });
               }}
               className="text-sm text-[#858585] hover:text-[#2D2D2D] transition-colors"
             >

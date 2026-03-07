@@ -88,9 +88,7 @@ export const useWizardData = () => {
         }
         const decoded = new TextDecoder('utf-8').decode(bytes)
         wizardDataFromUrl = JSON.parse(decoded)
-      } catch (err) {
-        console.error('Ошибка декодирования данных из URL:', err)
-      }
+      } catch {}
     }
     
     const state = location.state
@@ -267,4 +265,3 @@ export const useWizardData = () => {
     inviteRecipient,
   }
 }
-

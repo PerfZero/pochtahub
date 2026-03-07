@@ -116,13 +116,11 @@ export async function trackBusinessEvent(eventType, payload = {}, options = {}) 
         count_photos: requestBody.count_photos,
       });
     } catch (error) {
-      console.error("YM business analytics error:", error);
     }
   }
 
   try {
     await businessAPI.trackEvent(requestBody);
   } catch (error) {
-    console.error("Business analytics API error:", error);
   }
 }

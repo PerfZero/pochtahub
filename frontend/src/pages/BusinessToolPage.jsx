@@ -56,7 +56,6 @@ function BusinessToolPage() {
           setIsAuthenticated(false);
           return;
         }
-        console.error("Trial status error:", err);
       }
     };
 

@@ -82,15 +82,6 @@ function CabinetPage() {
       ]);
       setProfile(profileRes.data);
       const ordersList = ordersRes.data.results || ordersRes.data || [];
-      console.log(
-        "Загруженные заказы:",
-        ordersList.map((o) => ({
-          id: o.id,
-          transport_company_name: o.transport_company_name,
-          transport_company_logo: o.transport_company_logo,
-          transport_company_id: o.transport_company_id,
-        })),
-      );
       setOrders(ordersList);
       setEmail(profileRes.data.email || "");
       setPhone(profileRes.data.phone || "");
@@ -101,7 +92,6 @@ function CabinetPage() {
       );
       setAddress(profileRes.data.address || "");
     } catch (error) {
-      console.error("Ошибка загрузки данных:", error);
     } finally {
       setLoading(false);
     }
@@ -138,7 +128,6 @@ function CabinetPage() {
       await usersAPI.updateProfile(updateData);
       await loadData();
     } catch (error) {
-      console.error("Ошибка сохранения:", error);
       alert("Ошибка сохранения данных");
     }
   };
@@ -197,7 +186,6 @@ function CabinetPage() {
       const response = await ordersAPI.getOrderTracking(orderId);
       setOrderTracking((prev) => ({ ...prev, [orderId]: response.data }));
     } catch (error) {
-      console.error("Ошибка загрузки трекинга:", error);
     } finally {
       setLoadingTracking((prev) => ({ ...prev, [orderId]: false }));
     }
@@ -435,13 +423,7 @@ function CabinetPage() {
                     ? getMediaUrl(order.transport_company_logo)
                     : null;
                   if (logoUrl) {
-                    console.log(
-                      `Заказ ${order.id}: логотип = ${order.transport_company_logo}, обработанный URL = ${logoUrl}`,
-                    );
                   } else {
-                    console.log(
-                      `Заказ ${order.id}: transport_company_logo = ${order.transport_company_logo}, transport_company_id = ${order.transport_company_id}`,
-                    );
                   }
 
                   return (
@@ -460,12 +442,6 @@ function CabinetPage() {
                               alt={order.transport_company_name || "ТК"}
                               className="w-10 h-10 object-contain shrink-0"
                               onError={(e) => {
-                                console.error(
-                                  "Ошибка загрузки логотипа:",
-                                  logoUrl,
-                                  "Исходный путь:",
-                                  order.transport_company_logo,
-                                );
                                 e.target.style.display = "none";
                               }}
                             />
