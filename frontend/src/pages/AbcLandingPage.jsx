@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import PhoneInput from "../components/PhoneInput";
 
 const METRIKA_ID = 104664178;
 const PAGE_SOURCE = "abc_v1";
@@ -57,14 +58,11 @@ function AbcLandingPage() {
             </p>
 
             <form className="mt-5 max-w-[520px]" onSubmit={handleContinue}>
-              <input
-                type="tel"
-                inputMode="tel"
-                autoComplete="tel"
-                placeholder="Телефон"
+              <PhoneInput
                 value={phone}
                 onChange={(event) => setPhone(event.target.value)}
-                className="h-14 w-full rounded-2xl border border-[#D4DCE7] bg-white px-5 text-base text-[#1F2A39] outline-none transition-colors placeholder:text-[#8A95A6] focus:border-[#0077FE] md:h-16 md:text-lg"
+                label="Телефон"
+                autoComplete="tel"
               />
 
               <button
