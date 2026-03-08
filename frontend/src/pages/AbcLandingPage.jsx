@@ -48,16 +48,16 @@ function AbcLandingPage() {
       <main className="mx-auto flex min-h-screen max-w-[1128px] items-center px-4 py-6 md:px-6">
         <section className="w-full max-w-[720px]">
           <div className="rounded-[28px] border border-[#DCE4EF] bg-white/88 px-5 py-8 shadow-[0_18px_50px_rgba(31,50,80,0.08)] backdrop-blur-sm md:px-10 md:py-12">
-            <h1 className="max-w-[620px] text-[36px] font-bold leading-[0.98] tracking-[-0.04em] text-[#1F2A39] md:text-[68px]">
+            <h1 className="max-w-[640px] text-[34px] font-bold leading-[1.06] tracking-[-0.02em] text-[#1F2A39] md:text-[56px]">
               Не устраивает доставка, которую предлагают?
             </h1>
 
-            <p className="mt-4 max-w-[540px] text-lg leading-[1.3] text-[#5A6778] md:text-[30px]">
+            <p className="mt-5 max-w-[560px] text-[20px] leading-[1.25] text-[#5A6778] md:text-[28px]">
               Вы можете сами оформить доставку — курьер заберёт товар у
               продавца.
             </p>
 
-            <form className="mt-5 max-w-[520px]" onSubmit={handleContinue}>
+            <form className="mt-6 max-w-[520px]" onSubmit={handleContinue}>
               <PhoneInput
                 value={phone}
                 onChange={(event) => setPhone(event.target.value)}
@@ -67,7 +67,7 @@ function AbcLandingPage() {
 
               <button
                 type="submit"
-                className="mt-4 inline-flex min-h-[56px] w-full items-center justify-center rounded-2xl bg-[#0077FE] px-6 py-4 text-base font-semibold text-white transition-colors hover:bg-[#0066D9] md:text-lg"
+                className="mt-4 inline-flex min-h-[56px] w-full items-center justify-center rounded-2xl bg-[#0077FE] px-6 py-4 text-base font-semibold text-white transition-colors hover:bg-[#0066D9] md:text-[20px]"
               >
                 Посмотреть варианты доставки
               </button>
