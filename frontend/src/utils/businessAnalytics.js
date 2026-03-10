@@ -5,7 +5,10 @@ const ANON_KEY = "business_anonymous_id";
 const SESSION_KEY = "business_session_id";
 
 function createId() {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
     return crypto.randomUUID();
   }
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -63,11 +66,13 @@ function getUtmParams() {
   };
 }
 
-export async function trackBusinessEvent(eventType, payload = {}, options = {}) {
-  const {
-    oncePerSession = false,
-    dedupeKey = "",
-  } = options;
+export async function trackBusinessEvent(
+  eventType,
+  payload = {},
+  options = {},
+) {
+  const { oncePerSession = false, dedupeKey = "" } = options;
+  const source = payload.source ?? "business";
 
   if (typeof window !== "undefined" && oncePerSession) {
     const key = `business_evt_once_${eventType}_${dedupeKey || window.location.pathname}`;
@@ -81,16 +86,22 @@ export async function trackBusinessEvent(eventType, payload = {}, options = {}) 
   const sessionId = getSessionId();
   const eventId = createId();
   const path = typeof window !== "undefined" ? window.location.pathname : "";
-  const referrer = typeof document !== "undefined" ? document.referrer || "" : "";
-  const userAgent = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
-  const viewportWidth = typeof window !== "undefined" ? window.innerWidth || null : null;
-  const viewportHeight = typeof window !== "undefined" ? window.innerHeight || null : null;
+  const referrer =
+    typeof document !== "undefined" ? document.referrer || "" : "";
+  const userAgent =
+    typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
+  const viewportWidth =
+    typeof window !== "undefined" ? window.innerWidth || null : null;
+  const viewportHeight =
+    typeof window !== "undefined" ? window.innerHeight || null : null;
 
   const requestBody = {
     event_id: eventId,
     anonymous_id: anonymousId,
     session_id: sessionId,
     event_type: eventType,
+    source,
+    contact_phone: payload.contactPhone ?? "",
     path,
     referrer,
     user_agent: userAgent,
@@ -110,17 +121,19 @@ export async function trackBusinessEvent(eventType, payload = {}, options = {}) 
   if (typeof window !== "undefined" && typeof window.ym === "function") {
     try {
       window.ym(METRIKA_ID, "reachGoal", eventType, {
-        source: "business",
+        source,
         anonymous_id: anonymousId,
         session_id: sessionId,
         count_photos: requestBody.count_photos,
       });
-    } catch (error) {
+    } catch {
+      // Analytics failures should not block the user flow.
     }
   }
 
   try {
     await businessAPI.trackEvent(requestBody);
-  } catch (error) {
+  } catch {
+    // Analytics failures should not block the user flow.
   }
 }

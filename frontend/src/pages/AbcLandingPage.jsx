@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PhoneInput from "../components/PhoneInput";
+import { trackBusinessEvent } from "../utils/businessAnalytics";
 
 const METRIKA_ID = 104664178;
 const PAGE_SOURCE = "abc_v1";
@@ -21,16 +22,31 @@ function trackMetrika(goal, params = {}) {
 function AbcLandingPage() {
   const navigate = useNavigate();
   const [phone, setPhone] = useState("");
+  const digitsOnlyPhone = phone.replace(/\D/g, "");
+  const isPhoneComplete = digitsOnlyPhone.length === 11;
 
   useEffect(() => {
     trackMetrika("abc_view", { source: PAGE_SOURCE });
   }, []);
 
-  const handleContinue = (event) => {
+  const handleContinue = async (event) => {
     event.preventDefault();
+    if (!isPhoneComplete) {
+      return;
+    }
+
     trackMetrika("ожидание_шаг");
     trackMetrika("abc_cta_click", {
       source: PAGE_SOURCE,
+    });
+
+    await trackBusinessEvent("abc_phone_submitted", {
+      source: PAGE_SOURCE,
+      contactPhone: phone,
+      metadata: {
+        page_source: PAGE_SOURCE,
+        phone_digits: digitsOnlyPhone,
+      },
     });
 
     navigate("/wizard?step=recipientRoute", {
@@ -38,6 +54,9 @@ function AbcLandingPage() {
         wizardData: {
           selectedRole: "recipient",
           source: PAGE_SOURCE,
+          recipientPhone: phone,
+          recipientUserPhone: phone,
+          contactPhone: phone,
         },
       },
     });
@@ -63,10 +82,12 @@ function AbcLandingPage() {
                 onChange={(event) => setPhone(event.target.value)}
                 label="Телефон"
                 autoComplete="tel"
+                required
               />
 
               <button
                 type="submit"
+                disabled={!isPhoneComplete}
                 className="mt-4 inline-flex min-h-[56px] w-full items-center justify-center rounded-2xl bg-[#0077FE] px-6 py-4 text-base font-semibold text-white transition-colors hover:bg-[#0066D9] md:text-[20px]"
               >
                 Посмотреть варианты доставки
