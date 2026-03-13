@@ -68,12 +68,14 @@ function AbcLandingPage() {
         <section className="w-full max-w-[720px]">
           <div className="rounded-[28px] border border-[#DCE4EF] bg-white/88 px-5 py-8 shadow-[0_18px_50px_rgba(31,50,80,0.08)] backdrop-blur-sm md:px-10 md:py-12">
             <h1 className="max-w-[640px] text-[34px] font-bold leading-[1.06] tracking-[-0.02em] text-[#1F2A39] md:text-[56px]">
-              Не устраивает доставка, которую предлагают?
+              Продавец указал самовывоз?
+              <br />
+              Курьер заберёт товар за вас
             </h1>
 
             <p className="mt-5 max-w-[560px] text-[20px] leading-[1.25] text-[#5A6778] md:text-[28px]">
-              Вы можете сами оформить доставку — курьер заберёт товар у
-              продавца.
+              Оформите доставку сами — курьер заберёт товар у продавца и
+              отправит вам.
             </p>
 
             <form className="mt-6 max-w-[520px]" onSubmit={handleContinue}>
