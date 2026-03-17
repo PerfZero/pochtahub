@@ -5,7 +5,7 @@ import iconTelegram from "../assets/images/icon-telegram.svg";
 import iconVerify from "../assets/images/icon-verify.svg";
 import logoSvg from "../assets/images/logo.svg";
 
-const PRIMARY_CTA_TEXT = "Запустить доставку";
+const PRIMARY_CTA_TEXT = "Забрать товар";
 
 function CalculatePage() {
   const navigate = useNavigate();
@@ -130,13 +130,13 @@ function CalculatePage() {
             <div className="relative grid md:grid-cols-[1.1fr_0.9fr] gap-8 md:gap-10 items-center">
               <div>
                 <h1 className="mt-5 text-[34px] leading-[1.02] md:text-[64px] font-bold tracking-[-0.02em] text-white">
-                  Ты не оформляешь
+                  Продавец указал
                   <br />
-                  доставку.
+                  самовывоз?
                 </h1>
 
                 <p className="mt-5 text-base md:text-[30px] leading-[1.18] text-[#EAF4FF]">
-                  Ты просто запускаешь её — мы сделаем остальное.
+                  Заберём товар у продавца и доставим вам
                 </p>
 
                 <button
@@ -148,7 +148,7 @@ function CalculatePage() {
                 </button>
 
                 <p className="mt-3 text-sm md:text-base text-[#D7EAFF]">
-                  Без регистрации · Без выбора · Без ошибок
+                  Без договорённостей · Без поездок · Без стресса
                 </p>
               </div>
 
@@ -167,19 +167,19 @@ function CalculatePage() {
                     <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/20 text-xs font-bold">
                       2
                     </span>
-                    Контакт с отправителем берём на себя
+                    Контакт с продавцом берём на себя
                   </li>
                   <li className="flex items-start gap-3 text-sm md:text-base text-white">
                     <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/20 text-xs font-bold">
                       3
                     </span>
-                    Курьер забирает посылку
+                    Курьер забирает товар
                   </li>
                   <li className="flex items-start gap-3 text-sm md:text-base text-white">
                     <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/20 text-xs font-bold">
                       4
                     </span>
-                    Ты подтверждаешь и оплачиваешь
+                    Ты получаешь и оплачиваешь
                   </li>
                 </ul>
               </div>
@@ -194,10 +194,10 @@ function CalculatePage() {
 
           <div className="mt-7 md:mt-10 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
             {[
-              "Ты запускаешь доставку",
-              "Мы связываемся с отправителем",
-              "Курьер забирает посылку",
-              "Ты подтверждаешь и оплачиваешь",
+              "Ты указываешь, где забрать товар",
+              "Мы связываемся с продавцом",
+              "Курьер забирает товар",
+              "Ты получаешь и оплачиваешь",
             ].map((step, index) => (
               <article
                 key={step}
@@ -212,6 +212,10 @@ function CalculatePage() {
               </article>
             ))}
           </div>
+
+          <p className="mt-5 text-center text-base md:text-lg font-medium text-[#4B5A6D]">
+            Никуда ехать не нужно
+          </p>
         </section>
 
         {/*
@@ -250,16 +254,19 @@ function CalculatePage() {
 
             <ul className="mt-6 md:mt-7 grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 text-base md:text-xl text-[#304154]">
               <li className="rounded-xl border border-[#D2DEEE] bg-white px-4 py-3">
-                самовывоз
+                продавец только самовывоз
               </li>
               <li className="rounded-xl border border-[#D2DEEE] bg-white px-4 py-3">
-                неудобно напоминать отправителю
+                не хочет отправлять
               </li>
               <li className="rounded-xl border border-[#D2DEEE] bg-white px-4 py-3">
-                устал ждать
+                далёко ехать
               </li>
               <li className="rounded-xl border border-[#D2DEEE] bg-white px-4 py-3">
-                обычные сервисы не подходят
+                неудобное время
+              </li>
+              <li className="rounded-xl border border-[#D2DEEE] bg-white px-4 py-3">
+                дорогая доставка
               </li>
               <li className="rounded-xl border border-[#D2DEEE] bg-white px-4 py-3">
                 не хочется разбираться
@@ -271,13 +278,13 @@ function CalculatePage() {
         <section className="pt-10 md:pt-14">
           <div className="rounded-2xl border border-[#D7DEE8] bg-white px-6 md:px-8 py-7 md:py-9 shadow-[0_12px_30px_rgba(16,41,77,0.06)]">
             <h2 className="text-2xl md:text-3xl leading-[1.15] font-semibold text-center">
-              Это работает и если ты отправляешь посылку
+              Это работает так
             </h2>
 
             <ul className="mt-6 md:mt-7 max-w-[760px] mx-auto space-y-3 text-base md:text-xl text-[#3A414D]">
-              <li>• ты фотографируешь посылку</li>
-              <li>• указываешь, где её забрать</li>
-              <li>• вводишь номер получателя</li>
+              <li>• Ты даёшь ссылку или контакт продавца</li>
+              <li>• Мы договариваемся и забираем товар</li>
+              <li>• Доставляем его тебе</li>
             </ul>
 
             <p className="mt-6 text-center text-xl md:text-2xl font-semibold text-[#202938]">
