@@ -1644,9 +1644,6 @@ function OffersPage() {
                             </p>
                           </div>
                         </div>
-                        <div className="mt-4 flex items-center gap-2">
-                          <img src={cdekIcon} alt="CDEK" className="h-8 w-8" />
-                        </div>
                       </div>
                     </div>
 
