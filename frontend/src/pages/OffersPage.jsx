@@ -1463,35 +1463,7 @@ function OffersPage() {
         <div className="w-full max-w-[720px] mx-4 md:mx-6">
           {isOfferOnlyMode && <div className="mb-4 md:mb-6" />}
           {!isOfferOnlyMode && !isRecipientFlow && showCourierPickupCta && (
-            <div className="bg-white border border-[#E5E5E5] rounded-2xl px-4 py-5 md:px-6 md:py-6 mb-4 md:mb-6">
-              <h2 className="text-lg md:text-2xl font-bold text-[#2D2D2D] mb-1">
-                {hasPackageParams
-                  ? "Параметры посылки учтены. Осталось оформить забор курьером."
-                  : "Оформим доставку по фото"}
-              </h2>
-              <p className="text-xs md:text-sm text-[#2D2D2D] mb-4">
-                {hasPackageParams
-                  ? "Это займёт 1–2 шага"
-                  : "Не нужно никуда идти — курьер приедет сам"}
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  if (
-                    typeof window !== "undefined" &&
-                    typeof window.ym === "function"
-                  ) {
-                    window.ym(104664178, "params", {
-                      offers: "оформить_отправку",
-                    });
-                  }
-                  handleCourierPickupCtaClick();
-                }}
-                className="w-full bg-[#0077FE] text-white rounded-2xl px-4 py-3 md:py-4 text-base md:text-lg font-semibold hover:bg-[#0065D6] transition-colors"
-              >
-                👉 Оформить доставку
-              </button>
-            </div>
+            <div className="mb-4 md:mb-6" />
           )}
           {!isOfferOnlyMode && showAssistant && (
             <div className="bg-white border border-[#E5E5E5] rounded-2xl px-4 py-5 md:px-6 md:py-6 mb-4 md:mb-6">
