@@ -1633,7 +1633,10 @@ function OffersPage() {
                         <div className="flex items-start gap-3 text-sm md:text-base text-[#1E293B]">
                           <span className="text-[#22C55E] text-lg">✔</span>
                           <div>
-                            <p>Курьер заберёт товар и отправит вам через СДЭК</p>
+                            <p>Курьер заберёт товар и отправит его вам</p>
+                            <p className="text-xs md:text-sm text-[#1E293B] mt-1 font-medium">
+                              Постоплата — оплата после получения
+                            </p>
                             <p className="text-xs md:text-sm text-[#64748B] mt-1">
                               {preferredCdekOffer.delivery_time_min &&
                               preferredCdekOffer.delivery_time_max
