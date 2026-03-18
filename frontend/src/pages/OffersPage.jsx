@@ -1664,22 +1664,7 @@ function OffersPage() {
             )}
           </div>
 
-          {!isFromUrl && (
-            <div className="bg-white rounded-2xl p-4 md:p-8 relative">
-              <h2 className="text-xl md:text-2xl font-bold text-[#2D2D2D] mb-2">
-                Сомневаешься что выбрать?
-              </h2>
-              <p className="text-sm md:text-base text-[#2D2D2D] mb-4 md:mb-6">
-                Поделись расчётом с получателем, он сам выберет
-              </p>
-              <button
-                onClick={handleShare}
-                className="w-full bg-[#0077FE] text-white px-6 py-3 md:py-4 rounded-xl text-sm md:text-base font-semibold hover:bg-[#0066CC] transition-colors"
-              >
-                {shareSuccess ? "Ссылка скопирована!" : "Поделиться расчётом"}
-              </button>
-            </div>
-          )}
+          {!isFromUrl && <div className="mb-2" />}
         </div>
       </div>
     </div>
