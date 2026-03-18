@@ -1461,35 +1461,7 @@ function OffersPage() {
 
       <div className="flex justify-center pt-6 md:pt-12 pb-8">
         <div className="w-full max-w-[720px] mx-4 md:mx-6">
-          {isOfferOnlyMode && (
-            <div className="relative overflow-hidden bg-white border border-[#D8E8FF] rounded-2xl px-4 py-5 md:px-6 md:py-6 mb-4 md:mb-6 shadow-[0_8px_24px_rgba(0,119,254,0.08)]">
-              <div className="absolute -top-20 -right-10 w-44 h-44 bg-[#EAF4FF] rounded-full blur-2xl pointer-events-none" />
-
-              <p className="text-xs md:text-sm font-semibold text-[#5F7EA6] uppercase tracking-wide mb-3">
-                Сводка оформления
-              </p>
-
-              <div className="space-y-1 mb-4">
-                <p className="text-sm md:text-base text-[#2D2D2D]">
-                  ✔️ Маршрут указан
-                </p>
-                <p className="text-sm md:text-base text-[#2D2D2D]">
-                  ✔️ Параметры посылки учтены
-                </p>
-                <p className="text-sm md:text-base text-[#2D2D2D]">
-                  → Выберите способ доставки
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleCourierPickupCtaClick}
-                className="text-sm md:text-base text-[#0077FE] hover:underline"
-              >
-                выбрать вариант доставки
-              </button>
-            </div>
-          )}
+          {isOfferOnlyMode && <div className="mb-4 md:mb-6" />}
           {!isOfferOnlyMode && !isRecipientFlow && showCourierPickupCta && (
             <div className="bg-white border border-[#E5E5E5] rounded-2xl px-4 py-5 md:px-6 md:py-6 mb-4 md:mb-6">
               <h2 className="text-lg md:text-2xl font-bold text-[#2D2D2D] mb-1">
@@ -1592,96 +1564,7 @@ function OffersPage() {
             </div>
           )}
           <div className="rounded-2xl mb-4 md:mb-6" id="offers-list">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <h1 className="text-xl md:text-3xl text-center font-bold text-[#2D2D2D] px-2">
-                Доставка СДЭК
-              </h1>
-            </div>
-            <p className="text-sm md:text-base text-center text-[#2D2D2D] mb-4 md:mb-6 px-2">
-              Забор у продавца и доставка до двери
-            </p>
-
-            <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4 mb-4 md:mb-2">
-              <div className="grid grid-cols-2 gap-3 md:flex md:gap-4">
-                <div className="flex flex-col gap-2">
-                  <label
-                    className="flex items-center justify-between md:justify-start gap-3 cursor-not-allowed bg-white border border-[#C8C7CC] rounded-full px-4 py-2 transition-shadow opacity-30  select-none"
-                    style={{ cursor: "not-allowed" }}
-                  >
-                    <span className="text-xs md:text-sm text-[#2D2D2D] flex items-center gap-1">
-                      Курьер забирает
-                    </span>
-                    <div className="relative">
-                      <input
-                        type="checkbox"
-                        checked={true}
-                        disabled={true}
-                        readOnly={true}
-                        className="sr-only"
-                      />
-                      <div className="w-11 h-6 rounded-full transition-colors duration-200 bg-[#0077FE]">
-                        <div className="w-5 h-5 bg-white rounded-full transition-transform duration-200 mt-0.5 translate-y-0.5 translate-x-5"></div>
-                      </div>
-                    </div>
-                  </label>
-                </div>
-                <label className="flex items-center justify-between md:justify-start gap-3 cursor-pointer bg-white border border-[#C8C7CC] rounded-full px-4 py-2 transition-shadow">
-                  <span className="text-xs md:text-sm text-[#2D2D2D]">
-                    Курьер привезет
-                  </span>
-                  <div className="relative">
-                    <input
-                      type="checkbox"
-                      checked={filterCourierDelivery}
-                      onChange={(e) => {
-                        const newValue = e.target.checked;
-                        if (
-                          newValue &&
-                          typeof window !== "undefined" &&
-                          typeof window.ym === "function"
-                        ) {
-                          window.ym(104664178, "params", { offers: "курьер" });
-                        }
-                        setFilterCourierDelivery(newValue);
-                        localStorage.setItem(
-                          "filterCourierDelivery",
-                          String(newValue),
-                        );
-                        setWizardData((prev) => {
-                          const updated = {
-                            ...prev,
-                            filterCourierDelivery: newValue,
-                          };
-                          return updated;
-                        });
-                      }}
-                      className="sr-only"
-                    />
-                    <div
-                      className={`w-11 h-6 rounded-full transition-colors duration-200 ${
-                        filterCourierDelivery ? "bg-[#0077FE]" : "bg-[#E5E5E5]"
-                      }`}
-                    >
-                      <div
-                        className={`w-5 h-5 bg-white rounded-full transition-transform duration-200 mt-0.5 translate-y-0.5 ${
-                          filterCourierDelivery
-                            ? "translate-x-5"
-                            : "translate-x-0.5"
-                        }`}
-                      ></div>
-                    </div>
-                  </div>
-                </label>
-              </div>
-            </div>
-            <div className="bg-white border border-[#E5E5E5] rounded-2xl px-4 py-3 text-[#2D2D2D]">
-              <div className="text-xs md:text-sm font-semibold">
-                🚚 Курьер заберёт посылку бесплатно
-              </div>
-              <div className="text-xs md:text-sm text-[#858585]">
-                от двери отправителя — включено в Pochtahub
-              </div>
-            </div>
+            <div className="mb-2 md:mb-3" />
             {loading && (
               <div className="space-y-4">
                 {[1, 2, 3].map((i) => (
