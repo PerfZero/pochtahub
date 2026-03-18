@@ -64,6 +64,8 @@ function PackageStep({
   const isUnknownValid = packageOption === "unknown" && Boolean(selectedSize);
   const isContinueDisabled =
     photoAnalyzing || !(isPhotoValid || isManualValid || isUnknownValid);
+  const insuranceHint =
+    "Нужно для расчета страховки. Укажите примерную стоимость содержимого.";
   const applySizePreset = (option) => {
     if (!option) {
       return;
@@ -262,6 +264,21 @@ function PackageStep({
                   </div>
                 )}
 
+                <div className="mt-4 w-full">
+                  <NumberInput
+                    value={estimatedValue}
+                    onChange={onEstimatedValueChange}
+                    label="Оценочная стоимость"
+                  />
+                  <p className="text-xs text-[#858585] mt-2">{insuranceHint}</p>
+                  {photoAnalysis?.declared_value > 0 && (
+                    <p className="text-xs text-[#5F7EA6] mt-1">
+                      Значение подставлено по фото, при необходимости измените
+                      вручную.
+                    </p>
+                  )}
+                </div>
+
                 <div className="mt-4 text-center">
                   <input
                     type="file"
@@ -325,6 +342,7 @@ function PackageStep({
               onChange={onEstimatedValueChange}
               label="Оценочная стоимость"
             />
+            <p className="text-xs text-[#858585] mt-2">{insuranceHint}</p>
           </div>
           <div className="mb-6">
             <p className="text-sm md:text-base font-semibold text-[#2D2D2D] mb-3">
@@ -405,6 +423,7 @@ function PackageStep({
               onChange={onEstimatedValueChange}
               label="Оценочная стоимость"
             />
+            <p className="text-xs text-[#858585] mt-2">{insuranceHint}</p>
           </div>
           <button
             onClick={onContinue}

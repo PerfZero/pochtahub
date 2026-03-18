@@ -7,25 +7,6 @@ import NumberInput from "../components/NumberInput";
 import { tariffsAPI, ordersAPI } from "../api";
 
 const API_URL = import.meta.env.VITE_API_URL || "/api";
-const getMediaUrl = (path) => {
-  if (path.startsWith("http")) return path;
-  if (path.startsWith("/media")) {
-    if (API_URL.startsWith("http")) {
-      // Если API_URL полный URL (например, http://127.0.0.1:8000/api), используем его базовый URL
-      return `${API_URL.replace("/api", "")}${path}`;
-    }
-    // Если API_URL относительный (/api), определяем базовый URL
-    // Для локальной разработки обычно бэкенд на 127.0.0.1:8000
-    const isLocalDev =
-      window.location.hostname === "localhost" ||
-      window.location.hostname === "127.0.0.1";
-    if (isLocalDev && window.location.port !== "8000") {
-      return `http://127.0.0.1:8000${path}`;
-    }
-    return `${window.location.origin}${path}`;
-  }
-  return path;
-};
 import iconPhone from "../assets/images/icon-phone.svg";
 import iconIron from "../assets/images/icon-iron.svg";
 import iconShoes from "../assets/images/icon-shoes.svg";
@@ -78,7 +59,6 @@ function OffersPage() {
     if (fromStorage !== null) return fromStorage === "true";
     return false;
   });
-  const [sortBy, setSortBy] = useState("price");
   const [shareSuccess, setShareSuccess] = useState(false);
   const [isRouteEditing, setIsRouteEditing] = useState(false);
   const [showCourierPickupCta, setShowCourierPickupCta] = useState(true);
@@ -686,35 +666,18 @@ function OffersPage() {
     }
   }, [location.state]);
 
-  const getCompanyInitial = (name) => {
-    if (!name) return "?";
-    return name.charAt(0).toUpperCase();
-  };
-
-  const getCompanyColor = (index) => {
-    const colors = [
-      "bg-green-500",
-      "bg-red-500",
-      "bg-yellow-500",
-      "bg-orange-500",
-      "bg-blue-500",
-    ];
-    return colors[index % colors.length];
-  };
-
-  const sortedOffers = [...offers].sort((a, b) => {
-    if (sortBy === "price") {
-      return (a.price || 0) - (b.price || 0);
-    } else if (sortBy === "delivery_time") {
-      return (a.delivery_time || 0) - (b.delivery_time || 0);
-    }
-    return 0;
-  });
-
-  const cheapestOffer = sortedOffers.length > 0 ? sortedOffers[0] : null;
-  const fastestOffer = [...offers].sort(
-    (a, b) => (a.delivery_time || 999) - (b.delivery_time || 999),
-  )[0];
+  const cdekOffers = offers.filter(
+    (offer) => offer.company_name === "CDEK" || offer.company_code === "cdek",
+  );
+  const preferredCdekOffer = [...cdekOffers].sort((a, b) => {
+    const priceDiff = (a.price || 0) - (b.price || 0);
+    if (priceDiff !== 0) return priceDiff;
+    return (a.delivery_time || 999) - (b.delivery_time || 999);
+  })[0];
+  const pickupAddressDisplay =
+    wizardData.senderAddress || wizardData.pickupAddress || fromCity || "";
+  const deliveryAddressDisplay =
+    wizardData.deliveryAddress || wizardData.recipientAddress || toCity || "";
 
   const handleCourierPickupCtaClick = () => {
     setShowCourierPickupCta(false);
@@ -1631,11 +1594,11 @@ function OffersPage() {
           <div className="rounded-2xl mb-4 md:mb-6" id="offers-list">
             <div className="flex items-center justify-center gap-2 mb-2">
               <h1 className="text-xl md:text-3xl text-center font-bold text-[#2D2D2D] px-2">
-                Предложения по вашим параметрам 🔥
+                Доставка СДЭК
               </h1>
             </div>
             <p className="text-sm md:text-base text-center text-[#2D2D2D] mb-4 md:mb-6 px-2">
-              Выберите наиболее подходящий вариант доставки 👇
+              Забор у продавца и доставка до двери
             </p>
 
             <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4 mb-4 md:mb-2">
@@ -1719,15 +1682,6 @@ function OffersPage() {
                 от двери отправителя — включено в Pochtahub
               </div>
             </div>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="w-full md:w-auto md:ml-auto mt-2 md:mt-3 px-4 py-2 border border-[#C8C7CC] rounded-xl text-xs md:text-sm text-[#2D2D2D] focus:outline-none focus:border-[#0077FE]"
-            >
-              <option value="price">По наилучшей цене</option>
-              <option value="delivery_time">По скорости доставки</option>
-            </select>
-
             {loading && (
               <div className="space-y-4">
                 {[1, 2, 3].map((i) => (
@@ -1754,13 +1708,15 @@ function OffersPage() {
               </div>
             )}
 
-            {!loading && !error && sortedOffers.length === 0 && (
+            {!loading && !error && cdekOffers.length === 0 && (
               <div className="text-center py-12">
-                <p className="text-[#858585]">Предложения не найдены</p>
+                <p className="text-[#858585]">
+                  Сейчас не удалось получить тариф СДЭК по этому маршруту
+                </p>
               </div>
             )}
 
-            {!loading && !error && sortedOffers.length > 0 && (
+            {!loading && !error && preferredCdekOffer && (
               <div className="relative pt-4">
                 {isRecalculating && (
                   <div className="absolute inset-0 top-0 bg-white/80 backdrop-blur-sm z-20 flex items-center justify-center rounded-xl">
@@ -1770,107 +1726,87 @@ function OffersPage() {
                     </div>
                   </div>
                 )}
-                <div className="space-y-4">
-                  {sortedOffers.map((offer, index) => {
-                    const isCheapest = offer === cheapestOffer;
-                    const isFastest = offer === fastestOffer;
-                    const isCDEK =
-                      offer.company_name === "CDEK" ||
-                      offer.company_code === "cdek";
+                <div className="relative overflow-hidden rounded-[28px] border border-[#D7E8FF] bg-white p-4 md:p-6 shadow-[0_14px_35px_rgba(8,75,186,0.12)]">
+                  <div className="absolute -top-10 -right-10 h-28 w-28 rounded-full bg-[#E7F2FF] blur-2xl" />
+                  <div className="relative">
+                    <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-[linear-gradient(145deg,#5ED7B0_0%,#1BCB8B_100%)] text-white text-3xl flex items-center justify-center border-4 border-white shadow-[0_8px_24px_rgba(17,186,136,0.35)]">
+                      ✓
+                    </div>
 
-                    return (
-                      <div
-                        key={`${offer.company_id}-${offer.tariff_code || index}`}
-                        className="relative flex flex-col md:flex-row md:items-center md:justify-between rounded-xl p-4 md:p-6 hover:shadow-lg transition-shadow border-b-4 border-[#add3ff] rounded-b-2xl bg-white gap-3 md:gap-4"
-                      >
-                        {(isCheapest || isFastest) && (
-                          <div className="absolute -top-3 left-3 md:left-4 z-10">
-                            {isCheapest && (
-                              <span className="px-2 md:px-3 py-1 bg-[#35c353] text-white rounded-full text-xs font-semibold">
-                                Самый дешевый
-                              </span>
-                            )}
-                            {isFastest && !isCheapest && (
-                              <span className="px-2 md:px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-semibold shadow-md">
-                                Самый быстрый
-                              </span>
-                            )}
-                          </div>
-                        )}
-                        <div className="flex items-center gap-3 md:gap-4 flex-1">
-                          {offer.company_logo ? (
-                            <img
-                              src={getMediaUrl(offer.company_logo)}
-                              alt={offer.company_name}
-                              className="w-10 h-10 md:w-12 md:h-12 object-contain"
-                            />
-                          ) : isCDEK ? (
-                            <img
-                              src={cdekIcon}
-                              alt="CDEK"
-                              className="w-10 h-10 md:w-12 md:h-12"
-                            />
-                          ) : (
-                            <div
-                              className={`w-10 h-10 md:w-12 md:h-12 rounded-full ${getCompanyColor(index)} flex items-center justify-center text-white text-base md:text-lg font-bold`}
-                            >
-                              {getCompanyInitial(offer.company_name)}
-                            </div>
-                          )}
-                          <div>
-                            <p className="text-base md:text-lg font-bold text-[#2D2D2D]">
-                              {offer.price
-                                ? Number(offer.price).toLocaleString("ru-RU")
-                                : "?"}
-                              ₽
-                            </p>
-                            <p className="text-xs md:text-sm text-[#858585]">
-                              {offer.delivery_time_min &&
-                              offer.delivery_time_max
-                                ? `Доставка за ${offer.delivery_time_min}-${offer.delivery_time_max} дн.`
-                                : offer.delivery_time
-                                  ? `Доставка за ${offer.delivery_time} ${offer.delivery_time === 1 ? "дн." : "дн."}`
-                                  : "Срок доставки уточняется"}
-                            </p>
-                            {(deliveryName || offer.company_name) && (
-                              <p className="text-xs md:text-sm text-[#2D2D2D] mt-1 font-medium">
-                                {deliveryName || offer.company_name}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 md:gap-4">
-                          {filterCourierPickup && (
-                            <span className="text-xs text-[#2D2D2D] flex items-center gap-1 whitespace-nowrap">
-                              <span className="text-green-500">✓</span> Курьер
-                              забирает
-                            </span>
-                          )}
-                          {filterCourierDelivery && (
-                            <span className="text-xs text-[#2D2D2D] flex items-center gap-1 whitespace-nowrap">
-                              <span className="text-green-500">✓</span> Курьер
-                              привезет
-                            </span>
-                          )}
-                        </div>
-
-                        {!isFromUrl && (
-                          <button
-                            onClick={() => handleSelectOffer(offer)}
-                            className={`w-full md:w-auto px-4 md:px-3 py-3 md:py-3 rounded-xl font-semibold transition-colors text-sm whitespace-nowrap
- ${
-   isCheapest || isFastest
-     ? "bg-[#0077FE] text-white hover:bg-[#0066CC]"
-     : "bg-[#F5F5F5] text-[#2D2D2D] hover:bg-[#E5E5E5]"
- }`}
-                          >
-                            Выбрать этот вариант
-                          </button>
-                        )}
+                    <div className="rounded-2xl border border-[#E6EEF8] bg-[#FBFDFF] p-4 md:p-6">
+                      <div className="text-center pb-4 border-b border-[#ECF1F7]">
+                        <p className="text-3xl md:text-5xl font-bold text-[#1E293B] leading-none">
+                          {preferredCdekOffer.price
+                            ? Number(preferredCdekOffer.price).toLocaleString(
+                                "ru-RU",
+                              )
+                            : "?"}
+                          ₽
+                        </p>
+                        <p className="mt-2 text-sm md:text-base text-[#475569]">
+                          Забор у продавца и доставка
+                        </p>
                       </div>
-                    );
-                  })}
+
+                      <div className="py-4 border-b border-[#ECF1F7]">
+                        <div className="flex items-start gap-3">
+                          <span className="mt-1 text-lg text-[#1677FF]">📍</span>
+                          <div>
+                            <p className="text-xs uppercase tracking-wide text-[#7A8DA8]">
+                              Откуда
+                            </p>
+                            <p className="text-sm md:text-base font-semibold text-[#1E293B]">
+                              {pickupAddressDisplay}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="my-3 h-px w-full bg-[repeating-linear-gradient(to_right,#D0D9E6_0,#D0D9E6_6px,transparent_6px,transparent_12px)]" />
+                        <div className="flex items-start gap-3">
+                          <span className="mt-1 text-lg text-[#1677FF]">📍</span>
+                          <div>
+                            <p className="text-xs uppercase tracking-wide text-[#7A8DA8]">
+                              Куда
+                            </p>
+                            <p className="text-sm md:text-base font-semibold text-[#1E293B]">
+                              {deliveryAddressDisplay}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="pt-4">
+                        <div className="flex items-start gap-3 text-sm md:text-base text-[#1E293B]">
+                          <span className="text-[#22C55E] text-lg">✔</span>
+                          <div>
+                            <p>Курьер заберёт товар и отправит вам через СДЭК</p>
+                            <p className="text-xs md:text-sm text-[#64748B] mt-1">
+                              {preferredCdekOffer.delivery_time_min &&
+                              preferredCdekOffer.delivery_time_max
+                                ? `Ориентировочно ${preferredCdekOffer.delivery_time_min}-${preferredCdekOffer.delivery_time_max} дн.`
+                                : preferredCdekOffer.delivery_time
+                                  ? `Ориентировочно ${preferredCdekOffer.delivery_time} дн.`
+                                  : "Срок уточняется после оформления"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="mt-4 flex items-center gap-2">
+                          <img src={cdekIcon} alt="CDEK" className="h-8 w-8" />
+                          <span className="text-sm text-[#64748B] font-medium">
+                            Транспортная компания: CDEK
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {!isFromUrl && (
+                      <button
+                        onClick={() => handleSelectOffer(preferredCdekOffer)}
+                        className="mt-4 w-full rounded-2xl bg-[#0A6AFF] py-3 md:py-4 text-base md:text-xl font-semibold text-white hover:bg-[#005DEB] transition-colors"
+                      >
+                        Забрать товар
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
