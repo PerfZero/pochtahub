@@ -1646,9 +1646,6 @@ function OffersPage() {
                         </div>
                         <div className="mt-4 flex items-center gap-2">
                           <img src={cdekIcon} alt="CDEK" className="h-8 w-8" />
-                          <span className="text-sm text-[#64748B] font-medium">
-                            Транспортная компания: CDEK
-                          </span>
                         </div>
                       </div>
                     </div>
