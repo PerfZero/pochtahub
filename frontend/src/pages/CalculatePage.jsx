@@ -5,7 +5,42 @@ import iconTelegram from "../assets/images/icon-telegram.svg";
 import iconVerify from "../assets/images/icon-verify.svg";
 import logoSvg from "../assets/images/logo.svg";
 
-const PRIMARY_CTA_TEXT = "Забрать товар";
+const PRIMARY_CTA_TEXT = "Я получатель — хочу оформить доставку";
+const TELEGRAM_URL = "https://t.me/pochtahub_bot";
+const PHONE_DISPLAY = "+7 927 021 32 79";
+const PHONE_TEL = "tel:+79270213279";
+
+const HOW_STEPS = [
+  {
+    n: "01",
+    title: "Вы оставляете заявку",
+    desc: "Указываете, откуда забрать товар и куда доставить",
+  },
+  {
+    n: "02",
+    title: "Мы берём связь на себя",
+    desc: "Связываемся с продавцом и договариваемся о заборе",
+  },
+  {
+    n: "03",
+    title: "Курьер забирает товар",
+    desc: "Продавцу ничего не нужно оформлять — он просто передаёт посылку",
+  },
+  {
+    n: "04",
+    title: "Вы получаете и оплачиваете",
+    desc: "Только после того, как товар у курьера — никаких рисков",
+  },
+];
+
+const WHEN_TAGS = [
+  "продавец только самовывоз",
+  "не хочется ехать далеко",
+  "устали ждать",
+  "неудобно просить отправителя",
+  "обычные сервисы не подходят",
+  "не хочется разбираться самому",
+];
 
 function CalculatePage() {
   const navigate = useNavigate();
@@ -17,14 +52,11 @@ function CalculatePage() {
   );
 
   useEffect(() => {
-    const syncAuth = () => {
+    const syncAuth = () =>
       setIsAuthenticated(Boolean(localStorage.getItem("access_token")));
-    };
-
     window.addEventListener("storage", syncAuth);
     window.addEventListener("focus", syncAuth);
     window.addEventListener("authChange", syncAuth);
-
     return () => {
       window.removeEventListener("storage", syncAuth);
       window.removeEventListener("focus", syncAuth);
@@ -33,86 +65,87 @@ function CalculatePage() {
   }, []);
 
   useEffect(() => {
-    if (!location.hash) {
-      return;
-    }
-
+    if (!location.hash) return;
     const target = document.getElementById(location.hash.slice(1));
-    if (!target) {
-      return;
-    }
-
-    requestAnimationFrame(() => {
-      target.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
+    if (!target) return;
+    requestAnimationFrame(() =>
+      target.scrollIntoView({ behavior: "smooth", block: "start" }),
+    );
   }, [location.hash]);
 
   useEffect(() => {
-    if (!showStartPopup) {
-      return;
-    }
-
-    const originalOverflow = document.body.style.overflow;
+    if (!showStartPopup) return;
+    const orig = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-
     return () => {
-      document.body.style.overflow = originalOverflow;
+      document.body.style.overflow = orig;
     };
   }, [showStartPopup]);
 
-  const handleStartDelivery = () => {
-    setShowStartPopup(true);
-  };
+  const handleStartDelivery = () => setShowStartPopup(true);
 
   const handleStartPopupContinue = () => {
     if (typeof window !== "undefined" && typeof window.ym === "function") {
       window.ym(104664178, "reachGoal", "recipient_start");
     }
-
     setShowStartPopup(false);
     navigate("/wizard?step=recipientRoute", {
-      state: {
-        wizardData: {
-          selectedRole: "recipient",
-        },
-      },
+      state: { wizardData: { selectedRole: "recipient" } },
     });
   };
 
-  const handleScrollTop = () => {
+  const handleScrollTop = () =>
     window.scrollTo({ top: 0, behavior: "smooth" });
-  };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_10%_5%,#E9F4FF_0%,#F7FAFF_30%,#F4F6FA_55%,#F7F3EC_100%)] text-[#1F2630]">
-      <header className="w-full sticky top-0 z-20 backdrop-blur-md bg-white/70 border-b border-[#DCE2EB]">
-        <div className="mx-auto max-w-[1128px] px-4 md:px-6 h-[72px] md:h-[84px] flex items-center gap-4">
+    <div className="min-h-screen bg-white text-[#1A1A2E] font-sans">
+
+      {/* ───── HEADER ───── */}
+      <header className="w-full sticky top-0 z-30 bg-white border-b border-[#E5E9F0]">
+        <div className="mx-auto max-w-[1200px] px-4 md:px-8 h-16 md:h-[72px] flex items-center gap-6">
           <Link to="/calculate" aria-label="Pochtahub главная">
-            <img src={logoSvg} alt="PochtaHub" className="h-7 md:h-9" />
+            <img src={logoSvg} alt="PochtaHub" className="h-7 md:h-8" />
           </Link>
 
-          <a
-            href="https://t.me/pochtahub_bot"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden md:inline-flex items-center gap-2 text-xs font-medium text-[#6F7785] hover:text-[#4F5968]"
-          >
-            <img src={iconTelegram} alt="" className="w-4 h-4" />
-            Telegram
-          </a>
+          <nav className="hidden md:flex items-center gap-6 ml-4">
+            <a href="#how" className="text-sm text-[#5A6478] hover:text-[#0077FE] transition-colors">
+              Как работает
+            </a>
+            <a href="#when" className="text-sm text-[#5A6478] hover:text-[#0077FE] transition-colors">
+              Когда нужен
+            </a>
+            <a href="#launch" className="text-sm text-[#5A6478] hover:text-[#0077FE] transition-colors">
+              Контакты
+            </a>
+          </nav>
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-3">
+            <a
+              href={PHONE_TEL}
+              className="hidden md:block text-sm font-medium text-[#1A1A2E] hover:text-[#0077FE] transition-colors"
+            >
+              {PHONE_DISPLAY}
+            </a>
+            <a
+              href={TELEGRAM_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[#E5E9F0] text-sm font-medium text-[#5A6478] hover:border-[#0077FE] hover:text-[#0077FE] transition-colors"
+            >
+              <img src={iconTelegram} alt="" className="w-4 h-4" />
+              Telegram
+            </a>
             {isAuthenticated ? (
               <Link
                 to="/cabinet"
-                className="px-3.5 py-2 rounded-lg text-xs md:text-sm font-medium text-[#6B7280] bg-[#F2F4F7] hover:bg-[#E9EDF3] transition-colors"
+                className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-[#0077FE] hover:bg-[#0060CC] transition-colors"
               >
                 Личный кабинет
               </Link>
             ) : (
               <Link
                 to="/login"
-                className="px-3.5 py-2 rounded-lg text-xs md:text-sm font-medium text-[#6B7280] bg-[#F2F4F7] hover:bg-[#E9EDF3] transition-colors"
+                className="px-4 py-2 rounded-lg text-sm font-medium text-[#5A6478] bg-[#F4F6FA] hover:bg-[#E9EDF5] transition-colors"
               >
                 Войти
               </Link>
@@ -121,270 +154,225 @@ function CalculatePage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1128px] px-4 md:px-6 pb-10 md:pb-16">
-        <section className="pt-6 md:pt-10">
-          <div className="relative overflow-hidden rounded-[30px] border border-[#1D6DE8]/20 bg-gradient-to-br from-[#0D69EA] via-[#1B80FF] to-[#4EA7FF] px-6 md:px-10 py-8 md:py-11 shadow-[0_30px_90px_rgba(15,93,207,0.25)]">
-            <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/15 blur-2xl" />
-            <div className="absolute -left-16 -bottom-20 h-56 w-56 rounded-full bg-[#9BC9FF]/35 blur-2xl" />
+      {/* ───── HERO ───── */}
+      <section className="bg-[#F7F9FC]">
+        <div className="mx-auto max-w-[1200px] px-4 md:px-8 py-14 md:py-20 grid md:grid-cols-2 gap-10 md:gap-16 items-center">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#E8F1FF] text-xs font-semibold text-[#0077FE] mb-5">
+              🚀 Доставка по всей России
+            </div>
+            <h1 className="text-[36px] md:text-[56px] leading-[1.05] font-bold tracking-[-0.02em] text-[#0F1724]">
+              Просто отправить.<br />Удобно получить.
+            </h1>
+            <p className="mt-5 text-base md:text-lg text-[#4A5568] leading-relaxed">
+              Отправителю не нужно разбираться в доставке — он просто передаёт
+              посылку курьеру или сдаёт в пункт приёма.
+            </p>
+            <p className="mt-2 text-base md:text-lg text-[#4A5568] leading-relaxed">
+              Получатель сам выбирает сроки и стоимость, и оплачивает онлайн.
+            </p>
 
-            <div className="relative grid md:grid-cols-[1.1fr_0.9fr] gap-8 md:gap-10 items-center">
-              <div>
-                <h1 className="mt-5 text-[34px] leading-[1.02] md:text-[64px] font-bold tracking-[-0.02em] text-white">
-                  Продавец указал
-                  <br />
-                  самовывоз?
-                </h1>
-
-                <p className="mt-5 text-base md:text-[30px] leading-[1.18] text-[#EAF4FF]">
-                  Заберём товар у продавца и доставим вам
-                </p>
-
-                <button
-                  type="button"
-                  onClick={handleStartDelivery}
-                  className="mt-8 inline-flex items-center justify-center rounded-2xl bg-white px-8 py-4 text-base md:text-lg font-semibold text-[#0D63DA] hover:bg-[#F2F8FF] transition-colors"
+            <div className="mt-8 flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={handleStartDelivery}
+                className="w-full md:w-auto inline-flex items-center justify-center rounded-xl bg-[#0077FE] px-7 py-4 text-base font-semibold text-white hover:bg-[#0060CC] transition-colors shadow-[0_4px_14px_rgba(0,119,254,0.35)]"
+              >
+                {PRIMARY_CTA_TEXT}
+              </button>
+              <div className="flex flex-col md:flex-row gap-3">
+                <a
+                  href={TELEGRAM_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full md:w-auto inline-flex items-center justify-center gap-2 rounded-xl border border-[#D1D9E6] px-6 py-3.5 text-sm font-semibold text-[#1A1A2E] hover:border-[#0077FE] hover:text-[#0077FE] transition-colors bg-white"
                 >
-                  {PRIMARY_CTA_TEXT}
-                </button>
-
-                <p className="mt-3 text-sm md:text-base text-[#D7EAFF]">
-                  Без договорённостей · Без поездок · Без стресса
-                </p>
-              </div>
-
-              <div className="rounded-3xl border border-white/25 bg-white/12 backdrop-blur-sm p-5 md:p-6">
-                <p className="text-xs uppercase tracking-[0.12em] text-[#D9EBFF]">
-                  Маршрут прозрачный
-                </p>
-                <ul className="mt-4 space-y-3">
-                  <li className="flex items-start gap-3 text-sm md:text-base text-white">
-                    <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/20 text-xs font-bold">
-                      1
-                    </span>
-                    Запуск без лишних решений
-                  </li>
-                  <li className="flex items-start gap-3 text-sm md:text-base text-white">
-                    <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/20 text-xs font-bold">
-                      2
-                    </span>
-                    Контакт с продавцом берём на себя
-                  </li>
-                  <li className="flex items-start gap-3 text-sm md:text-base text-white">
-                    <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/20 text-xs font-bold">
-                      3
-                    </span>
-                    Курьер забирает товар
-                  </li>
-                  <li className="flex items-start gap-3 text-sm md:text-base text-white">
-                    <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/20 text-xs font-bold">
-                      4
-                    </span>
-                    Ты получаешь и оплачиваешь
-                  </li>
-                </ul>
+                  <img src={iconTelegram} alt="" className="w-4 h-4" />
+                  Написать в Telegram
+                </a>
+                <a
+                  href={PHONE_TEL}
+                  className="w-full md:w-auto inline-flex items-center justify-center rounded-xl border border-[#D1D9E6] px-6 py-3.5 text-sm font-semibold text-[#1A1A2E] hover:border-[#0077FE] hover:text-[#0077FE] transition-colors bg-white"
+                >
+                  {PHONE_DISPLAY}
+                </a>
               </div>
             </div>
+
+            <p className="mt-4 text-xs text-[#8A94A6]">
+              Отвечаем лично. Не бот, не колл-центр.
+            </p>
           </div>
-        </section>
 
-        <section className="pt-10 md:pt-14">
-          <h2 className="text-2xl md:text-[42px] leading-[1.08] font-bold text-center">
-            Что будет дальше
-          </h2>
+          <div className="hidden md:block">
+            <img
+              src="/1_img.jpg"
+              alt="Доставка"
+              className="w-full rounded-3xl object-cover shadow-[0_20px_60px_rgba(0,0,0,0.10)]"
+              style={{ maxHeight: 480 }}
+            />
+          </div>
+        </div>
+      </section>
 
-          <div className="mt-7 md:mt-10 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
-            {[
-              "Ты указываешь, где забрать товар",
-              "Мы связываемся с продавцом",
-              "Курьер забирает товар",
-              "Ты получаешь и оплачиваешь",
-            ].map((step, index) => (
-              <article
-                key={step}
-                className="rounded-2xl border border-[#D7DEE8] bg-white/85 px-5 md:px-6 py-5 md:py-6 shadow-[0_10px_30px_rgba(16,41,77,0.06)]"
-              >
-                <p className="text-sm uppercase tracking-[0.08em] text-[#748095]">
-                  Шаг {index + 1}
+      {/* ───── TRUST STRIP ───── */}
+      <section className="border-y border-[#E5E9F0] bg-white">
+        <div className="mx-auto max-w-[1200px] px-4 md:px-8 py-8 md:py-10 grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-[#E5E9F0] gap-0">
+          {[
+            { icon: "🔒", text: "Оплата только после того как курьер забрал товар" },
+            { icon: "💬", text: "Живой человек на связи — звоните или пишите" },
+            { icon: "📦", text: "Работаем по всей России" },
+          ].map(({ icon, text }) => (
+            <div key={text} className="flex items-center gap-4 px-6 py-5 md:py-0 first:pl-0 last:pr-0">
+              <span className="text-3xl shrink-0">{icon}</span>
+              <p className="text-sm md:text-base text-[#2D3748] font-medium leading-snug">{text}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ───── HOW IT WORKS ───── */}
+      <section id="how" className="bg-white py-16 md:py-24">
+        <div className="mx-auto max-w-[1200px] px-4 md:px-8">
+          <div className="mb-12 md:mb-14">
+            <p className="text-xs font-bold uppercase tracking-[0.15em] text-[#0077FE] mb-3">Процесс</p>
+            <h2 className="text-[28px] md:text-[44px] font-bold tracking-tight text-[#0F1724]">
+              Как это работает
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 md:gap-5">
+            {HOW_STEPS.map((step) => (
+              <div key={step.n} className="relative">
+                <div className="text-[42px] md:text-[56px] font-black text-[#EBF2FF] leading-none select-none mb-4">
+                  {step.n}
+                </div>
+                <h3 className="text-base md:text-lg font-bold text-[#0F1724] mb-2">
+                  {step.title}
+                </h3>
+                <p className="text-sm text-[#6B7A99] leading-relaxed">
+                  {step.desc}
                 </p>
-                <p className="mt-2 text-lg md:text-2xl leading-[1.2] font-semibold text-[#273142]">
-                  {step}
-                </p>
-              </article>
+              </div>
             ))}
           </div>
+        </div>
+      </section>
 
-          <p className="mt-5 text-center text-base md:text-lg font-medium text-[#4B5A6D]">
-            Никуда ехать не нужно
-          </p>
-        </section>
-
-        {/*
-        <section className="pt-10 md:pt-14">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
-            <article className="rounded-2xl border border-[#D5DDE8] bg-[#F8FBFF] px-6 md:px-7 py-6 md:py-7">
-              <p className="text-xs uppercase tracking-[0.12em] text-[#6E7F95]">
-                Что делаешь ты
-              </p>
-              <p className="mt-4 text-3xl md:text-4xl leading-[1.02] font-bold text-[#1D2B3F]">
-                Запускаешь
-                <br />
-                доставку
-              </p>
-            </article>
-
-            <article className="rounded-2xl border border-[#D5DDE8] bg-[#FFF9F1] px-6 md:px-7 py-6 md:py-7">
-              <p className="text-xs uppercase tracking-[0.12em] text-[#7D7464]">
-                Что делаем мы
-              </p>
-              <p className="mt-4 text-3xl md:text-4xl leading-[1.02] font-bold text-[#2E2A22]">
-                Всё
-                <br />
-                остальное
-              </p>
-            </article>
-          </div>
-        </section>
-        */}
-
-        <section className="pt-10 md:pt-14">
-          <div className="rounded-2xl border border-[#D7DEE8] bg-[#F5F9FF] px-6 md:px-8 py-7 md:py-9">
-            <h2 className="text-2xl md:text-[42px] leading-[1.08] font-bold text-center md:text-left text-[#1F2B3D]">
+      {/* ───── WHEN ───── */}
+      <section id="when" className="bg-[#F7F9FC] py-16 md:py-24">
+        <div className="mx-auto max-w-[1200px] px-4 md:px-8">
+          <div className="mb-10 md:mb-12">
+            <p className="text-xs font-bold uppercase tracking-[0.15em] text-[#0077FE] mb-3">Ситуации</p>
+            <h2 className="text-[28px] md:text-[44px] font-bold tracking-tight text-[#0F1724]">
               Pochtahub — когда
             </h2>
-
-            <ul className="mt-6 md:mt-7 grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 text-base md:text-xl text-[#304154]">
-              <li className="rounded-xl border border-[#D2DEEE] bg-white px-4 py-3">
-                продавец только самовывоз
-              </li>
-              <li className="rounded-xl border border-[#D2DEEE] bg-white px-4 py-3">
-                не хочет отправлять
-              </li>
-              <li className="rounded-xl border border-[#D2DEEE] bg-white px-4 py-3">
-                далёко ехать
-              </li>
-              <li className="rounded-xl border border-[#D2DEEE] bg-white px-4 py-3">
-                неудобное время
-              </li>
-              <li className="rounded-xl border border-[#D2DEEE] bg-white px-4 py-3">
-                дорогая доставка
-              </li>
-              <li className="rounded-xl border border-[#D2DEEE] bg-white px-4 py-3">
-                не хочется разбираться
-              </li>
-            </ul>
           </div>
-        </section>
 
-        <section className="pt-10 md:pt-14">
-          <div className="rounded-2xl border border-[#D7DEE8] bg-white px-6 md:px-8 py-7 md:py-9 shadow-[0_12px_30px_rgba(16,41,77,0.06)]">
-            <h2 className="text-2xl md:text-3xl leading-[1.15] font-semibold text-center">
-              Это работает так
-            </h2>
-
-            <ul className="mt-6 md:mt-7 max-w-[760px] mx-auto space-y-3 text-base md:text-xl text-[#3A414D]">
-              <li>• Ты даёшь ссылку или контакт продавца</li>
-              <li>• Мы договариваемся и забираем товар</li>
-              <li>• Доставляем его тебе</li>
-            </ul>
-
-            <p className="mt-6 text-center text-xl md:text-2xl font-semibold text-[#202938]">
-              Всё остальное — мы.
-            </p>
+          <div className="flex flex-wrap gap-3">
+            {WHEN_TAGS.map((tag) => (
+              <span
+                key={tag}
+                className="px-4 py-2.5 rounded-full bg-white border border-[#D1D9E6] text-sm md:text-base text-[#2D3748] font-medium shadow-[0_1px_4px_rgba(0,0,0,0.05)]"
+              >
+                {tag}
+              </span>
+            ))}
           </div>
-        </section>
+        </div>
+      </section>
 
-        <section id="launch" className="pt-10 md:pt-14">
-          <div className="rounded-[30px] border border-[#CBD4E2] bg-[#F7F3EA] px-6 md:px-10 py-10 md:py-12 text-center">
-            <p className="mt-5 text-3xl md:text-[52px] leading-[1.02] tracking-[-0.02em] font-bold text-[#202938]">
-              До запуска доставки — один шаг
-            </p>
+      {/* ───── CTA ───── */}
+      <section id="launch" className="bg-[#0077FE] py-16 md:py-24">
+        <div className="mx-auto max-w-[1200px] px-4 md:px-8 text-center">
+          <h2 className="text-[28px] md:text-[48px] font-bold tracking-tight text-white leading-tight">
+            Напишите нам — разберёмся<br className="hidden md:block" /> с вашей ситуацией
+          </h2>
+          <p className="mt-4 text-base md:text-lg text-[#B8D5FF]">
+            Ответим в течение 10 минут
+          </p>
 
+          <div className="mt-10 flex flex-col items-center gap-4">
             <button
               type="button"
               onClick={handleStartDelivery}
-              className="mt-8 inline-flex items-center justify-center rounded-2xl bg-[#0077FE] px-8 py-4 text-base md:text-lg font-semibold text-white hover:bg-[#0066D9] transition-colors"
+              className="w-full max-w-sm inline-flex items-center justify-center rounded-xl bg-white px-8 py-4 text-base font-bold text-[#0077FE] hover:bg-[#F0F7FF] transition-colors shadow-[0_4px_20px_rgba(0,0,0,0.15)]"
             >
               {PRIMARY_CTA_TEXT}
             </button>
-
-            <p className="mt-3 text-sm md:text-base text-[#7A828E]">
-              Займёт меньше минуты
-            </p>
-          </div>
-        </section>
-
-        <section className="pt-8 md:pt-10 pb-4 md:pb-6">
-          <p className="text-center text-sm md:text-base text-[#6E7785]">
-            Отправителю не нужно ничего оформлять. Он просто передаёт посылку
-            курьеру.
-          </p>
-        </section>
-      </main>
-
-      <footer className="w-full border-t border-[#DCE2EB] bg-white/90">
-        <div className="mx-auto max-w-[1128px] px-4 md:px-6 py-7 md:py-8 flex flex-col md:flex-row items-center gap-4 md:gap-6">
-          <img src={logoSvg} alt="PochtaHub" className="h-6 md:h-8" />
-
-          <div className="hidden md:flex items-center gap-1">
-            <img src={iconVerify} alt="" className="w-5 h-5" />
-            <span className="text-xs text-[#667080]">
-              Агрегатор транспортных компаний
-            </span>
-          </div>
-
-          <div className="md:ml-auto flex flex-wrap items-center justify-center gap-3 md:gap-6">
             <a
-              href="/pochtahub.ru:privacy.docx"
-              className="text-xs text-[#78808D] hover:text-[#4B5563]"
+              href={TELEGRAM_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-[#B8D5FF] hover:text-white transition-colors"
             >
-              Политика конфиденциальности
+              <img src={iconTelegram} alt="" className="w-4 h-4 opacity-75" />
+              Или напишите в Telegram →
             </a>
             <a
-              href="/pochtahub.ru:terms.docx"
-              className="text-xs text-[#78808D] hover:text-[#4B5563]"
+              href={PHONE_TEL}
+              className="text-sm text-[#B8D5FF] hover:text-white transition-colors"
             >
+              {PHONE_DISPLAY}
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* ───── FOOTER ───── */}
+      <footer className="bg-[#0F1724] text-white">
+        <div className="mx-auto max-w-[1200px] px-4 md:px-8 py-10 md:py-12 flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-0 justify-between">
+          <div className="flex flex-col items-center md:items-start gap-3">
+            <img src={logoSvg} alt="PochtaHub" className="h-7 opacity-90" />
+            <div className="flex items-center gap-1.5">
+              <img src={iconVerify} alt="" className="w-4 h-4 opacity-50" />
+              <span className="text-xs text-[#6B7A99]">Агрегатор транспортных компаний</span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-4 md:gap-8">
+            <a href="/pochtahub.ru:privacy.docx" className="text-xs text-[#6B7A99] hover:text-white transition-colors">
+              Политика конфиденциальности
+            </a>
+            <a href="/pochtahub.ru:terms.docx" className="text-xs text-[#6B7A99] hover:text-white transition-colors">
               Пользовательское соглашение
             </a>
             <button
               type="button"
               onClick={handleScrollTop}
-              className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[#4B5563] hover:bg-[#F4EEE2]"
+              className="text-xs text-[#6B7A99] hover:text-white transition-colors"
             >
-              Наверх
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#F4F2F3]">
-                ↑
-              </span>
+              Наверх ↑
             </button>
           </div>
         </div>
       </footer>
 
+      {/* ───── POPUP ───── */}
       {showStartPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#10213A]/55 px-4 py-6 backdrop-blur-sm">
-          <div className="w-full max-w-[900px] overflow-hidden rounded-[28px] border border-[#D6DEEA] bg-white shadow-[0_30px_80px_rgba(16,41,77,0.24)]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6 backdrop-blur-sm">
+          <div className="w-full max-w-[900px] overflow-hidden rounded-[28px] border border-[#D6DEEA] bg-white shadow-[0_30px_80px_rgba(0,0,0,0.2)]">
             <div className="flex items-center justify-end px-4 pt-4">
               <button
                 type="button"
                 onClick={() => setShowStartPopup(false)}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[#7A8594] transition-colors hover:bg-[#F2F5F9] hover:text-[#223047]"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[#7A8594] transition-colors hover:bg-[#F2F5F9] hover:text-[#223047] text-xl"
                 aria-label="Закрыть"
               >
                 ×
               </button>
             </div>
-
             <div className="px-4 pb-4 md:px-6 md:pb-6">
               <img
                 src="/pop.jpg"
                 alt="Подсказка перед запуском"
                 className="w-full rounded-[22px] border border-[#E2E8F0]"
               />
-
               <div className="mt-5 flex justify-center">
                 <button
                   type="button"
                   onClick={handleStartPopupContinue}
-                  className="inline-flex items-center justify-center rounded-2xl bg-[#0077FE] px-8 py-4 text-base font-semibold text-white transition-colors hover:bg-[#0066D9] md:text-lg"
+                  className="inline-flex items-center justify-center rounded-xl bg-[#0077FE] px-8 py-4 text-base font-semibold text-white transition-colors hover:bg-[#0060CC] md:text-lg"
                 >
                   Далее
                 </button>
