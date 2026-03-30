@@ -16,6 +16,7 @@ import InviteRedirectPage from "./pages/InviteRedirectPage";
 import BusinessPage from "./pages/BusinessPage";
 import BusinessToolPage from "./pages/BusinessToolPage";
 import AbcLandingPage from "./pages/AbcLandingPage";
+import AvitoPage from "./pages/AvitoPage";
 import "./App.css";
 
 function App() {
@@ -47,6 +48,7 @@ function App() {
         <Route path="/o/:token" element={<InviteRedirectPage />} />
         <Route path="/recipient" element={<RecipientInvitePage />} />
         <Route path="/abc" element={<AbcLandingPage />} />
+        <Route path="/avito" element={<AvitoPage />} />
         <Route path="/business" element={<BusinessPage />} />
         <Route path="/business/tool" element={<BusinessToolPage />} />
         <Route path="/confirmation/:orderId" element={<ConfirmationPage />} />
