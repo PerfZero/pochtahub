@@ -9,8 +9,17 @@ function AvitoPage() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
 
+  const [toError, setToError] = useState(false);
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!to.trim()) {
+      setToError(true);
+      return;
+    }
+    if (typeof window.ym === "function") {
+      window.ym(93738079, "reachGoal", "avito_raschet");
+    }
     navigate("/wizard", { state: { fromCity: from, toCity: to, source: "avito" } });
   };
 
@@ -78,11 +87,14 @@ function AvitoPage() {
               <input
                 type="text"
                 value={to}
-                onChange={(e) => setTo(e.target.value)}
+                onChange={(e) => { setTo(e.target.value); setToError(false); }}
                 placeholder="Ваш город"
-                className="w-full bg-white border border-[#C8C7CC] rounded-xl pl-10 pr-3 py-3 text-sm text-[#2D2D2D] placeholder-[#858585] focus:outline-none focus:border-[#0077FE] transition-colors"
+                className={`w-full bg-white border rounded-xl pl-10 pr-3 py-3 text-sm text-[#2D2D2D] placeholder-[#858585] focus:outline-none transition-colors ${toError ? "border-red-400 focus:border-red-400" : "border-[#C8C7CC] focus:border-[#0077FE]"}`}
               />
             </div>
+            {toError && (
+              <p className="text-red-400 text-xs mt-1.5 pl-0.5">Укажите город доставки</p>
+            )}
           </div>
 
           {/* Submit */}
