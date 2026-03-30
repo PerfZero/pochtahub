@@ -15,198 +15,109 @@ function AvitoPage() {
   };
 
   return (
-    <div
-      style={{ backgroundColor: "#0F1724", minHeight: "100vh", fontFamily: "'Onest', sans-serif" }}
-      className="flex flex-col items-center justify-center px-4 py-12"
-    >
-      {/* Logo */}
+    <div className="min-h-screen bg-[#0F1724] font-sans flex flex-col items-center justify-center px-4 py-12">
       <div className="mb-10">
-        <img src={logoSvg} alt="Почтахаб" style={{ height: 28 }} />
+        <img src={logoSvg} alt="PochtaHub" className="h-7 opacity-90" />
       </div>
 
-      {/* Content */}
       <div className="w-full max-w-md">
         {/* Badge */}
         <div className="mb-5">
-          <span
-            style={{
-              backgroundColor: "#1a7f3c",
-              color: "#fff",
-              fontSize: 13,
-              fontWeight: 500,
-              borderRadius: 20,
-              padding: "4px 12px",
-            }}
-          >
+          <span className="inline-block bg-[#E8F1FF] text-[#0077FE] text-xs font-semibold rounded-full px-3 py-1.5">
             Авито · самовывоз
           </span>
         </div>
 
         {/* Heading */}
-        <h1
-          style={{ color: "#fff", fontSize: "clamp(28px, 7vw, 36px)", fontWeight: 700, lineHeight: 1.2, marginBottom: 14 }}
-        >
-          Продавец только{" "}
-          <span style={{ color: "#0077FE" }}>самовывоз?</span>
+        <h1 className="text-[32px] leading-[1.15] font-bold tracking-tight text-white mb-3">
+          Продавец только <span className="text-[#0077FE]">самовывоз?</span>
           <br />
           Курьер заберёт сам
         </h1>
 
         {/* Subtitle */}
-        <p style={{ color: "#8A9BB5", fontSize: 15, lineHeight: 1.5, marginBottom: 28 }}>
+        <p className="text-[#6B7A99] text-base leading-relaxed mb-7">
           Укажите откуда и куда — рассчитаем стоимость и заберём товар. Вам ехать не нужно.
         </p>
 
         {/* Form card */}
         <form
           onSubmit={handleSubmit}
-          style={{
-            backgroundColor: "#162032",
-            border: "1px solid #243349",
-            borderRadius: 20,
-            padding: 20,
-            marginBottom: 0,
-          }}
+          className="bg-white/5 border border-white/10 rounded-[20px] p-5"
         >
-          {/* From field */}
+          {/* From */}
           <div className="mb-1">
-            <label style={{ color: "#8A9BB5", fontSize: 12, fontWeight: 500, marginBottom: 6, display: "block" }}>
+            <label className="text-[#6B7A99] text-xs font-medium mb-1.5 block">
               Откуда забрать
             </label>
-            <div style={{ position: "relative" }}>
-              <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 18 }}>
-                📍
-              </span>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg pointer-events-none">📍</span>
               <input
                 type="text"
                 value={from}
                 onChange={(e) => setFrom(e.target.value)}
                 placeholder="Город продавца или ссылка на объявление"
-                style={{
-                  width: "100%",
-                  backgroundColor: "#0F1724",
-                  border: "1px solid #243349",
-                  borderRadius: 12,
-                  padding: "12px 14px 12px 42px",
-                  color: "#fff",
-                  fontSize: 14,
-                  outline: "none",
-                  boxSizing: "border-box",
-                }}
-                onFocus={(e) => (e.target.style.borderColor = "#0077FE")}
-                onBlur={(e) => (e.target.style.borderColor = "#243349")}
+                className="w-full bg-[#0F1724] border border-white/10 rounded-xl pl-10 pr-3 py-3 text-sm text-white placeholder-[#6B7A99] focus:outline-none focus:border-[#0077FE] transition-colors"
               />
             </div>
-            <p style={{ color: "#5A6F8A", fontSize: 12, marginTop: 6, paddingLeft: 2 }}>
+            <p className="text-[#6B7A99] text-xs mt-1.5 pl-0.5">
               Не знаете город — просто вставьте ссылку с Авито
             </p>
           </div>
 
-          {/* Arrow divider */}
-          <div style={{ textAlign: "center", color: "#5A6F8A", fontSize: 18, margin: "8px 0" }}>↓</div>
+          {/* Arrow */}
+          <div className="text-center text-[#6B7A99] text-lg my-2">↓</div>
 
-          {/* To field */}
+          {/* To */}
           <div className="mb-5">
-            <label style={{ color: "#8A9BB5", fontSize: 12, fontWeight: 500, marginBottom: 6, display: "block" }}>
+            <label className="text-[#6B7A99] text-xs font-medium mb-1.5 block">
               Куда доставить
             </label>
-            <div style={{ position: "relative" }}>
-              <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 18 }}>
-                🏠
-              </span>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-lg pointer-events-none">🏠</span>
               <input
                 type="text"
                 value={to}
                 onChange={(e) => setTo(e.target.value)}
                 placeholder="Ваш город"
-                style={{
-                  width: "100%",
-                  backgroundColor: "#0F1724",
-                  border: "1px solid #243349",
-                  borderRadius: 12,
-                  padding: "12px 14px 12px 42px",
-                  color: "#fff",
-                  fontSize: 14,
-                  outline: "none",
-                  boxSizing: "border-box",
-                }}
-                onFocus={(e) => (e.target.style.borderColor = "#0077FE")}
-                onBlur={(e) => (e.target.style.borderColor = "#243349")}
+                className="w-full bg-[#0F1724] border border-white/10 rounded-xl pl-10 pr-3 py-3 text-sm text-white placeholder-[#6B7A99] focus:outline-none focus:border-[#0077FE] transition-colors"
               />
             </div>
           </div>
 
-          {/* CTA button */}
+          {/* Submit */}
           <button
             type="submit"
-            style={{
-              width: "100%",
-              backgroundColor: "#fff",
-              color: "#0F1724",
-              border: "none",
-              borderRadius: 12,
-              padding: "14px",
-              fontSize: 15,
-              fontWeight: 600,
-              cursor: "pointer",
-              marginBottom: 16,
-            }}
-            onMouseEnter={(e) => (e.target.style.backgroundColor = "#E8EDF5")}
-            onMouseLeave={(e) => (e.target.style.backgroundColor = "#fff")}
+            className="w-full bg-white text-[#0F1724] font-semibold text-sm rounded-xl py-3.5 mb-4 hover:bg-[#E8EDF5] transition-colors"
           >
             Рассчитать стоимость →
           </button>
 
           {/* Trust points */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 8,
-              marginBottom: 16,
-              paddingBottom: 16,
-              borderBottom: "1px solid #243349",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
-              <span style={{ color: "#1a7f3c", fontSize: 16, marginTop: 1 }}>●</span>
-              <span style={{ color: "#8A9BB5", fontSize: 12, lineHeight: 1.4 }}>
+          <div className="grid grid-cols-2 gap-3 pb-4 mb-4 border-b border-white/10">
+            <div className="flex items-start gap-1.5">
+              <span className="text-[#0077FE] mt-0.5 text-xs">●</span>
+              <span className="text-[#6B7A99] text-xs leading-snug">
                 Оплата после того, как курьер забрал товар
               </span>
             </div>
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
-              <span style={{ color: "#1a7f3c", fontSize: 16, marginTop: 1 }}>●</span>
-              <span style={{ color: "#8A9BB5", fontSize: 12, lineHeight: 1.4 }}>
+            <div className="flex items-start gap-1.5">
+              <span className="text-[#0077FE] mt-0.5 text-xs">●</span>
+              <span className="text-[#6B7A99] text-xs leading-snug">
                 Продавцу ничего оформлять не нужно
               </span>
             </div>
           </div>
 
-          {/* OR divider */}
-          <div style={{ textAlign: "center", color: "#5A6F8A", fontSize: 13, marginBottom: 16 }}>или</div>
+          {/* Or */}
+          <div className="text-center text-[#6B7A99] text-xs mb-4">или</div>
 
-          {/* Telegram button */}
+          {/* Telegram */}
           <a
             href={TELEGRAM_URL}
             target="_blank"
             rel="noopener noreferrer"
-            style={{
-              display: "block",
-              width: "100%",
-              backgroundColor: "transparent",
-              color: "#fff",
-              border: "1px solid #243349",
-              borderRadius: 12,
-              padding: "14px",
-              fontSize: 15,
-              fontWeight: 500,
-              cursor: "pointer",
-              textAlign: "center",
-              textDecoration: "none",
-              boxSizing: "border-box",
-            }}
-            onMouseEnter={(e) => (e.target.style.borderColor = "#0077FE")}
-            onMouseLeave={(e) => (e.target.style.borderColor = "#243349")}
+            className="block w-full border border-white/10 text-white text-sm font-medium rounded-xl py-3.5 text-center hover:border-[#0077FE] hover:text-[#0077FE] transition-colors"
           >
             Написать в Telegram — разберёмся вместе
           </a>
