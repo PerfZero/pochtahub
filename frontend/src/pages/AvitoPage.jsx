@@ -18,7 +18,7 @@ function AvitoPage() {
       return;
     }
     if (typeof window.ym === "function") {
-      window.ym(93738079, "reachGoal", "avito_raschet");
+      window.ym(104664178, "reachGoal", "avito_raschet");
     }
     navigate("/wizard", { state: { fromCity: from, toCity: to, source: "avito" } });
   };
