@@ -122,8 +122,7 @@ function OffersPage() {
             setPackagingPrice(data.packaging_price);
           }
         }
-      } catch (error) {
-      }
+      } catch (error) {}
     };
     fetchSettings();
   }, []);
@@ -224,8 +223,7 @@ function OffersPage() {
             finalWidth = response.data.width || "";
             finalHeight = response.data.height || "";
           }
-        } catch (err) {
-        }
+        } catch (err) {}
       }
 
       const updatedWizardData = {
@@ -437,8 +435,7 @@ function OffersPage() {
         if (uploadResponse.data?.success && uploadResponse.data?.image_url) {
           setPhotoUrl(uploadResponse.data.image_url);
         }
-      } catch (uploadError) {
-      }
+      } catch (uploadError) {}
 
       const analyzeFormData = new FormData();
       analyzeFormData.append("image", file);
@@ -853,7 +850,14 @@ function OffersPage() {
       }
     } else {
       if (!updatedWizardData.selectedRole) {
-        navigationPath = "/wizard?step=role";
+        navigationPath = "/wizard?step=recipientRoute";
+        navigationState = {
+          ...navigateState,
+          wizardData: {
+            ...updatedWizardData,
+            selectedRole: "recipient",
+          },
+        };
       } else if (!updatedWizardData.packageDataCompleted) {
         navigationPath = "/wizard?step=package";
       } else if (updatedWizardData.selectedRole === "recipient") {
@@ -1035,8 +1039,7 @@ function OffersPage() {
       await navigator.clipboard.writeText(url);
       setShareSuccess(true);
       setTimeout(() => setShareSuccess(false), 3000);
-    } catch (err) {
-    }
+    } catch (err) {}
   };
 
   return (
@@ -1605,7 +1608,9 @@ function OffersPage() {
 
                       <div className="py-4 border-b border-[#ECF1F7]">
                         <div className="flex items-start gap-3">
-                          <span className="mt-1 text-lg text-[#1677FF]">📍</span>
+                          <span className="mt-1 text-lg text-[#1677FF]">
+                            📍
+                          </span>
                           <div>
                             <p className="text-xs uppercase tracking-wide text-[#7A8DA8]">
                               Откуда
@@ -1617,7 +1622,9 @@ function OffersPage() {
                         </div>
                         <div className="my-3 h-px w-full bg-[repeating-linear-gradient(to_right,#D0D9E6_0,#D0D9E6_6px,transparent_6px,transparent_12px)]" />
                         <div className="flex items-start gap-3">
-                          <span className="mt-1 text-lg text-[#1677FF]">📍</span>
+                          <span className="mt-1 text-lg text-[#1677FF]">
+                            📍
+                          </span>
                           <div>
                             <p className="text-xs uppercase tracking-wide text-[#7A8DA8]">
                               Куда

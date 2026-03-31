@@ -59,7 +59,6 @@ import RecipientRouteStep from "./wizard/steps/RecipientRouteStep";
 import SelectPvzStep from "./wizard/steps/SelectPvzStep";
 import OrderCompleteStep from "./wizard/steps/OrderCompleteStep";
 import EmailStep from "./wizard/steps/EmailStep";
-import RoleSelectStep from "./wizard/steps/RoleSelectStep";
 import { authAPI, ordersAPI, tariffsAPI, usersAPI } from "../api";
 
 function WizardPage() {
@@ -70,7 +69,6 @@ function WizardPage() {
   const stepFromUrl = urlParams.get("step");
 
   const validSteps = [
-    "role",
     "recipientRoute",
     "package",
     "contactPhone",
@@ -112,11 +110,7 @@ function WizardPage() {
     if (stepFromUrl && validSteps.includes(stepFromUrl)) {
       return stepFromUrl;
     }
-    const initialRole = location.state?.wizardData?.selectedRole;
-    if (initialRole) {
-      return "recipientRoute";
-    }
-    return "role";
+    return "recipientRoute";
   })();
 
   const [fromCity, setFromCity] = useState(
@@ -126,7 +120,9 @@ function WizardPage() {
     location.state?.toCity || location.state?.wizardData?.toCity || "",
   );
   const [selectedRole, setSelectedRole] = useState(
-    location.state?.wizardData?.selectedRole || null,
+    location.state?.wizardData?.selectedRole ||
+      getRoleForStep(initialStep) ||
+      "recipient",
   );
   const [currentStep, setCurrentStep] = useState(initialStep);
   const [profile, setProfile] = useState(null);
@@ -134,14 +130,14 @@ function WizardPage() {
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const stepFromUrl = urlParams.get("step");
-    const fallbackStep = selectedRole ? "recipientRoute" : "role";
+    const fallbackStep = "recipientRoute";
     if (
       stepFromUrl &&
       validSteps.includes(stepFromUrl) &&
       stepFromUrl !== currentStep
     ) {
       setCurrentStep(stepFromUrl);
-    } else if (!stepFromUrl && currentStep !== fallbackStep) {
+    } else if (!stepFromUrl || !validSteps.includes(stepFromUrl)) {
       navigate(`/wizard?step=${fallbackStep}`, { replace: true });
     }
 
@@ -380,20 +376,6 @@ function WizardPage() {
 
     const firstAddressChunk = (addressValue || "").split(",")[0]?.trim() || "";
     return firstAddressChunk.replace(/^(г\.?|город)\s*/i, "").trim();
-  };
-
-  const handleRoleSelect = (role) => {
-    const wizardData = {
-      ...location.state?.wizardData,
-      selectedRole: role,
-      fromCity,
-      toCity,
-    };
-    setSelectedRole(role);
-    logWizardStep("role", wizardData);
-    navigate("/wizard?step=recipientRoute", {
-      state: { wizardData },
-    });
   };
 
   const handleRoleToggle = (role) => {
@@ -1771,9 +1753,14 @@ function WizardPage() {
 
     let stepOrder = [];
 
-    if (!selectedRole || currentStep === "role") {
-      stepOrder = ["role", "package"];
-    } else if (selectedRole === "recipient") {
+    if (selectedRole === "recipient") {
+      stepOrder = [
+        "recipientRoute",
+        "package",
+        "recipientAddress",
+        "recipientUserPhone",
+      ];
+    } else if (!selectedRole) {
       stepOrder = [
         "recipientRoute",
         "package",
@@ -1903,7 +1890,8 @@ function WizardPage() {
               fromCity,
               toCity,
               selectedRole: "recipient",
-              deliveryAddress: deliveryAddress || existingWizardData.deliveryAddress,
+              deliveryAddress:
+                deliveryAddress || existingWizardData.deliveryAddress,
               recipientAddress:
                 deliveryAddress || existingWizardData.recipientAddress,
               recipientFIO: recipientFIO || existingWizardData.recipientFIO,
@@ -2083,12 +2071,7 @@ function WizardPage() {
       stepLabel={getStepLabel()}
       onBack={handleBack}
     >
-      {currentStep === "role" ? (
-        <RoleSelectStep
-          selectedRole={selectedRole}
-          onRoleSelect={handleRoleSelect}
-        />
-      ) : currentStep === "recipientRoute" && selectedRole ? (
+      {currentStep === "recipientRoute" ? (
         <RecipientRouteStep
           fromCity={fromCity}
           toCity={toCity}
