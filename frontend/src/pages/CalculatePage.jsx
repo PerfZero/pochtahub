@@ -1,5 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import axios from "axios";
+
+const DADATA_API_URL =
+  "https://suggestions.dadata.ru/suggestions/api/4_1/rs/suggest/address";
+const DADATA_TOKEN = import.meta.env.VITE_DADATA_TOKEN || "";
 
 import iconTelegram from "../assets/images/icon-telegram.svg";
 import iconVerify from "../assets/images/icon-verify.svg";
@@ -46,6 +51,60 @@ function CalculatePage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [showStartPopup, setShowStartPopup] = useState(false);
+
+  const [fromCity, setFromCity] = useState("");
+  const [toCity, setToCity] = useState("");
+  const [toOptions, setToOptions] = useState([]);
+  const [toIsOpen, setToIsOpen] = useState(false);
+  const toWrapperRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (toWrapperRef.current && !toWrapperRef.current.contains(e.target)) {
+        setToIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const loadToSuggestions = useCallback(async (query) => {
+    if (!query || query.length < 2 || !DADATA_TOKEN) {
+      setToOptions([]);
+      setToIsOpen(false);
+      return;
+    }
+    try {
+      const response = await axios.post(
+        DADATA_API_URL,
+        { query, count: 10, from_bound: { value: "city" }, to_bound: { value: "settlement" } },
+        { headers: { "Content-Type": "application/json", Authorization: `Token ${DADATA_TOKEN}` } },
+      );
+      const suggestions = response.data.suggestions
+        .filter((item) => (item.data.city || item.data.settlement) && !item.data.street && !item.data.house)
+        .map((item) => ({
+          value: item.data.city_with_type || item.data.city || item.data.settlement_with_type || item.data.settlement || "",
+          id: item.data.fias_id || item.value,
+        }))
+        .filter((item, i, self) => i === self.findIndex((t) => t.value === item.value))
+        .slice(0, 8);
+      setToOptions(suggestions);
+      setToIsOpen(suggestions.length > 0);
+    } catch {
+      setToOptions([]);
+    }
+  }, []);
+
+  const handleFormSubmit = (e) => {
+    e.preventDefault();
+    if (!toCity.trim()) return;
+    if (typeof window !== "undefined" && typeof window.ym === "function") {
+      window.ym(104664178, "reachGoal", "calc_raschet");
+    }
+    navigate("/offers", {
+      state: { wizardData: { fromCity: fromCity.trim(), toCity: toCity.trim() } },
+    });
+  };
 
   const [isAuthenticated, setIsAuthenticated] = useState(
     () => Boolean(localStorage.getItem("access_token")),
@@ -172,7 +231,51 @@ function CalculatePage() {
               Получатель сам выбирает сроки и стоимость, и оплачивает онлайн.
             </p>
 
-            <div className="mt-8 flex flex-col gap-3">
+            <form onSubmit={handleFormSubmit} className="mt-8 bg-white border border-[#E5E9F0] rounded-2xl p-5 shadow-sm mb-4">
+              <div className="mb-3">
+                <label className="block text-xs font-semibold text-[#5A6478] mb-1.5">Откуда забрать</label>
+                <input
+                  type="text"
+                  value={fromCity}
+                  onChange={(e) => setFromCity(e.target.value)}
+                  placeholder="Город продавца или ссылка на объявление"
+                  className="w-full border border-[#C8C7CC] rounded-xl px-4 py-3 text-sm text-[#2D2D2D] placeholder-[#858585] focus:outline-none focus:border-[#0077FE] transition-colors"
+                />
+              </div>
+              <div className="mb-4 relative" ref={toWrapperRef}>
+                <label className="block text-xs font-semibold text-[#5A6478] mb-1.5">Куда доставить</label>
+                <input
+                  type="text"
+                  value={toCity}
+                  onChange={(e) => { setToCity(e.target.value); loadToSuggestions(e.target.value); }}
+                  onFocus={() => { if (toOptions.length > 0) setToIsOpen(true); }}
+                  placeholder="Ваш город"
+                  className="w-full border border-[#C8C7CC] rounded-xl px-4 py-3 text-sm text-[#2D2D2D] placeholder-[#858585] focus:outline-none focus:border-[#0077FE] transition-colors"
+                />
+                {toIsOpen && toOptions.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#C8C7CC] rounded-xl shadow-lg z-50 max-h-52 overflow-auto">
+                    {toOptions.map((opt) => (
+                      <div
+                        key={opt.id}
+                        onMouseDown={() => { setToCity(opt.value); setToIsOpen(false); setToOptions([]); }}
+                        className="px-4 py-3 text-sm text-[#2D2D2D] cursor-pointer hover:bg-[#F0F7FF] first:rounded-t-xl last:rounded-b-xl"
+                      >
+                        {opt.value}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button
+                type="submit"
+                disabled={!toCity.trim()}
+                className="w-full bg-[#0077FE] hover:bg-[#0060CC] disabled:opacity-50 text-white font-semibold text-sm rounded-xl py-3.5 transition-colors"
+              >
+                Рассчитать стоимость →
+              </button>
+            </form>
+
+            <div className="flex flex-col gap-3">
               <button
                 type="button"
                 onClick={handleStartDelivery}
@@ -180,6 +283,9 @@ function CalculatePage() {
               >
                 {PRIMARY_CTA_TEXT}
               </button>
+            </div>
+
+            <div className="flex flex-col gap-3 mt-3">
               <div className="flex flex-col md:flex-row gap-3">
                 <a
                   href={TELEGRAM_URL}

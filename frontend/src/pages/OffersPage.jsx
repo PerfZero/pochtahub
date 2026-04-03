@@ -4,6 +4,7 @@ import logoSvg from "../assets/whitelogo.svg";
 import cdekIcon from "../assets/images/cdek.svg";
 import CityInput from "../components/CityInput";
 import NumberInput from "../components/NumberInput";
+import PhoneInput from "../components/PhoneInput";
 import { tariffsAPI, ordersAPI } from "../api";
 
 const API_URL = import.meta.env.VITE_API_URL || "/api";
@@ -105,6 +106,11 @@ function OffersPage() {
   const [deliveryName, setDeliveryName] = useState(
     wizardData.deliveryName || "",
   );
+
+  const [senderFIO, setSenderFIO] = useState(wizardData.pickupSenderName || "");
+  const [senderPhone, setSenderPhone] = useState(wizardData.senderPhone || "");
+  const [senderAddress, setSenderAddress] = useState(wizardData.pickupAddress || "");
+  const [senderComment, setSenderComment] = useState(wizardData.senderComment || "");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -764,15 +770,24 @@ function OffersPage() {
       window.ym(104664178, "reachGoal", "star");
       window.ym(104664178, "params", { offers: "выбрал_ТК" });
     }
+    const hasSenderFormData = Boolean(senderFIO.trim() && senderPhone.trim());
     const updatedWizardData = {
       ...wizardData,
       fromCity: wizardData.fromCity || fromCity,
       toCity: wizardData.toCity || toCity,
       deliveryName: deliveryName,
-      selectedRole: wizardData.selectedRole || null,
+      selectedRole: wizardData.selectedRole || (hasSenderFormData ? "sender" : null),
       packageDataCompleted: Boolean(wizardData.packageDataCompleted),
       offerOnlyMode: false,
-      estimatedValue: estimatedValue || wizardData.estimatedValue || "10", // Сохраняем estimatedValue
+      estimatedValue: estimatedValue || wizardData.estimatedValue || "10",
+      ...(hasSenderFormData && {
+        pickupSenderName: senderFIO.trim(),
+        senderFIO: senderFIO.trim(),
+        senderPhone: senderPhone.trim(),
+        pickupAddress: senderAddress.trim(),
+        senderAddress: senderAddress.trim(),
+        senderComment: senderComment.trim(),
+      }),
       selectedOffer: {
         company_id: offer.company_id,
         company_name: offer.company_name,
@@ -1638,11 +1653,11 @@ function OffersPage() {
 
                       <div className="pt-4">
                         <div className="flex items-start gap-3 text-sm md:text-base text-[#1E293B]">
-                          <span className="text-[#22C55E] text-lg">✔</span>
+                          <span className="text-lg">🔒</span>
                           <div>
-                            <p>Курьер заберёт товар и отправит его вам</p>
-                            <p className="text-xs md:text-sm text-[#1E293B] mt-1 font-medium">
-                              Постоплата — оплата после получения
+                            <p className="font-medium">Платите, когда товар уже у вас</p>
+                            <p className="text-xs md:text-sm text-[#64748B] mt-1">
+                              Курьер передаёт посылку в транспортную компанию, вы получаете — и только после этого оплачиваете
                             </p>
                             <p className="text-xs md:text-sm text-[#64748B] mt-1">
                               {preferredCdekOffer.delivery_time_min &&
@@ -1658,18 +1673,88 @@ function OffersPage() {
                     </div>
 
                     {!isFromUrl && (
-                      <button
-                        onClick={() => handleSelectOffer(preferredCdekOffer)}
-                        className="mt-4 w-full rounded-2xl bg-[#0A6AFF] py-3 md:py-4 text-base md:text-xl font-semibold text-white hover:bg-[#005DEB] transition-colors"
-                      >
-                        Забрать товар
-                      </button>
+                      <>
+                        <div className="mt-4 space-y-3 border-t border-[#ECF1F7] pt-4">
+                          <p className="text-xs font-semibold text-[#7A8DA8] uppercase tracking-wide mb-2">Данные отправителя</p>
+                          <div className="relative border border-[#C8C7CC] rounded-xl">
+                            <input
+                              type="text"
+                              value={senderFIO}
+                              onChange={(e) => setSenderFIO(e.target.value)}
+                              placeholder=" "
+                              className="peer w-full px-4 pt-6 pb-2 bg-transparent text-sm text-[#2D2D2D] focus:outline-none rounded-xl"
+                            />
+                            <label className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-[#858585] transition-all duration-200 pointer-events-none peer-not-placeholder-shown:top-3 peer-not-placeholder-shown:text-xs peer-focus:top-3 peer-focus:text-xs peer-focus:text-[#0077FE]">
+                              ФИО
+                            </label>
+                          </div>
+                          <PhoneInput
+                            value={senderPhone}
+                            onChange={(e) => setSenderPhone(e.target.value)}
+                            label="Телефон *"
+                          />
+                          <div className="relative border border-[#C8C7CC] rounded-xl">
+                            <input
+                              type="text"
+                              value={senderAddress}
+                              onChange={(e) => setSenderAddress(e.target.value)}
+                              placeholder=" "
+                              className="peer w-full px-4 pt-6 pb-2 bg-transparent text-sm text-[#2D2D2D] focus:outline-none rounded-xl"
+                            />
+                            <label className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-[#858585] transition-all duration-200 pointer-events-none peer-not-placeholder-shown:top-3 peer-not-placeholder-shown:text-xs peer-focus:top-3 peer-focus:text-xs peer-focus:text-[#0077FE]">
+                              Адрес забора
+                            </label>
+                          </div>
+                          <div className="relative border border-[#C8C7CC] rounded-xl">
+                            <input
+                              type="text"
+                              value={senderComment}
+                              onChange={(e) => setSenderComment(e.target.value)}
+                              placeholder=" "
+                              className="peer w-full px-4 pt-6 pb-2 bg-transparent text-sm text-[#2D2D2D] focus:outline-none rounded-xl"
+                            />
+                            <label className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-[#858585] transition-all duration-200 pointer-events-none peer-not-placeholder-shown:top-3 peer-not-placeholder-shown:text-xs peer-focus:top-3 peer-focus:text-xs peer-focus:text-[#0077FE]">
+                              Комментарий к заказу
+                            </label>
+                          </div>
+                          <p className="text-xs text-[#858585]">Пример: забор после 18 часов</p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            if (typeof window !== "undefined" && typeof window.ym === "function") {
+                              window.ym(104664178, "reachGoal", "-oformlyaem");
+                            }
+                            handleSelectOffer(preferredCdekOffer);
+                          }}
+                          disabled={!senderPhone.trim()}
+                          className="mt-4 w-full rounded-2xl bg-[#0A6AFF] py-3 md:py-4 text-base md:text-xl font-semibold text-white hover:bg-[#005DEB] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Забрать товар
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
               </div>
             )}
           </div>
+
+          {!isFromUrl && !loading && !error && preferredCdekOffer && (
+            <div className="mt-4 space-y-3">
+              <div className="bg-white border border-[#E5E9F0] rounded-2xl p-4">
+                <p className="text-sm text-[#1E293B] leading-relaxed">
+                  «Приехал, забрал, всё стандартно. Самое ценное — живое общение, всё объяснили»
+                </p>
+                <p className="text-xs text-[#7A8DA8] mt-2 font-medium">Сергей</p>
+              </div>
+              <div className="bg-white border border-[#E5E9F0] rounded-2xl p-4">
+                <p className="text-sm text-[#1E293B] leading-relaxed">
+                  «Написал информацию — пришло сообщение — получил. Раз-два-три. Комиссия копейки»
+                </p>
+                <p className="text-xs text-[#7A8DA8] mt-2 font-medium">Андрей</p>
+              </div>
+            </div>
+          )}
 
           {!isFromUrl && <div className="mb-2" />}
         </div>

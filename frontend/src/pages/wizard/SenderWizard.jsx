@@ -402,6 +402,8 @@ function SenderWizard() {
             selectedSize={selectedSize}
             onSelectedSizeChange={setSelectedSize}
             onContinue={handleContinue}
+            fromCity={fromCity}
+            toCity={toCity}
           />
         );
 

@@ -2102,6 +2102,8 @@ function WizardPage() {
           selectedSize={selectedSize}
           onSelectedSizeChange={setSelectedSize}
           onContinue={handlePackageContinue}
+          fromCity={fromCity}
+          toCity={toCity}
         />
       ) : currentStep === "contactPhone" && selectedRole === "sender" ? (
         <ContactPhoneStep

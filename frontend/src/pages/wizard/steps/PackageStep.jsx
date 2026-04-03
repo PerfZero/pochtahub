@@ -57,6 +57,8 @@ function PackageStep({
   selectedSize,
   onSelectedSizeChange,
   onContinue,
+  fromCity,
+  toCity,
 }) {
   const isPhotoValid = packageOption === "photo" && Boolean(photoPreview);
   const isManualValid =
@@ -87,14 +89,28 @@ function PackageStep({
 
   return (
     <>
+      {fromCity && toCity && (
+        <div className="mb-5 bg-white border border-[#DCE8FF] rounded-2xl px-4 py-3">
+          <div className="flex items-center gap-2">
+            <span className="text-[#22C55E] text-base">✅</span>
+            <span className="font-semibold text-[#1E293B] text-sm md:text-base">
+              {fromCity} → {toCity}
+            </span>
+          </div>
+          <p className="text-xs md:text-sm text-[#64748B] mt-1 pl-6">
+            Заберём у продавца в {fromCity} и доставим в {toCity}
+          </p>
+        </div>
+      )}
+
       <h1 className="text-xl md:text-3xl font-bold text-[#2D2D2D] mb-2 text-center px-2">
-        Расскажите о посылке
+        Укажите размеры посылки
       </h1>
       <p className="text-sm md:text-base text-[#2D2D2D] mb-6 md:mb-8 text-center px-2">
-        Фото - лучший способ: мы сами определим размеры и подберём упаковку.
+        Рассчитаем стоимость и предложим варианты доставки
       </p>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-3">
         <button
           onClick={() => {
             if (
@@ -147,6 +163,10 @@ function PackageStep({
           </div>
         </button>
       </div>
+
+      <p className="text-xs md:text-sm text-[#64748B] mb-6 text-center">
+        📦 Можно просто сфотографировать — мы сами определим размеры
+      </p>
 
       {packageOption === "photo" && (
         <div className="mb-8">

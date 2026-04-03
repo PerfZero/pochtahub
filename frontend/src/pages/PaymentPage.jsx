@@ -132,8 +132,6 @@ function PaymentPage() {
 
   const handlePayment = async () => {
     sendYmGoalWithRetry("заказ!");
-    alert("Оплата временно недоступна для всех служб доставки.");
-    return;
     const senderName = wizardData.senderFIO || wizardData.senderName;
     const senderPhone = wizardData.senderPhone || wizardData.userPhone;
     const recipientName = wizardData.recipientFIO || wizardData.recipientName;
