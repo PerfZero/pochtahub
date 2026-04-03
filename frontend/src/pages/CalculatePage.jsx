@@ -54,24 +54,28 @@ function CalculatePage() {
 
   const [fromCity, setFromCity] = useState("");
   const [toCity, setToCity] = useState("");
+
+  const [fromOptions, setFromOptions] = useState([]);
+  const [fromIsOpen, setFromIsOpen] = useState(false);
+  const fromWrapperRef = useRef(null);
+
   const [toOptions, setToOptions] = useState([]);
   const [toIsOpen, setToIsOpen] = useState(false);
   const toWrapperRef = useRef(null);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (toWrapperRef.current && !toWrapperRef.current.contains(e.target)) {
-        setToIsOpen(false);
-      }
+      if (fromWrapperRef.current && !fromWrapperRef.current.contains(e.target)) setFromIsOpen(false);
+      if (toWrapperRef.current && !toWrapperRef.current.contains(e.target)) setToIsOpen(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const loadToSuggestions = useCallback(async (query) => {
-    if (!query || query.length < 2 || !DADATA_TOKEN) {
-      setToOptions([]);
-      setToIsOpen(false);
+  const loadSuggestions = useCallback(async (query, setOptions, setIsOpen) => {
+    if (!query || query.length < 2 || !DADATA_TOKEN || query.startsWith("http")) {
+      setOptions([]);
+      setIsOpen(false);
       return;
     }
     try {
@@ -88,12 +92,15 @@ function CalculatePage() {
         }))
         .filter((item, i, self) => i === self.findIndex((t) => t.value === item.value))
         .slice(0, 8);
-      setToOptions(suggestions);
-      setToIsOpen(suggestions.length > 0);
+      setOptions(suggestions);
+      setIsOpen(suggestions.length > 0);
     } catch {
-      setToOptions([]);
+      setOptions([]);
     }
   }, []);
+
+  const loadFromSuggestions = useCallback((q) => loadSuggestions(q, setFromOptions, setFromIsOpen), [loadSuggestions]);
+  const loadToSuggestions = useCallback((q) => loadSuggestions(q, setToOptions, setToIsOpen), [loadSuggestions]);
 
   const handleFormSubmit = (e) => {
     e.preventDefault();
@@ -232,15 +239,29 @@ function CalculatePage() {
             </p>
 
             <form onSubmit={handleFormSubmit} className="mt-8 bg-white border border-[#E5E9F0] rounded-2xl p-5 shadow-sm mb-4">
-              <div className="mb-3">
+              <div className="mb-3 relative" ref={fromWrapperRef}>
                 <label className="block text-xs font-semibold text-[#5A6478] mb-1.5">Откуда забрать</label>
                 <input
                   type="text"
                   value={fromCity}
-                  onChange={(e) => setFromCity(e.target.value)}
+                  onChange={(e) => { setFromCity(e.target.value); loadFromSuggestions(e.target.value); }}
+                  onFocus={() => { if (fromOptions.length > 0) setFromIsOpen(true); }}
                   placeholder="Город продавца или ссылка на объявление"
                   className="w-full border border-[#C8C7CC] rounded-xl px-4 py-3 text-sm text-[#2D2D2D] placeholder-[#858585] focus:outline-none focus:border-[#0077FE] transition-colors"
                 />
+                {fromIsOpen && fromOptions.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#C8C7CC] rounded-xl shadow-lg z-50 max-h-52 overflow-auto">
+                    {fromOptions.map((opt) => (
+                      <div
+                        key={opt.id}
+                        onMouseDown={() => { setFromCity(opt.value); setFromIsOpen(false); setFromOptions([]); }}
+                        className="px-4 py-3 text-sm text-[#2D2D2D] cursor-pointer hover:bg-[#F0F7FF] first:rounded-t-xl last:rounded-b-xl"
+                      >
+                        {opt.value}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="mb-4 relative" ref={toWrapperRef}>
                 <label className="block text-xs font-semibold text-[#5A6478] mb-1.5">Куда доставить</label>

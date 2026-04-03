@@ -1477,7 +1477,7 @@ function OffersPage() {
         </div>
       )}
 
-      <div className="flex justify-center pt-6 md:pt-12 pb-8">
+      <div className="flex justify-center pt-3 pb-4">
         <div className="w-full max-w-[720px] mx-4 md:mx-6">
           {isOfferOnlyMode && <div className="mb-4 md:mb-6" />}
           {!isOfferOnlyMode && !isRecipientFlow && showCourierPickupCta && (
@@ -1529,92 +1529,71 @@ function OffersPage() {
                     </div>
                   </div>
                 )}
-                <div className="relative overflow-hidden rounded-[28px] border border-[#D7E8FF] bg-white p-4 md:p-6 shadow-[0_14px_35px_rgba(8,75,186,0.12)]">
+                <div className="relative overflow-hidden rounded-[28px] border border-[#D7E8FF] bg-white p-3 shadow-[0_14px_35px_rgba(8,75,186,0.12)]">
                   <div className="absolute -top-10 -right-10 h-28 w-28 rounded-full bg-[#E7F2FF] blur-2xl" />
                   <div className="relative">
-                    <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-[linear-gradient(145deg,#5ED7B0_0%,#1BCB8B_100%)] text-white text-3xl flex items-center justify-center border-4 border-white shadow-[0_8px_24px_rgba(17,186,136,0.35)]">
+                    <div className="mx-auto mb-2 h-10 w-10 rounded-full bg-[linear-gradient(145deg,#5ED7B0_0%,#1BCB8B_100%)] text-white text-xl flex items-center justify-center border-4 border-white shadow-[0_8px_24px_rgba(17,186,136,0.35)]">
                       ✓
                     </div>
 
-                    <div className="rounded-2xl border border-[#E6EEF8] bg-[#FBFDFF] p-4 md:p-6">
-                      <div className="text-center pb-4 border-b border-[#ECF1F7]">
-                        <p className="text-3xl md:text-5xl font-bold text-[#1E293B] leading-none">
+                    <div className="rounded-2xl border border-[#E6EEF8] bg-[#FBFDFF] p-3">
+                      <div className="text-center pb-2 border-b border-[#ECF1F7]">
+                        <p className="text-2xl md:text-3xl font-bold text-[#1E293B] leading-none">
                           {preferredCdekOffer.price
-                            ? Number(preferredCdekOffer.price).toLocaleString(
-                                "ru-RU",
-                              )
+                            ? Number(preferredCdekOffer.price).toLocaleString("ru-RU")
                             : "?"}
                           ₽
                         </p>
-                        <p className="mt-2 text-sm md:text-base text-[#475569]">
+                        <p className="mt-1 text-xs text-[#475569]">
                           Забор у продавца и доставка
                         </p>
                       </div>
 
-                      <div className="py-4 border-b border-[#ECF1F7]">
-                        <div className="flex items-start gap-3">
-                          <span className="mt-1 text-lg text-[#1677FF]">
-                            📍
-                          </span>
+                      <div className="py-2 border-b border-[#ECF1F7]">
+                        <div className="flex items-center gap-2">
+                          <span className="text-base text-[#1677FF]">📍</span>
                           <div>
-                            <p className="text-xs uppercase tracking-wide text-[#7A8DA8]">
-                              Откуда
-                            </p>
-                            <p className="text-sm md:text-base font-semibold text-[#1E293B]">
-                              {pickupAddressDisplay}
-                            </p>
+                            <p className="text-xs text-[#7A8DA8]">Откуда</p>
+                            <p className="text-sm font-semibold text-[#1E293B]">{pickupAddressDisplay}</p>
                           </div>
                         </div>
-                        <div className="my-3 h-px w-full bg-[repeating-linear-gradient(to_right,#D0D9E6_0,#D0D9E6_6px,transparent_6px,transparent_12px)]" />
-                        <div className="flex items-start gap-3">
-                          <span className="mt-1 text-lg text-[#1677FF]">
-                            📍
-                          </span>
+                        <div className="my-2 h-px w-full bg-[repeating-linear-gradient(to_right,#D0D9E6_0,#D0D9E6_6px,transparent_6px,transparent_12px)]" />
+                        <div className="flex items-center gap-2">
+                          <span className="text-base text-[#1677FF]">📍</span>
                           <div>
-                            <p className="text-xs uppercase tracking-wide text-[#7A8DA8]">
-                              Куда
-                            </p>
-                            <p className="text-sm md:text-base font-semibold text-[#1E293B]">
-                              {deliveryAddressDisplay}
-                            </p>
+                            <p className="text-xs text-[#7A8DA8]">Куда</p>
+                            <p className="text-sm font-semibold text-[#1E293B]">{deliveryAddressDisplay}</p>
                           </div>
                         </div>
                       </div>
 
-                      <div className="pt-4">
-                        <div className="flex items-start gap-3 text-sm md:text-base text-[#1E293B]">
-                          <span className="text-lg">🔒</span>
-                          <div>
-                            <p className="font-medium">Платите, когда товар уже у вас</p>
-                            <p className="text-xs md:text-sm text-[#64748B] mt-1">
-                              Курьер передаёт посылку в транспортную компанию, вы получаете — и только после этого оплачиваете
-                            </p>
-                            <p className="text-xs md:text-sm text-[#64748B] mt-1">
-                              {preferredCdekOffer.delivery_time_min &&
-                              preferredCdekOffer.delivery_time_max
-                                ? `Ориентировочно ${preferredCdekOffer.delivery_time_min}-${preferredCdekOffer.delivery_time_max} дн.`
-                                : preferredCdekOffer.delivery_time
-                                  ? `Ориентировочно ${preferredCdekOffer.delivery_time} дн.`
-                                  : "Срок уточняется после оформления"}
-                            </p>
-                          </div>
+                      <div className="pt-2 pb-1">
+                        <div className="flex items-start gap-2 text-sm text-[#1E293B]">
+                          <span>🔒</span>
+                          <p className="text-xs text-[#64748B]">
+                            Платите после получения — курьер передаёт посылку в ТК, вы получаете и только потом оплачиваете.{" "}
+                            {preferredCdekOffer.delivery_time_min && preferredCdekOffer.delivery_time_max
+                              ? `Ориентировочно ${preferredCdekOffer.delivery_time_min}–${preferredCdekOffer.delivery_time_max} дн.`
+                              : preferredCdekOffer.delivery_time
+                                ? `Ориентировочно ${preferredCdekOffer.delivery_time} дн.`
+                                : "Срок уточняется."}
+                          </p>
                         </div>
                       </div>
                     </div>
 
                     {!isFromUrl && (
                       <>
-                        <div className="mt-4 space-y-3 border-t border-[#ECF1F7] pt-4">
-                          <p className="text-xs font-semibold text-[#7A8DA8] uppercase tracking-wide mb-2">Данные отправителя</p>
+                        <div className="mt-3 space-y-2 border-t border-[#ECF1F7] pt-3">
                           <div className="relative border border-[#C8C7CC] rounded-xl">
                             <input
                               type="text"
                               value={senderFIO}
                               onChange={(e) => setSenderFIO(e.target.value)}
                               placeholder=" "
-                              className="peer w-full px-4 pt-6 pb-2 bg-transparent text-sm text-[#2D2D2D] focus:outline-none rounded-xl"
+                              className="peer w-full px-3 pt-5 pb-1.5 bg-transparent text-sm text-[#2D2D2D] focus:outline-none rounded-xl"
                             />
-                            <label className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-[#858585] transition-all duration-200 pointer-events-none peer-not-placeholder-shown:top-3 peer-not-placeholder-shown:text-xs peer-focus:top-3 peer-focus:text-xs peer-focus:text-[#0077FE]">
+                            <label className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#858585] transition-all duration-200 pointer-events-none peer-not-placeholder-shown:top-3 peer-not-placeholder-shown:text-xs peer-focus:top-3 peer-focus:text-xs peer-focus:text-[#0077FE]">
                               ФИО
                             </label>
                           </div>
@@ -1629,9 +1608,9 @@ function OffersPage() {
                               value={senderAddress}
                               onChange={(e) => setSenderAddress(e.target.value)}
                               placeholder=" "
-                              className="peer w-full px-4 pt-6 pb-2 bg-transparent text-sm text-[#2D2D2D] focus:outline-none rounded-xl"
+                              className="peer w-full px-3 pt-5 pb-1.5 bg-transparent text-sm text-[#2D2D2D] focus:outline-none rounded-xl"
                             />
-                            <label className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-[#858585] transition-all duration-200 pointer-events-none peer-not-placeholder-shown:top-3 peer-not-placeholder-shown:text-xs peer-focus:top-3 peer-focus:text-xs peer-focus:text-[#0077FE]">
+                            <label className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#858585] transition-all duration-200 pointer-events-none peer-not-placeholder-shown:top-3 peer-not-placeholder-shown:text-xs peer-focus:top-3 peer-focus:text-xs peer-focus:text-[#0077FE]">
                               Адрес забора
                             </label>
                           </div>
@@ -1640,14 +1619,10 @@ function OffersPage() {
                               type="text"
                               value={senderComment}
                               onChange={(e) => setSenderComment(e.target.value)}
-                              placeholder=" "
-                              className="peer w-full px-4 pt-6 pb-2 bg-transparent text-sm text-[#2D2D2D] focus:outline-none rounded-xl"
+                              placeholder="Комментарий (забор после 18 часов)"
+                              className="w-full px-3 py-2.5 bg-transparent text-sm text-[#2D2D2D] placeholder-[#858585] focus:outline-none rounded-xl"
                             />
-                            <label className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-[#858585] transition-all duration-200 pointer-events-none peer-not-placeholder-shown:top-3 peer-not-placeholder-shown:text-xs peer-focus:top-3 peer-focus:text-xs peer-focus:text-[#0077FE]">
-                              Комментарий к заказу
-                            </label>
                           </div>
-                          <p className="text-xs text-[#858585]">Пример: забор после 18 часов</p>
                         </div>
                         <button
                           onClick={() => {
@@ -1657,7 +1632,7 @@ function OffersPage() {
                             handleSelectOffer(preferredCdekOffer);
                           }}
                           disabled={!senderPhone.trim()}
-                          className="mt-4 w-full rounded-2xl bg-[#0A6AFF] py-3 md:py-4 text-base md:text-xl font-semibold text-white hover:bg-[#005DEB] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="mt-3 w-full rounded-2xl bg-[#0A6AFF] py-3 text-base font-semibold text-white hover:bg-[#005DEB] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           Забрать товар
                         </button>
